@@ -1,16 +1,115 @@
-/* src/css/HomePage.css */
 .home-container {
+    font-family: 'Segoe UI', sans-serif;
+    color: #fff;
+  }
+   
+  .homepage-header {
+    background-color: #00245A;
+    border-bottom: 4px solid #C68A00;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+  }
+   
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 250px;
+  }
+   
+  .logo {
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: scale-down;
+  }
+   
+  .header-text h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+   
+  .header-text p.motto {
+    font-size: 0.7rem;
+    color: #dddddd;
+    margin: 0.15rem 0 0 0;
+    font-style: italic;
+  }
+   
+  .header-right {
+    color: #fff;
+    font-size: 0.9rem;
+    text-align: right;
+    min-width: 180px;
+  }
+   
+  .header-right strong {
+    font-weight: bold;
+    color: #fff;
+  }
+   
+  .header-right .icon {
+    margin-left: 0.3rem;
+    color: #C68A00;
+    font-size: 1rem;
+  }
+   
+  .homepage-main {
+    padding: 2rem;
     text-align: center;
-    margin-top: 50px;
+    background-color: #f4f4f4;
+    color: #222;
   }
-  
-  .home-container h1 {
-    font-size: 3rem;
-    color: #333;
+   
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .homepage-header {
+      padding: 0.4rem 0.8rem;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+   
+    .header-left {
+      width: 100%;
+      margin-bottom: 0.3rem;
+    }
+   
+    .header-right {
+      width: 100%;
+      text-align: left;
+      padding-top: 0;
+    }
+   
+    .header-text h1 {
+      font-size: 0.9rem;
+    }
+   
+    .header-text p.motto {
+      font-size: 0.65rem;
+    }
   }
-  
-  .home-container p {
-    font-size: 1.2rem;
-    color: #555;
+   
+  @media (max-width: 480px) {
+    .logo {
+      width: 20px !important;
+      height: 20px !important;
+    }
+   
+    .header-text h1 {
+      font-size: 0.8rem;
+    }
+   
+    .header-right {
+      font-size: 0.8rem;
+    }
+   
+    .header-right .icon {
+      font-size: 0.9rem;
+    }
   }
-  
