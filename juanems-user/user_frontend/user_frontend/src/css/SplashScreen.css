@@ -31,14 +31,14 @@
   }
   
   .big-text {
-    font-size: 24px;
+    font-size: 35px;
     font-weight: bold;
     color: #C68A00;
     margin-top: 10px;
   }
   
   .small-text {
-    font-size: 16px;
+    font-size: 20px;
     color: white;
     margin-top: 5px;
     max-width: 300px;
