@@ -1,8 +1,8 @@
 // src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import HomePage from './components/HomePage';
-import SplashScreen from './components/SplashScreen'; // Importing SplashScreen component
+import HomePage from './components/JuanEMS/HomePage';
+import SplashScreen from './components/JuanEMS/SplashScreen'; // Importing SplashScreen component
 
 function App() {
   return (

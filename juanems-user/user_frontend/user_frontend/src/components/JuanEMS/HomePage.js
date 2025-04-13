@@ -1,20 +1,47 @@
 import React, { useState, useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { FaRegSmileWink, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMapMarkerAlt, faPhone, faEnvelope, faClock } from '@fortawesome/free-solid-svg-icons'
-import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons'
-import '../css/HomePage.css';
-import SJDEFILogo from '../images/SJDEFILogo.png';
-import Banner1 from '../images/be an sjdcian.png';
-import Banner2 from '../images/banner 2 sjdefi.png';
-import Banner3 from '../images/banner 3 sjdefi.png';
-import ScopeImage from '../images/scope.png'; // Add this import
-import JuanEMSLogo from '../images/JuanEMS logotop image final.png';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMapMarkerAlt, faPhone, faEnvelope, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
+import '../../css/HomePage.css';
+import SJDEFILogo from '../../images/SJDEFILogo.png';
+import Banner1 from '../../images/be an sjdcian.png';
+import Banner2 from '../../images/banner 2 sjdefi.png';
+import Banner3 from '../../images/banner 3 sjdefi.png';
+import ScopeImage from '../../images/scope.png';
+import JuanEMSLogo from '../../images/JuanEMS logotop image final.png';
 
 function HomePage() {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const banners = [Banner1, Banner2, Banner3];
+
+    // Add these intersection observer hooks for each section you want to animate
+    const [headingRef, headingInView] = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
+
+    const [cardsRef, cardsInView] = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
+
+    const [teleprompterRef, teleprompterInView] = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
+
+    const [aboutRef, aboutInView] = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
+
+    const [footerRef, footerInView] = useInView({
+        triggerOnce: true,
+        threshold: 0.1,
+    });
 
     // Card data
     const cards = [
@@ -138,7 +165,10 @@ function HomePage() {
             {/* Main Content */}
             <main className="homepage-main">
                 {/* Heading Section */}
-                <div className="heading-section">
+                <div
+                    ref={headingRef}
+                    className={`heading-section ${headingInView ? 'fade-in-up' : ''}`}
+                >
                     <h2 className="heading-title">Start Your SJDCIAN Journey</h2>
                     <p className="heading-description">
                         Begin your educational adventure at San Juan De Dios Educational Foundation, Inc. with JuanEMS—your gateway to a seamless enrollment experience. Explore Juan Scope for hassle-free online admission and stay connected with Juan IS, the institution's comprehensive information system.
@@ -146,7 +176,11 @@ function HomePage() {
                 </div>
 
                 {/* Cards Section */}
-                <div className="cards-container">
+                <div
+                    ref={cardsRef}
+                    className={`cards-container ${cardsInView ? 'fade-in-up' : ''}`}
+                >
+
                     {cards.map((card, index) => (
                         <div key={index} className="card-wrapper">
                             {/* Card Number */}
@@ -198,7 +232,10 @@ function HomePage() {
                 </div>
 
                 {/* Teleprompter Text Line */}
-                <div className="teleprompter-container">
+                <div
+                    ref={teleprompterRef}
+                    className={`teleprompter-container ${teleprompterInView ? 'fade-in-up' : ''}`}
+                >
                     <div className="teleprompter-track">
                         <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED • </span>
                         <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED • </span>
@@ -206,7 +243,10 @@ function HomePage() {
                 </div>
 
                 {/* About JuanEMS Section */}
-                <div className="about-section-container">
+                <div
+                    ref={aboutRef}
+                    className={`about-section-container ${aboutInView ? 'fade-in-up' : ''}`}
+                >
                     <div className="about-section">
                         <h2 className="about-title">About JuanEMS</h2>
                         <p className="about-description">
@@ -231,7 +271,10 @@ function HomePage() {
             </main>
 
             {/* Footer */}
-            <footer className="homepage-footer">
+            <footer
+                ref={footerRef}
+                className={`homepage-footer ${footerInView ? 'fade-in-up' : ''}`}
+            >
                 {/* Left section - Logo and school name */}
                 <div className="footer-left">
                     <img

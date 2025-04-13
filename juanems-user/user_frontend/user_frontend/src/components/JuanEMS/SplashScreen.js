@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import '../css/SplashScreen.css';
+import '../../css/SplashScreen.css';
 import { useNavigate } from 'react-router-dom';
+import SJDEFILogo from '../../images/SJDEFILogo.png';
+import JuanEMSLogo from '../../images/JuanEMSlogo.png';
 
 function SplashScreen() {
   const navigate = useNavigate();
@@ -19,13 +21,13 @@ function SplashScreen() {
   return (
     <div className="splash-container">
       <div className={`logo-container ${showSecondSplash ? 'fade-out' : 'fade-in'}`}>
-        <img src={require('../images/SJDEFILogo.png')} alt="SJDEFI Logo" className="logo" />
+      <img src={SJDEFILogo} alt="SJDEFI Logo" className="logo" />
         <h1 className="big-text">SJDEFI</h1>
         <p className="small-text">San Juan De Dios Educational Foundation, Inc.</p>
       </div>
 
       <div className={`logo-container overlay ${showSecondSplash ? 'fade-in' : 'fade-out'}`}>
-        <img src={require('../images/JuanEMSlogo.png')} alt="JuanEMS Logo" className="logo" />
+      <img src={JuanEMSLogo} alt="JuanEMS Logo" className="logo" />
         <h1 className="big-text">JuanEMS</h1>
         <p className="small-text">Juan Enrollment Management System</p>
       </div>

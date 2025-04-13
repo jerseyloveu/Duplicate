@@ -380,16 +380,16 @@
     max-width: 1200px;
     margin: 2rem auto 2rem;
     padding: 0 2rem;
-  }
+}
 
-  .about-section {
+.about-section {
     background-color: #00245A;
     border-radius: 15px;
     padding: 1.5rem 2rem;
     flex: 1;
     color: white;
-  }
-  
+}
+
 
 .about-title {
     font-size: 2.0rem;
@@ -577,6 +577,63 @@
     flex-shrink: 0;
 }
 
+/* Animation Styles */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Add these to elements you want to animate with a delay */
+.heading-section {
+    opacity: 0;
+}
+
+.cards-container {
+    opacity: 0;
+}
+
+.teleprompter-container {
+    opacity: 0;
+}
+
+.about-section-container {
+    opacity: 0;
+}
+
+.homepage-footer {
+    opacity: 0;
+}
+
+/* Optional: Add staggered animations for cards */
+.card-wrapper {
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Delay each card's animation */
+.card-wrapper:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.card-wrapper:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.card-wrapper:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
     .footer-content {
@@ -584,8 +641,10 @@
         justify-content: center;
         gap: 0.5rem;
     }
-    
-    .footer-links, .footer-social-link, .footer-contact-container {
+
+    .footer-links,
+    .footer-social-link,
+    .footer-contact-container {
         margin: 0.5rem 1rem;
     }
 }
@@ -620,23 +679,24 @@
         align-items: center;
         text-align: center;
     }
-    
+
     .footer-left {
         margin-right: 0;
         margin-bottom: 1.5rem;
         justify-content: center;
     }
-    
+
     .footer-content {
         width: 100%;
         flex-direction: column;
         align-items: center;
     }
-    
-    .footer-links, .footer-social-link {
+
+    .footer-links,
+    .footer-social-link {
         margin-bottom: 1rem;
     }
-    
+
     .footer-contact-container {
         width: auto;
         min-width: unset;
@@ -644,7 +704,7 @@
         flex-direction: column;
         align-items: center;
     }
-    
+
     .contact-items {
         align-items: center;
     }
@@ -742,6 +802,24 @@
 
     .homepage-footer {
         padding: 1rem;
+    }
+
+    /* Reduce animation distance on mobile */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Remove delays on mobile for cards */
+    .card-wrapper {
+        animation-delay: 0s !important;
     }
 }
 
@@ -844,21 +922,21 @@
         justify-content: center;
         gap: 0.5rem;
     }
-    
+
     .footer-social-link {
         margin: 0.8rem 0;
     }
-    
+
     .contact-item {
         font-size: 0.65rem;
         text-align: left;
     }
 
-      .about-section-container {
+    .about-section-container {
         padding: 0 0.8rem;
-      }
-      
-      .about-section {
+    }
+
+    .about-section {
         padding: 1rem 1.2rem;
-      }
+    }
 }
