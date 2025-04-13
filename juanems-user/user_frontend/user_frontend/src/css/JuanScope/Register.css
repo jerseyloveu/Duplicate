@@ -1,0 +1,409 @@
+.juan-register-container {
+    font-family: 'Segoe UI', sans-serif;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  /* Header Styles */
+  .juan-register-header {
+    background-color: #00245A;
+    border-bottom: 4px solid #C68A00;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+  }
+  
+  .juan-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .juan-logo-register {
+    width: 40px;
+    height: 40px;
+    object-fit: scale-down;
+  }
+  
+  .juan-header-text h1 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+  }
+  
+  /* Main Content Styles */
+  .juan-main-content {
+    display: flex;
+    flex: 1;
+  }
+  
+  /* Left Side with Gradient and Image */
+  .juan-left-side {
+    width: 40%;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .juan-gradient-background {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 3rem;
+    z-index: 0;
+  }
+
+  .juan-gradient-background::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, #C68A00 0%, #00245A 100%);
+    opacity: 0.7; /* 40% opacity for background only */
+    z-index: -1;
+  }
+  
+  .juan-registration-title {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .juan-registration-image {
+    max-width: 80%;
+    height: auto;
+  }
+  
+  /* Right Side with Form */
+  .juan-right-side {
+    width: 60%;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  
+  .juan-form-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 2rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .juan-form-container h2 {
+    color: #00245A;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .juan-form-container p {
+    color: #666;
+    margin-bottom: 2rem;
+  }
+  
+  .juan-registration-form {
+    margin-top: 1.5rem;
+  }
+  
+  .juan-back-button {
+    background-color: #00245A;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 1rem;
+  }
+  
+  .juan-back-button:hover {
+    background-color: #16366F;
+  }
+  
+  /* Footer Styles */
+  .juan-register-footer {
+    background-color: #00245A;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 2rem;
+    color: white;
+    flex-wrap: wrap;
+  }
+  
+  .juan-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex: 0 0 auto;
+    margin-right: 2rem;
+  }
+  
+  .juan-footer-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+  
+  .juan-footer-text h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+  
+  .juan-footer-motto {
+    font-size: 0.65rem;
+    color: #dddddd;
+    margin: 0.15rem 0 0 0;
+  }
+  
+  /* Footer Content Styles */
+  .juan-footer-content {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  
+  .juan-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    margin-left: 80px;
+  }
+  
+  .juan-footer-link {
+    color: white;
+    text-decoration: none;
+    font-size: 0.75rem;
+    transition: color 0.3s;
+    white-space: nowrap;
+  }
+  
+  .juan-footer-link:hover {
+    color: #C68A00;
+  }
+  
+  .juan-footer-link-separator {
+    color: white;
+    font-size: 0.75rem;
+  }
+  
+  .juan-footer-social-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    transition: color 0.3s;
+    white-space: nowrap;
+    margin: 0 2rem;
+  }
+  
+  .juan-footer-social-link:hover {
+    color: #C68A00;
+  }
+  
+  .juan-social-icon {
+    font-size: 1.3rem;
+    color: inherit;
+  }
+  
+  .juan-social-text {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .juan-social-find {
+    font-size: 0.65rem;
+    line-height: 1.2;
+  }
+  
+  .juan-social-platform {
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: inherit;
+  }
+  
+  .juan-footer-contact-container {
+    flex: 0 0 auto;
+    min-width: 300px;
+  }
+  
+  .juan-contact-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  
+  .juan-contact-title svg {
+    width: 0.9em;
+    height: 0.9em;
+  }
+  
+  .juan-contact-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .juan-contact-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+  
+  .juan-contact-item svg {
+    width: 0.8em;
+    height: 0.8em;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 1200px) {
+    .juan-footer-content {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+  
+    .juan-footer-links,
+    .juan-footer-social-link,
+    .juan-footer-contact-container {
+      margin: 0.5rem 1rem;
+    }
+  }
+  
+  @media (max-width: 900px) {
+    .juan-main-content {
+      flex-direction: column;
+    }
+  
+    .juan-left-side, .juan-right-side {
+      width: 100%;
+    }
+  
+    .juan-left-side {
+      min-height: 300px;
+    }
+  
+    .juan-registration-title {
+      font-size: 2rem;
+      padding-top: 1rem;
+    }
+  
+    .juan-registration-image {
+      max-width: 60%;
+    }
+  
+    .juan-right-side {
+      padding: 1.5rem;
+    }
+  
+    .juan-form-container {
+      max-width: 100%;
+      padding: 1.5rem;
+    }
+  
+    .juan-register-footer {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  
+    .juan-footer-left {
+      margin-right: 0;
+      margin-bottom: 1.5rem;
+      justify-content: center;
+    }
+  
+    .juan-footer-content {
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+    }
+  
+    .juan-footer-links,
+    .juan-footer-social-link {
+      margin-bottom: 1rem;
+    }
+  
+    .juan-footer-contact-container {
+      width: auto;
+      min-width: unset;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  
+    .juan-contact-items {
+      align-items: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .juan-register-header {
+      padding: 0.4rem 0.8rem;
+    }
+  
+    .juan-header-text h1 {
+      font-size: 1rem;
+    }
+  
+    .juan-registration-title {
+      font-size: 1.5rem;
+    }
+  
+    .juan-form-container h2 {
+      font-size: 1.5rem;
+    }
+  
+    .juan-form-container p {
+      font-size: 0.9rem;
+    }
+  
+    .juan-registration-form {
+      margin-top: 1rem;
+    }
+  
+    .juan-back-button {
+      width: 100%;
+    }
+  
+    .juan-footer-links {
+      flex-direction: row;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+  
+    .juan-footer-social-link {
+      margin: 0.8rem 0;
+    }
+  
+    .juan-contact-item {
+      font-size: 0.65rem;
+      text-align: left;
+    }
+  }

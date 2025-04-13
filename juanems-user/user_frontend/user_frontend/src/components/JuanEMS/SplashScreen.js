@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import '../../css/SplashScreen.css';
+import '../../css/JuanEMS/SplashScreen.css';
 import { useNavigate } from 'react-router-dom';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';

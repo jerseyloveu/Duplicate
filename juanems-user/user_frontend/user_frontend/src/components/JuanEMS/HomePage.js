@@ -4,7 +4,7 @@ import { FaRegSmileWink, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faPhone, faEnvelope, faClock } from '@fortawesome/free-solid-svg-icons';
 import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
-import '../../css/HomePage.css';
+import '../../css/JuanEMS/HomePage.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import Banner1 from '../../images/be an sjdcian.png';
 import Banner2 from '../../images/banner 2 sjdefi.png';
@@ -219,7 +219,13 @@ function HomePage() {
                                             <button
                                                 key={buttonIndex}
                                                 className={`${button.style === 'login' ? 'login-button' : 'register-button'} ${card.buttons.length === 1 ? 'single-button' : ''}`}
-                                                onClick={() => window.location.href = button.destination}
+                                                onClick={() => {
+                                                    if (button.destination.startsWith('http')) {
+                                                        window.location.href = button.destination;
+                                                    } else {
+                                                        window.location.pathname = button.destination;
+                                                    }
+                                                }}
                                             >
                                                 {button.text}
                                             </button>
@@ -237,8 +243,8 @@ function HomePage() {
                     className={`teleprompter-container ${teleprompterInView ? 'fade-in-up' : ''}`}
                 >
                     <div className="teleprompter-track">
-                        <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED • </span>
-                        <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED • </span>
+                        <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED </span>
+                        <span>ENROLL NOW • PAASCU ACCREDITED • ENROLL NOW • +400 ENROLLED STUDENTS • ENROLL NOW • 4 STRANDS OFFERED </span>
                     </div>
                 </div>
 

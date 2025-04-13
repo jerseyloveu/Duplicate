@@ -430,7 +430,6 @@
 /* Footer Styles */
 .homepage-footer {
     background-color: #00245A;
-    border-top: 4px solid #C68A00;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
