@@ -4,11 +4,14 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    width: 100%;
   }
   
   /* Styles for react-select */
   .juan-select-wrapper {
     font-family: 'Segoe UI', sans-serif;
+    width: 100%; /* Ensure select takes full width */
   }
   
   /* Header Styles */
@@ -19,6 +22,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .juan-header-left {
@@ -44,6 +49,8 @@
   .juan-main-content {
     display: flex;
     flex: 1;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   /* Left Side with Gradient and Image */
@@ -72,7 +79,7 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(to bottom, #C68A00 0%, #00245A 100%);
-    opacity: 0.7; /* 40% opacity for background only */
+    opacity: 0.7;
     z-index: -1;
   }
   
@@ -92,23 +99,26 @@
   /* Right Side with Form */
   .juan-right-side {
     width: 60%;
-    padding: 1rem; /* Reduced padding */
+    padding: 1rem;
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    box-sizing: border-box;
   }
   
   .juan-form-container {
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
-    padding: 1.5rem; /* Reduced padding */
+    padding: 1.5rem;
     background-color: #fff;
     border-radius: 8px;
+    box-sizing: border-box;
   }
   
   .juan-registration-form {
-    margin-top: 0.5rem; /* Reduced margin */
+    margin-top: 0.5rem;
+    width: 100%;
   }
   
   /* Form Grid Layout */
@@ -116,6 +126,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 0.8rem;
+    width: 100%;
   }
   
   /* Footer Styles */
@@ -127,6 +138,8 @@
     padding: 1rem 2rem;
     color: white;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .juan-footer-left {
@@ -269,10 +282,12 @@
   /* Reminder Box */
   .juan-reminder-box {
     background-color: #C68A00;
-    border-radius: 20px;
+    border-radius: 10px;
     padding: 15px;
     margin-bottom: 20px;
     color: white;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .juan-reminder-box p {
@@ -293,11 +308,13 @@
     display: flex;
     align-items: center;
     margin-bottom: 25px;
+    width: 100%;
   }
   
   .juan-step-circles {
     display: flex;
     align-items: center;
+    flex: 1;
   }
   
   .juan-step-circle {
@@ -311,6 +328,7 @@
     justify-content: center;
     font-weight: bold;
     font-size: 13px;
+    flex-shrink: 0;
   }
   
   .juan-step-circle.active {
@@ -318,9 +336,9 @@
   }
   
   .juan-step-line {
-    width: 60px;
     height: 2px;
     background-color: #D8D8D8;
+    flex: 1;
   }
   
   .juan-step-text {
@@ -328,6 +346,8 @@
     font-size: 16px;
     font-weight: bold;
     color: #000;
+    min-width: 80px;
+    flex-shrink: 0;
   }
   
   /* Form Rows and Groups */
@@ -335,12 +355,14 @@
     display: flex;
     align-items: center;
     margin-bottom: 15px;
+    width: 100%;
   }
   
   .juan-form-group {
     display: flex;
     flex-direction: column;
     margin-bottom: 0.75rem;
+    width: 100%;
   }
   
   /* Form Title */
@@ -349,13 +371,14 @@
     font-weight: bold;
     color: #000;
     margin-bottom: 3px;
+    width: 100%;
   }
   
   .juan-title-underline {
-    width: 100%;
     height: 1px;
     background-color: #A2A2A2;
     margin-bottom: 15px;
+    width: 100%;
   }
   
   /* Form Note */
@@ -363,6 +386,8 @@
     display: flex;
     align-items: flex-start;
     margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .juan-form-note p {
@@ -375,6 +400,7 @@
     color: #880D0C;
     margin-right: 8px;
     margin-top: 2px;
+    flex-shrink: 0;
   }
   
   .juan-form-group label {
@@ -392,6 +418,7 @@
     border-radius: 4px;
     font-size: 13px;
     height: 34px;
+    box-sizing: border-box;
   }
   
   /* Country Dropdown Styling */
@@ -424,6 +451,7 @@
     gap: 15px;
     margin-top: 1rem;
     grid-column: 1 / -1;
+    width: 100%;
   }
   
   .juan-cancel-button {
@@ -472,6 +500,7 @@
     border-radius: 8px;
     width: 400px;
     max-width: 90%;
+    box-sizing: border-box;
   }
   
   .juan-confirm-modal h3 {
@@ -513,6 +542,7 @@
     min-height: 34px !important;
     border-color: #ccc;
     box-shadow: none;
+    width: 100% !important;
   }
   
   .juan-select__control:hover {
@@ -541,6 +571,7 @@
   
   .juan-select__menu {
     font-size: 13px !important;
+    width: 100% !important;
   }
   
   .juan-select__option {
@@ -580,6 +611,10 @@
     .juan-footer-contact-container {
       margin: 0.5rem 1rem;
     }
+    
+    .juan-footer-links {
+      margin-left: 0;
+    }
   }
   
   @media (max-width: 900px) {
@@ -610,12 +645,14 @@
   
     .juan-form-container {
       padding: 1rem;
+      max-width: 100%;
     }
   
     .juan-register-footer {
       flex-direction: column;
       align-items: center;
       text-align: center;
+      padding: 1rem;
     }
   
     .juan-footer-left {
@@ -633,10 +670,11 @@
     .juan-footer-links,
     .juan-footer-social-link {
       margin-bottom: 1rem;
+      margin-left: 0;
     }
   
     .juan-footer-contact-container {
-      width: auto;
+      width: 100%;
       min-width: unset;
       display: flex;
       flex-direction: column;
@@ -662,13 +700,26 @@
     .juan-form-container {
       padding: 1rem 0.8rem;
     }
+    
+    .juan-step-line {
+      width: 40px;
+    }
+
+    .juan-step-text {
+        min-width: 70px;
+      }
   }
   
   @media (max-width: 480px) {
+    .juan-register-container {
+      width: 100%;
+    }
+    
     .juan-form-group input,
     .react-country-dropdown {
       height: 34px;
       font-size: 13px;
+      width: 100%;
     }
   
     .juan-register-header {
@@ -698,11 +749,22 @@
     .juan-back-button {
       width: 100%;
     }
+    
+    .juan-step-line {
+      width: 30px;
+    }
+    
+  .juan-step-text {
+    font-size: 14px;
+    margin-left: 10px;
+    min-width: 65px;
+  }
   
     .juan-footer-links {
       flex-direction: row;
       justify-content: center;
       gap: 0.5rem;
+      margin-left: 0;
     }
   
     .juan-footer-social-link {
@@ -712,6 +774,7 @@
     .juan-contact-item {
       font-size: 0.65rem;
       text-align: left;
+      width: 100%;
     }
   
     .juan-form-buttons {
@@ -722,11 +785,13 @@
     .juan-cancel-button,
     .juan-next-button {
       width: 100%;
+      justify-content: center;
     }
   
     .juan-select__control {
       min-height: 34px !important;
       height: 34px !important;
+      width: 100% !important;
     }
     
     .juan-select__value-container {
@@ -735,5 +800,23 @@
     
     .juan-select__indicators {
       height: 34px !important;
+    }
+    
+    /* Adjust reminder box and note to fit mobile screens */
+    .juan-reminder-box {
+      padding: 10px;
+    }
+    
+    .juan-form-note {
+      flex-direction: column;
+    }
+    
+    .juan-form-note p {
+      width: 100%;
+      margin-top: 5px;
+    }
+    
+    .juan-form-note .juan-note-icon {
+      align-self: flex-start;
     }
   }
