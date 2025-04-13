@@ -230,7 +230,9 @@ function HomePage() {
 
             </main>
 
+            {/* Footer */}
             <footer className="homepage-footer">
+                {/* Left section - Logo and school name */}
                 <div className="footer-left">
                     <img
                         src={SJDEFILogo}
@@ -242,28 +244,33 @@ function HomePage() {
                         <p className="footer-motto">Where faith and reason are expressed in Charity.</p>
                     </div>
                 </div>
-                <div className="footer-right">
-                    <div className="footer-top-row">
-                        <div className="footer-links">
-                            <a href="/about" className="footer-link">About</a>
-                            <span className="footer-link-separator">|</span>
-                            <a href="/terms" className="footer-link">Terms of Use</a>
-                            <span className="footer-link-separator">|</span>
-                            <a href="/privacy" className="footer-link">Privacy</a>
-                        </div>
-                        <a
-                            href="https://www.facebook.com/SJDEFIcollege"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="footer-social-link"
-                        >
-                            <FontAwesomeIcon icon={faFacebookSquare} className="social-icon" />
-                            <div className="social-text">
-                                <span className="social-find">Find us on</span>
-                                <span className="social-platform">Facebook</span>
-                            </div>
-                        </a>
+
+                {/* Center and right section - organized in a row */}
+                <div className="footer-content">
+                    {/* About, Terms, Privacy links */}
+                    <div className="footer-links">
+                        <a href="/about" className="footer-link">About</a>
+                        <span className="footer-link-separator">|</span>
+                        <a href="/terms" className="footer-link">Terms of Use</a>
+                        <span className="footer-link-separator">|</span>
+                        <a href="/privacy" className="footer-link">Privacy</a>
                     </div>
+
+                    {/* Facebook link */}
+                    <a
+                        href="https://www.facebook.com/SJDEFIcollege"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="footer-social-link"
+                    >
+                        <FontAwesomeIcon icon={faFacebookSquare} className="social-icon" />
+                        <div className="social-text">
+                            <span className="social-find">Find us on</span>
+                            <span className="social-platform">Facebook</span>
+                        </div>
+                    </a>
+
+                    {/* Contact Form section */}
                     <div className="footer-contact-container">
                         <div className="contact-title">
                             <FontAwesomeIcon icon={faPhone} />
