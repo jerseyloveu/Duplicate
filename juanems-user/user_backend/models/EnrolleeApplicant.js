@@ -7,7 +7,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   middleName: { type: String, trim: true },
   lastName: { type: String, required: true, trim: true },
   dob: { type: Date, required: true },
-  email: { type: String, required: true, trim: true }, // Removed unique: true
+  email: { type: String, required: true, trim: true },
   mobile: { type: String, required: true },
   nationality: { type: String, required: true },
   academicYear: { type: String, required: true },
@@ -21,7 +21,24 @@ const enrolleeApplicantSchema = new mongoose.Schema({
     enum: ['Active', 'Inactive', 'Pending Verification'],
     default: 'Pending Verification',
   },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  // New OTP related fields
+  otp: { type: String },
+  otpExpires: { type: Date },
+  otpAttempts: { 
+    type: Number, 
+    default: 0 
+  },
+  otpAttemptLockout: { 
+    type: Date 
+  },
+  lastOtpAttempt: { 
+    type: Date 
+  },
+  verificationExpires: { 
+    type: Date, 
+    default: () => new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+  }
 });
 
 // Hash password before save
@@ -31,5 +48,10 @@ enrolleeApplicantSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+// Method to check if OTP is valid
+enrolleeApplicantSchema.methods.isOtpValid = function() {
+  return this.otp && this.otpExpires && this.otpExpires > Date.now();
+};
 
 module.exports = mongoose.model('EnrolleeApplicant', enrolleeApplicantSchema);

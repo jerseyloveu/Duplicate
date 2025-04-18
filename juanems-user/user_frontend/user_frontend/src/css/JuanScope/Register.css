@@ -393,6 +393,154 @@
   flex-shrink: 0;
 }
 
+.juan-verify-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background-color: #f5f5f5;
+}
+
+.juan-verify-card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.juan-verify-icon {
+  margin-bottom: 20px;
+  color: #34A853;
+}
+
+.juan-verify-card h2 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.juan-verify-description {
+  color: #555;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.juan-otp-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.juan-otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.juan-otp-input {
+  width: 50px;
+  height: 55px;
+  font-size: 24px;
+  text-align: center;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0;
+  transition: border-color 0.3s;
+}
+
+.juan-otp-input:focus {
+  border-color: #34A853;
+  outline: none;
+}
+
+.juan-otp-timer {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 15px;
+}
+
+.juan-otp-error {
+  color: #e53935;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.juan-otp-success {
+  color: #34A853;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.juan-otp-actions {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.juan-resend-button {
+  background-color: #fff;
+  color: #34A853;
+  border: 1px solid #34A853;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.juan-resend-button:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  border-color: #ddd;
+  cursor: not-allowed;
+}
+
+.juan-verify-button {
+  background-color: #34A853;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.juan-verify-button:hover {
+  background-color: #2d9249;
+}
+
+.juan-verify-button:disabled {
+  background-color: #7fc893;
+  cursor: not-allowed;
+}
+
+.juan-verify-note {
+  margin-top: 25px;
+  font-size: 13px;
+  color: #777;
+}
+
+.otp-attempt-warning {
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
+
+/* Lockout Message */
+.otp-lockout-message {
+  color: #d32f2f;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+
 /* Reminder Box */
 .juan-reminder-box {
   background-color: #C68A00;

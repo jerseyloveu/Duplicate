@@ -1,23 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { faEnvelope, faArrowLeft, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faPhone, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faCheck, faArrowLeft, faEnvelopeOpen, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
-import '../../css/JuanScope/Register.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';
+import '../../css/JuanScope/Register.css';
 
 function VerifyEmail() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { email, firstName, fromRegistration, studentID } = location.state || {};
+  const navigate = useNavigate();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResending, setIsResending] = useState(false);
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(180); // 3 minutes in seconds
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(180); // 3 minutes for OTP
+  const [lockoutCountdown, setLockoutCountdown] = useState(0); // 5 minutes for lockout
+  const [canResend, setCanResend] = useState(false);
+  const [isLockedOut, setIsLockedOut] = useState(false); // Added this line
+  const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const inputsRef = useRef([]);
+
+
+  // Extract email and firstName from location state
+  const email = location.state?.email || '';
+  const firstName = location.state?.firstName || '';
+  const studentID = location.state?.studentID || '';
+  const fromRegistration = location.state?.fromRegistration || false;
 
   // Redirect if no email or not from registration
   useEffect(() => {
@@ -26,138 +36,213 @@ function VerifyEmail() {
     }
   }, [email, fromRegistration, navigate]);
 
-  // Countdown timer
+  // Timer for OTP expiration
+  // Replace your existing OTP timer useEffect with this:
   useEffect(() => {
-    if (countdown <= 0) return;
-
-    const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
-    }, 1000);
-
+    let timer;
+    if (!isLockedOut && otpCountdown > 0) {
+      timer = setTimeout(() => {
+        setOtpCountdown(prev => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
     return () => clearTimeout(timer);
-  }, [countdown]);
+  }, [otpCountdown, isLockedOut]);
 
-  const handleOtpChange = (e, index) => {
-    const value = e.target.value;
-    if (isNaN(value)) return;
+  // Replace your existing lockout timer useEffect with this:
+  useEffect(() => {
+    let timer;
+    if (isLockedOut && lockoutCountdown > 0) {
+      timer = setTimeout(() => {
+        setLockoutCountdown(prev => {
+          if (prev <= 1) {
+            setIsLockedOut(false);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [lockoutCountdown, isLockedOut]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Add this useEffect hook near the top of your component
+  useEffect(() => {
+    const fetchVerificationStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/enrollee-applicants/verification-status/${email}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setIsLockedOut(data.isLockedOut);
+          if (data.isLockedOut) {
+            setLockoutCountdown(data.lockoutTimeLeft);
+            setOtpCountdown(0);
+          } else {
+            setOtpCountdown(Math.max(0, data.otpTimeLeft));
+            setCanResend(data.otpTimeLeft <= 0);
+          }
+          setAttemptsLeft(data.attemptsLeft);
+        }
+      } catch (error) {
+        console.error('Error fetching verification status:', error);
+      }
+    };
+
+    if (email) {
+      fetchVerificationStatus();
+    }
+  }, [email]);
+
+  // Handle OTP input change
+  const handleChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return; // Only allow digits
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto focus to next input
+    // Clear errors
+    if (error) setError('');
+
+    // Auto-focus next input
     if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`).focus();
+      inputsRef.current[index + 1].focus();
     }
   };
 
-  const handleKeyDown = (e, index) => {
+  // Handle key press (backspace)
+  const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`).focus();
+      inputsRef.current[index - 1].focus();
     }
   };
 
+  // Handle paste
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    if (/^\d{6}$/.test(pastedData)) {
+      const newOtp = pastedData.split('');
+      setOtp(newOtp);
+      inputsRef.current[5].focus();
+    }
+  };
+
+  // Submit OTP
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const otpCode = otp.join('');
-
-    if (otpCode.length !== 6) {
-      setErrors({ otp: 'Please enter a 6-digit OTP' });
+    const otpString = otp.join('');
+    
+    if (otpString.length !== 6) {
+      setError('Please enter the complete 6-digit code');
       return;
     }
+  
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          otp: otpString
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        if (data.lockout) {
+          setIsLockedOut(true);
+          setLockoutCountdown(300); // 5 minutes in seconds
+          setOtpCountdown(0);
+          setCanResend(false);
+        }
+        if (data.attemptsLeft !== undefined) {
+          setAttemptsLeft(data.attemptsLeft);
+        }
+        throw new Error(data.message || 'Verification failed');
+      }
+  
+      setSuccess('Email verified successfully!');
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { 
+            fromVerification: true,
+            studentID: data.data?.studentID || studentID
+          } 
+        });
+      }, 2000);
+    } catch (err) {
+      setError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setIsSubmitting(true);
-    setErrors({});
+  // Resend OTP
+  const handleResend = async () => {
+    if (!canResend) return;
+
+    setResendLoading(true);
+    setError('');
+    setSuccess('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/verify-otp', {
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/resend-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otpCode })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'OTP verification failed');
+        throw new Error(data.message || 'Failed to resend verification code');
       }
 
-      setVerificationSuccess(true);
-    } catch (error) {
-      setErrors({ submit: error.message });
+      // Reset all counters and states
+      setOtpCountdown(180);
+      setLockoutCountdown(0);
+      setIsLockedOut(false);
+      setCanResend(false);
+      setAttemptsLeft(3);
+      setSuccess('New verification code sent to your email');
+
+      // Clear current OTP
+      setOtp(['', '', '', '', '', '']);
+      inputsRef.current[0].focus();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to resend verification code. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setResendLoading(false);
     }
   };
-
-  const handleResendOtp = async () => {
-    setIsResending(true);
-    setErrors({});
-
-    try {
-      const response = await fetch('http://localhost:5000/api/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to resend OTP');
-      }
-
-      setCountdown(180); // Reset countdown
-    } catch (error) {
-      setErrors({ resend: error.message });
-    } finally {
-      setIsResending(false);
-    }
-  };
-
-  if (verificationSuccess) {
-    return (
-      <div className="juan-register-container">
-        <header className="juan-register-header">
-          <div className="juan-header-left">
-            <img src={SJDEFILogo} alt="SJDEFI Logo" className="juan-logo-register" />
-            <div className="juan-header-text">
-              <h1>JUAN SCOPE</h1>
-            </div>
-          </div>
-        </header>
-
-        <div className="juan-main-content" style={{ justifyContent: 'center' }}>
-          <div className="juan-verification-success">
-            <h2>Email Verified Successfully!</h2>
-            <p>Your account has been successfully verified.</p>
-            <p>We've sent your student ID and password to your email at <strong>{email}</strong>.</p>
-            <p>Please check your inbox (and spam folder if you don't see it).</p>
-            
-            <div className="juan-student-id-box">
-              <p>Your Student ID:</p>
-              <h3>{studentID}</h3>
-            </div>
-
-            <button 
-              className="juan-next-button" 
-              onClick={() => navigate('/login')}
-              style={{ marginTop: '20px' }}
-            >
-              Proceed to Login
-            </button>
-          </div>
-        </div>
-
-        <footer className="juan-register-footer">
-          {/* Footer content same as your Register.js */}
-        </footer>
-      </div>
-    );
-  }
 
   return (
-    <div className="juan-register-container">
+    <div className="juan-verify-container">
       {/* Header */}
       <header className="juan-register-header">
         <div className="juan-header-left">
@@ -172,89 +257,86 @@ function VerifyEmail() {
         </div>
       </header>
 
-      <div className="juan-main-content" style={{ justifyContent: 'center' }}>
-        <div className="juan-verification-container">
-          <div className="juan-verification-header">
-            <FontAwesomeIcon icon={faEnvelope} className="juan-verification-icon" />
-            <h2>Verify Your Email Address</h2>
+      <div className="juan-verify-main">
+        <div className="juan-verify-card">
+          <div className="juan-verify-icon">
+            <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
           </div>
-
-          <p className="juan-verification-text">
-            We've sent a 6-digit verification code to <strong>{email}</strong>.
-            Please enter it below to verify your account.
+          <h2>Email Verification</h2>
+          <p className="juan-verify-description">
+            We've sent a verification code to <strong>{email}</strong>.
+            Please enter the 6-digit code below to verify your account.
           </p>
 
-          <form onSubmit={handleSubmit} className="juan-otp-form">
+          {/* OTP Input */}
+          <form onSubmit={handleSubmit} className="juan-otp-form" onPaste={handlePaste}>
             <div className="juan-otp-inputs">
               {otp.map((digit, index) => (
                 <input
                   key={index}
-                  id={`otp-${index}`}
+                  ref={el => inputsRef.current[index] = el}
                   type="text"
                   maxLength="1"
                   value={digit}
-                  onChange={(e) => handleOtpChange(e, index)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                  className={`juan-otp-input ${errors.otp ? 'juan-input-error' : ''}`}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  className="juan-otp-input"
+                  autoFocus={index === 0}
+                  disabled={isLockedOut || loading}
                 />
               ))}
             </div>
-            {errors.otp && <p className="juan-error-message">{errors.otp}</p>}
 
-            <div className="juan-countdown">
-              {countdown > 0 ? (
-                <p>Code expires in: {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}</p>
+            {/* Timer */}
+            <div className="juan-otp-timer">
+              {isLockedOut ? (
+                `Please wait ${formatTime(lockoutCountdown)} before trying again`
+              ) : canResend ? (
+                'OTP has expired'
               ) : (
-                <p>Code has expired</p>
+                `OTP expires in ${formatTime(otpCountdown)}`
               )}
             </div>
 
-            <button
-              type="submit"
-              className="juan-next-button"
-              disabled={isSubmitting || countdown <= 0}
-            >
-              {isSubmitting ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin /> Verifying...
-                </>
-              ) : (
-                'Verify Email'
-              )}
-            </button>
+            {/* Error/Success */}
+            {error && (
+              <div className="juan-otp-error">
+                {error}
+                {attemptsLeft < 3 && !error.includes('wait') && (
+                  <div style={{ marginTop: '5px' }}></div>
+                )}
+              </div>
+            )}
+            {success && <div className="juan-otp-success">{success}</div>}
 
-            <button
-              type="button"
-              className="juan-resend-button"
-              onClick={handleResendOtp}
-              disabled={isResending || countdown > 0}
-            >
-              {isResending ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin /> Sending...
-                </>
-              ) : (
-                'Resend Code'
-              )}
-            </button>
+            {/* Actions */}
+            <div className="juan-otp-actions">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={!canResend || resendLoading || isLockedOut}
+                className="juan-resend-button"
+              >
+                {resendLoading ? <FontAwesomeIcon icon={faSpinner} spin /> : 'Resend Code'}
+              </button>
+
+              <button
+                type="submit"
+                className="juan-verify-button"
+                disabled={loading || isLockedOut}
+              >
+                {loading ? <FontAwesomeIcon icon={faSpinner} spin /> : 'Verify Email'}
+              </button>
+            </div>
           </form>
 
-          {errors.submit && <p className="juan-error-message">{errors.submit}</p>}
-          {errors.resend && <p className="juan-error-message">{errors.resend}</p>}
-
-          <div className="juan-back-to-register">
-            <button
-              type="button"
-              className="juan-cancel-button"
-              onClick={() => navigate('/register')}
-            >
-              <FontAwesomeIcon icon={faArrowLeft} /> Back to Registration
-            </button>
-          </div>
+          <p className="juan-verify-note">
+            Note: If you do not verify your email within 5 days, your registration will expire.
+          </p>
         </div>
       </div>
 
- {/* Footer section remains the same */}
+      {/* Footer section remains the same */}
       <footer className="juan-register-footer">
         {/* Left section - Logo and school name */}
         <div className="juan-footer-left">

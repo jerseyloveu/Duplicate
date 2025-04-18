@@ -48,6 +48,10 @@ app.get("/api/test-db", async (req, res) => {
   }
 });
 
+// After database connection
+const startAccountCleaner = require('./services/accountCleaner');
+startAccountCleaner();
+
 // Example backend verification (Node.js)
 const verifyCaptcha = async (token) => {
   const secretKey = '0x4AAAAAABMiNbL8N-4SR9FfoAPqKdoJy-I';

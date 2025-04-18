@@ -162,7 +162,8 @@ const confirmRegistration = async () => {
         email: formData.email,
         firstName: formData.firstName,
         fromRegistration: true,
-        studentID: data.data.studentID || ''
+        studentID: data.data.studentID || '',
+        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
       }
     });
 
