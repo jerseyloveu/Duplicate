@@ -38,6 +38,7 @@
 .header-text p.motto {
     font-size: 0.7rem;
     color: #dddddd;
+    font-weight: 400;
     margin: 0.15rem 0 0 0;
     font-style: italic;
 }
@@ -47,6 +48,10 @@
     font-size: 0.9rem;
     text-align: right;
     min-width: 180px;
+}
+
+.header-right p {
+    color: #fff;
 }
 
 .header-right strong {
@@ -399,6 +404,7 @@
 }
 
 .about-description {
+    color: white;
     font-size: 0.95rem;
     line-height: 1.5;
     margin-bottom: 1.2rem;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faCheck, faArrowLeft, faEnvelopeOpen, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faEnvelopeOpen, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';
