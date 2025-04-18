@@ -326,24 +326,6 @@
   font-size: 14px;
 }
 
-.juan-resend-button {
-  background: none;
-  border: none;
-  color: #00245A;
-  cursor: pointer;
-  margin-top: 15px;
-  font-size: 14px;
-}
-
-.juan-resend-button:hover {
-  text-decoration: underline;
-}
-
-.juan-resend-button:disabled {
-  color: #999;
-  cursor: not-allowed;
-  text-decoration: none;
-}
 
 .juan-verification-success {
   max-width: 500px;
@@ -480,40 +462,37 @@
   display: flex;
   justify-content: space-between;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 20px;
+  gap: 10px;
+  align-items: center; /* This ensures buttons are aligned vertically */
 }
 
-.juan-resend-button {
-  background-color: #fff;
-  color: #34A853;
-  border: 1px solid #34A853;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.juan-resend-button:disabled {
-  background-color: #f5f5f5;
-  color: #999;
-  border-color: #ddd;
-  cursor: not-allowed;
+.juan-resend-button,
+.juan-verify-button {
+  flex: 1;
+  height: 40px;
+  padding: 0 15px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box; /* Ensures padding is included in height */
+  line-height: 1; /* Removes any extra line height */
 }
 
 .juan-verify-button {
   background-color: #34A853;
   color: white;
   border: none;
-  padding: 10px 25px;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.3s;
 }
 
+
 .juan-verify-button:hover {
-  background-color: #2d9249;
+  background-color: #155327;
 }
 
 .juan-verify-button:disabled {
@@ -910,13 +889,15 @@ input[name="mobile"]::placeholder {
 }
 
 .juan-otp-input {
-  width: 45px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
   text-align: center;
-  font-size: 1.5rem;
   border: 2px solid #ddd;
   border-radius: 8px;
-  transition: all 0.3s;
+  padding: 0;
+  transition: border-color 0.3s;
+  margin: 0 5px;
 }
 
 .juan-otp-input:focus {
@@ -944,43 +925,23 @@ input[name="mobile"]::placeholder {
   flex-wrap: wrap;
 }
 
-.juan-verify-button {
-  background-color: #046315;
-  color: white;
-  border: none;
-  padding: 10px 25px;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background-color 0.3s;
-}
 
-.juan-verify-button:hover {
-  background-color: #034a10;
-}
+
 
 .juan-resend-button {
-  background-color: #00245A;
-  color: white;
-  border: none;
-  padding: 10px 25px;
-  border-radius: 8px;
-  font-size: 1rem;
+  background-color: #fff;
+  color: #34A853;
+  border: 1px solid #34A853;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-weight: 500;
+  transition: all 0.3s;
 }
 
 .juan-resend-button:hover:not(:disabled) {
   background-color: #001a3d;
 }
 
-.juan-resend-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
 
 .juan-verify-help {
   margin-top: 1.5rem;

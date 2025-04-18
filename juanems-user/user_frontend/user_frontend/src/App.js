@@ -7,6 +7,8 @@ import Register from './components/JuanScope/Register'; // Add this import
 import Register2 from './components/JuanScope/Register2'
 import Register3 from './components/JuanScope/Register3';
 import VerifyEmail from './components/JuanScope/VerifyEmail';
+import ScopeLogin from './components/JuanScope/ScopeLogin';
+
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
           <Route path="/register2" element={<Register2 />} /> 
           <Route path="/register3" element={<Register3 />} /> 
           <Route path="/verify-email" element={<VerifyEmail />} /> 
+          <Route path="/scope-login" element={<ScopeLogin />} /> 
         </Routes>
       </div>
     </Router>

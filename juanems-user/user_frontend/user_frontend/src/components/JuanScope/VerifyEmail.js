@@ -147,12 +147,12 @@ function VerifyEmail() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
-    
+
     if (otpString.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
     }
-  
+
     setLoading(true);
     try {
       const response = await fetch('http://localhost:5000/api/enrollee-applicants/verify-otp', {
@@ -165,9 +165,9 @@ function VerifyEmail() {
           otp: otpString
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
         if (data.lockout) {
           setIsLockedOut(true);
@@ -180,14 +180,14 @@ function VerifyEmail() {
         }
         throw new Error(data.message || 'Verification failed');
       }
-  
+
       setSuccess('Email verified successfully!');
       setTimeout(() => {
-        navigate('/login', { 
-          state: { 
+        navigate('/scope-login', {
+          state: {
             fromVerification: true,
             studentID: data.data?.studentID || studentID
-          } 
+          }
         });
       }, 2000);
     } catch (err) {

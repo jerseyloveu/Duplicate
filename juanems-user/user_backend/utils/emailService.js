@@ -26,24 +26,44 @@ const generateOTP = () => {
 
 // Generate and send OTP
 const sendOTP = async (email, name, otp) => {
-  try {
-    const mailOptions = {
-      from: config.sender,
-      to: email,
-      subject: 'Your Account Verification OTP',
-      text: `Hello ${name},\n\nYour OTP for account verification is: ${otp}\nThis OTP will expire in 3 minutes.`,
-      html: `<p>Hello ${name},</p>
-             <p>Your OTP for account verification is: <strong>${otp}</strong></p>
-             <p>This OTP will expire in 3 minutes.</p>`
-    };
-
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    throw error;
-  }
-};
+    try {
+      const mailOptions = {
+        from: `${config.senderName} <${config.sender}>`,
+        to: email,
+        subject: 'JuanEMS: Account Verification Code',
+        text: `Dear ${name},\n\nThank you for registering with Juan Enrollment Management System (JuanEMS).\n\nYour verification code is: ${otp}\n\nThis code is valid for 3 minutes only. Please do not share this code with anyone.\n\nIf you did not request this verification, please ignore this email or contact our support team.\n\nBest regards,\nJuanEMS Administration`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0;">JuanEMS</h1>
+              <p style="color: #ecf0f1; margin: 5px 0 0;">Enrollment Management System</p>
+            </div>
+            <div style="padding: 20px;">
+              <h2 style="color: #2A67D5;">Account Verification</h2>
+              <p>Dear ${name},</p>
+              <p>Thank you for registering with Juan Enrollment Management System (JuanEMS).</p>
+              <p style="font-size: 18px; font-weight: bold; text-align: center; margin: 25px 0; letter-spacing: 2px;">${otp}</p>
+              <p>This verification code is valid for <strong>3 minutes</strong> only. Please enter this code in the verification page to complete your registration.</p>
+              <p style="color: #e74c3c; font-style: italic;">For your security, please do not share this code with anyone.</p>
+              <p>If you did not request this verification, please ignore this email or contact our support team immediately.</p>
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+              <p>Best regards,</p>
+              <p><strong>JuanEMS Administration</strong></p>
+            </div>
+            <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;">
+              <p>© ${new Date().getFullYear()} Juan Enrollment Management System. All rights reserved.</p>
+            </div>
+          </div>
+        `
+      };
+  
+      await transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      throw error;
+    }
+  };
 
 // Verify OTP
 const verifyOTP = async (email, otp) => {
@@ -135,11 +155,33 @@ const resendOTP = async (email) => {
 
       // Send email
       const mailOptions = {
-          from: config.sender,
-          to: email,
-          subject: 'Your New Verification OTP',
-          text: `Your new OTP is: ${otp}\nThis OTP will expire in 3 minutes.`,
-          html: `<p>Your new OTP is: <strong>${otp}</strong></p><p>This OTP will expire in 3 minutes.</p>`
+        from: `${config.senderName} <${config.sender}>`,
+        to: email,
+        subject: 'JuanEMS: New Verification Code',
+        text: `Dear ${name},\n\nAs requested, here is your new verification code for Juan Enrollment Management System (JuanEMS):\n\nVerification Code: ${otp}\n\nThis code is valid for 3 minutes only. Please do not share this code with anyone.\n\nIf you did not request this verification, please contact our support team immediately.\n\nBest regards,\nJuanEMS Administration`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0;">JuanEMS</h1>
+              <p style="color: #ecf0f1; margin: 5px 0 0;">Enrollment Management System</p>
+            </div>
+            <div style="padding: 20px;">
+              <h2 style="color: #2A67D5;">New Verification Code</h2>
+              <p>Dear ${name},</p>
+              <p>As requested, here is your new verification code for Juan Enrollment Management System (JuanEMS):</p>
+              <p style="font-size: 18px; font-weight: bold; text-align: center; margin: 25px 0; letter-spacing: 2px;">${otp}</p>
+              <p>This verification code is valid for <strong>3 minutes</strong> only.</p>
+              <p style="color: #e74c3c; font-style: italic;">For your security, please do not share this code with anyone.</p>
+              <p>If you did not request this verification, please contact our support team immediately.</p>
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+              <p>Best regards,</p>
+              <p><strong>JuanEMS Administration</strong></p>
+            </div>
+            <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;">
+              <p>© ${new Date().getFullYear()} Juan Enrollment Management System. All rights reserved.</p>
+            </div>
+          </div>
+        `
       };
 
       await transporter.sendMail(mailOptions);

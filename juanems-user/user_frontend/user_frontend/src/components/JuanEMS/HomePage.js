@@ -53,7 +53,7 @@ function HomePage() {
             restOfTitle: 'PE',
             description: 'Provides you the fastest way to apply for SJDEFI admission. Create your profile and set an appointment for your entrance examination.',
             buttons: [
-                { text: 'Login', style: 'login', destination: '/login' },
+                { text: 'Login', style: 'login', destination: '/scope-login' },
                 { text: 'Register', style: 'register', destination: '/register' },
             ],
         },
