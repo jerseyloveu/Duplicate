@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import HomePage from './components/JuanEMS/HomePage';
 import SplashScreen from './components/JuanEMS/SplashScreen';
 import Register from './components/JuanScope/Register'; // Add this import
+import Register2 from './components/JuanScope/Register2'
+import Register3 from './components/JuanScope/Register3';
+import VerifyEmail from './components/JuanScope/VerifyEmail';
 
 function App() {
   return (
@@ -15,7 +18,10 @@ function App() {
 
           {/* Other routes */}
           <Route path="/home" element={<HomePage />} />
-          <Route path="/register" element={<Register />} /> {/* Add this new route */}
+          <Route path="/register" element={<Register />} /> 
+          <Route path="/register2" element={<Register2 />} /> 
+          <Route path="/register3" element={<Register3 />} /> 
+          <Route path="/verify-email" element={<VerifyEmail />} /> 
         </Routes>
       </div>
     </Router>
@@ -23,3 +29,4 @@ function App() {
 }
 
 export default App;
+
