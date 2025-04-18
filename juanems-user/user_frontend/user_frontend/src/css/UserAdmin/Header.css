@@ -1,0 +1,60 @@
+.header-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-blue {
+  background-color: #00245A;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.header-yellow {
+  height: 10px;
+  width: 100%;
+  background-color: #C68A00;
+}
+
+.header-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.menu-icon {
+  font-size: 24px;
+}
+
+.header-text {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.juan-logo-register {
+  height: 40px;
+  max-width: 100px;
+  object-fit: contain;
+}
+
+@media (max-width: 300px) {
+  .header-blue {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-section {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .juan-logo-register {
+    align-self: center;
+  }
+}

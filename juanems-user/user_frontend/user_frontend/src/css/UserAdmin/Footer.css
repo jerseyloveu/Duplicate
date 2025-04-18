@@ -9,7 +9,7 @@
 }
 
 .footer-blue {
-    height: 12px;
+    min-height: 12px;
     padding: 10px;
     padding-left: 5%;
     width: 100%;
