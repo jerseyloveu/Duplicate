@@ -16,6 +16,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   academicLevel: { type: String, required: true },
   studentID: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  temporaryPassword: { type: String, select: false },
   status: {
     type: String,
     enum: ['Active', 'Inactive', 'Pending Verification'],
@@ -52,6 +53,16 @@ enrolleeApplicantSchema.pre('save', async function (next) {
 // Method to check if OTP is valid
 enrolleeApplicantSchema.methods.isOtpValid = function() {
   return this.otp && this.otpExpires && this.otpExpires > Date.now();
+};
+
+// Add this to your EnrolleeApplicant model file, before the module.exports
+enrolleeApplicantSchema.methods.getPlainPassword = async function() {
+  // We need to fetch the document again with the temporaryPassword selected
+  const user = await this.model('EnrolleeApplicant')
+    .findById(this._id)
+    .select('+temporaryPassword')
+    .exec();
+  return user.temporaryPassword;
 };
 
 module.exports = mongoose.model('EnrolleeApplicant', enrolleeApplicantSchema);

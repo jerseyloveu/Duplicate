@@ -7,6 +7,7 @@ import '../../css/JuanScope/ScopeLogin.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';
 import ScopeImage from '../../images/scope.png';
+import PasswordNotification from '../JuanScope/PasswordNotification';
 
 function ScopeLogin() {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ function ScopeLogin() {
 
   return (
     <div className="scope-login-container">
+      <PasswordNotification />
       {/* Left side with image and gradient overlay */}
       <div className="scope-login-left-side">
         <div className="scope-login-image-background">
