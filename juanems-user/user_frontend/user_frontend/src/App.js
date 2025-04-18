@@ -10,6 +10,8 @@ import VerifyEmail from './components/JuanScope/VerifyEmail';
 import ScopeLogin from './components/JuanScope/ScopeLogin';
 
 
+import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
+import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
 function App() {
   return (
     <Router>
@@ -25,6 +27,9 @@ function App() {
           <Route path="/register3" element={<Register3 />} /> 
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
+          <Route path="/register" element={<Register />} /> {/* Add this new route */}
+          <Route path='/admin' element={<Admin_LoginPage/>}/>
+          <Route path='/admin/dashboard' element={<Admin_DashboardPage/>}/>
         </Routes>
       </div>
     </Router>

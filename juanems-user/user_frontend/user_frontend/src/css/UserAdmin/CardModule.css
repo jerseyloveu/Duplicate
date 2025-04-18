@@ -1,0 +1,126 @@
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 100%;
+}
+
+.card-modules {
+    min-width: 220px;
+    max-width: calc((100% - 60px) / 4);
+    flex: 1 1 calc(25% - 20px);
+    height: 130px;
+    background-color: white;
+    display: flex;
+    cursor: pointer;
+    border-radius: 5px;
+    border: 1px solid #989898;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.invisible-module {
+    visibility: hidden;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.card-content {
+    flex: 1;
+    padding: 15px;
+    word-wrap: break-word;
+    overflow: hidden;
+}
+
+.card-content:first-child {
+    flex: 1 1 20%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.card-content:last-child {
+    flex: 1 1 80%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: right;
+}
+
+
+.card-heading {
+    font-size: 1.3rem;
+    font-weight: 700;
+    overflow-wrap: break-word;
+}
+
+.card-message {
+    font-size: .8rem;
+    overflow-wrap: break-word;
+}
+
+
+.active {
+    background-color: #2A67D5;
+    color: white;
+}
+
+.icon-container {
+    height: 50px;
+    width: 50px;
+    border-radius: 10px;
+    background-color: #E8E8E8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card-modules .anticon {
+    color: #5F6366;
+    font-size: 24px;
+}
+
+
+@media screen and (max-width: 1200px) {
+    .card-modules {
+        flex: 1 1 calc((100% - 40px) / 3);
+        max-width: calc((100% - 40px) / 3);
+        /* 3 cards per row on medium screens, fills the width properly */
+    }
+}
+
+
+@media screen and (max-width: 900px) {
+    .card-modules {
+        flex: 1 1 calc(50% - 20px);
+        max-width: calc((50% - 20px));
+        /* 2 cards per row on smaller screens */
+    }
+
+    .card-heading {
+        font-size: 1rem;
+        font-weight: 700;
+        overflow-wrap: break-word;
+        /* Breaks the heading text into multiple lines if necessary */
+    }
+
+    .card-message {
+        font-size: .8rem;
+        overflow-wrap: break-word;
+        /* Prevents message text from overflowing */
+    }
+
+    .invisible-module {
+        display: none;
+    }
+}
+
+    @media screen and (max-width: 500px) {
+        .card-modules {
+            flex: 1 1 100%;
+            max-width: 100%;
+            /* 1 card per row on extra small screens */
+        }
+    }

@@ -68,7 +68,7 @@ function HomePage() {
             title: 'USER ADMIN',
             description: 'A dedicated portal for authorized administrators to access and manage essential system modules.',
             buttons: [
-                { text: 'Login', style: 'login', destination: '/queue' },
+                { text: 'Login', style: 'login', destination: '/admin' },
             ],
         },
     ];
