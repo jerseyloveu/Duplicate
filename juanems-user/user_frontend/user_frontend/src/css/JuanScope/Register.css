@@ -519,6 +519,13 @@
   margin-top: 10px;
 }
 
+.juan-verify-card.password-reset {
+  border-top: 4px solid #C68A00;
+}
+
+.juan-verify-card.password-reset .juan-verify-icon {
+  color: #C68A00;
+}
 
 /* Reminder Box */
 .juan-reminder-box {
