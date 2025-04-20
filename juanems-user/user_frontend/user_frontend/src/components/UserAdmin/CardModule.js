@@ -1,9 +1,8 @@
 import React from 'react';
-import { FaRegFileAlt } from "react-icons/fa";
 import '../../css/UserAdmin/CardModule.css';
 import { useNavigate } from 'react-router-dom';
 
-const CardModule = ({ title, description, path, isActive = false, isInvisible = false}) => {
+const CardModule = ({ title, description, path, isActive = false, isInvisible = false, icon: Icon }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -16,7 +15,7 @@ const CardModule = ({ title, description, path, isActive = false, isInvisible = 
     <div onClick={handleClick} className={`card-modules ${isActive ? 'active' : ''} ${isInvisible ? 'invisible-module' : ''}`}>
       <div className='card-content'>
         <div className='icon-container'>
-          <FaRegFileAlt />
+        {Icon && <Icon style={{ fontSize: '1.5rem'}} />} 
         </div>
       </div>
       <div className='card-content'>
