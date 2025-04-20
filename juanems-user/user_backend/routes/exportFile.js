@@ -71,4 +71,38 @@ router.get('/subjects', async (req, res) => {
   }
 });
 
+const Section = require('../models/Sections'); 
+
+router.get('/sections', async (req, res) => {
+  try {
+    const sections = await Section.find().lean();
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `sections-report-${currentDate}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const modifiedSections = sections.map((section, index) => ({
+      ...section,
+      __rowNumber: (index + 1).toString(),
+    }));
+
+    const sectionColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'Section Name', property: 'sectionName', width: 100 },
+      { label: 'Grade Level', property: 'gradeLevel', width: 70 },
+      { label: 'Strand', property: 'strand', width: 80 },
+      { label: 'Capacity', property: 'capacity', width: 60 },
+      { label: 'Status', property: 'status', width: 50 },
+    ];
+
+    pdfService.buildPDF(modifiedSections, sectionColumns, 'Sections Report', (chunk) => res.write(chunk), () => res.end());
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Failed to export sections' });
+  }
+});
+
+
 module.exports = router;

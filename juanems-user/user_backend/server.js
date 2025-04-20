@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
 const accountRoutes = require('./routes/accountRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
+const sectionRoutes = require('./routes/sectionRoutes');
 const exportFile = require('./routes/exportFile');
 const connectDB = require('./config/db');
 require('dotenv').config();
@@ -78,6 +79,7 @@ app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
 app.use('/api/admin', accountRoutes);
 app.use('/api/admin/export', exportFile);
 app.use('/api/admin/subjects', subjectRoutes);
+app.use('/api/admin/sections', sectionRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

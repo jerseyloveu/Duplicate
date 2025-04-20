@@ -25,6 +25,7 @@ import Admin_CreateAnnouncements from './components/UserAdmin/CreateAnnouncement
 import Admin_CreateAccount from './components/UserAdmin/CreateAccount'; 
 import Admin_ManageStrandsPage from './components/UserAdmin/ManageStrandsPage'; 
 import Admin_ManageSectionsPage from './components/UserAdmin/ManageSectionsPage'; 
+import Admin_CreateSection from './components/UserAdmin/CreateSection'; 
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 
@@ -63,7 +64,10 @@ function App() {
           <Route path='/admin/manage-overall-system-logs' element={<Admin_OverallSystemLogs/>}/>
           <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
           <Route path='/admin/manage-strands' element={<Admin_ManageStrandsPage/>}/>
+          
           <Route path='/admin/manage-sections' element={<Admin_ManageSectionsPage/>}/>
+          <Route path='/admin/manage-sections/create' element={<Admin_CreateSection/>}/>
+          <Route path="/admin/manage-sections/edit/:id" element={<Admin_CreateSection />} />
 
           <Route path='/admin/manage-subjects' element={<Admin_ManageSubjectsPage/>}/>
           <Route path='/admin/manage-subjects/create' element={<Admin_CreateSubject/>}/>
