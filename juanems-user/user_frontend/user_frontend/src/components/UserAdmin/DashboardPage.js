@@ -1,17 +1,17 @@
-// Dashboard.js
+import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
+import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 import React from 'react';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import '../../css/UserAdmin/DashboardPage.css';
 import '../../css/UserAdmin/Global.css';
+import CardModule from './CardModule';
 import Footer from './Footer';
 import Header from './Header';
-import CardModule from './CardModule';
 
 const Dashboard = () => {
   return (
-    <div className="main dashboard-container">
+    <div className="main main-container">
       <Header />
-      <div className="dashboard-content">
+      <div className="main-content">
         <div className='content-announcement'>
           <div className='announcement-left'>
             <p className='heading'>Dashboard</p>
@@ -22,8 +22,8 @@ const Dashboard = () => {
               <div className='noticeboard-header'>
                 <p className='subheading'>Notice Board</p>
                 <div className='arrows'>
-                  <LeftOutlined />
-                  <RightOutlined />
+                  <MdOutlineKeyboardArrowLeft />
+                  <MdOutlineKeyboardArrowRight />
                 </div>
               </div>
               <div className='divider' />
@@ -48,55 +48,57 @@ const Dashboard = () => {
             <CardModule
               title="Manage Applications"
               description="Review, process, and track student applications"
-              isActive={true}
+              path="/admin/manage-applications"
             />
             <CardModule
               title="Manage Accounts"
               description="Manage JuanIS Student Accounts"
+              path="/admin/manage-accounts"
             />
             <CardModule
               title="Manage Student Accounts"
               description="Manage JuanIS Student Accounts"
+              path="/admin/manage-accounts"
             />
             <CardModule
               title="Manage Student Records"
               description="View and update student academic records"
-              isInvisible={false}
+              path="/admin/manage-student-records"
             />
             <CardModule
               title="Manage Enrollment"
               description="Oversee and process student enrollment statuses"
-              isInvisible={false}
+              path="/admin/manage-enrollment"
             />
             <CardModule
               title="Manage Schedule"
               description="Set and adjust class schedules and timetables"
-              isInvisible={false}
+              path="/admin/manage-schedule"
             />
             <CardModule
               title="Manage Program"
               description="Configure degree programs and course structures"
-              isInvisible={false}
+              path="/admin/manage-program"
             />
             <CardModule
               title="Manage Payments"
-              description="Control and update queuing system"
-              isInvisible={false}
+              description="Control and update payment system"
+              path="/admin/manage-payments"
             />
             <CardModule
               title="Manage Queue"
               description="Control and update queuing system"
-              isInvisible={false}
+              path="/admin/manage-queue"
             />
             <CardModule
               title="Overall System Logs"
               description="Monitor logins, account updates, and system changes."
-              isInvisible={false}
+              path="/admin/manage-overall-system-logs"
             />
             <CardModule
               title="Create Announcements"
               description="Post important updates for students and staff"
-              isInvisible={false}
+              path="/admin/create-announcements"
             />
           </div>
         </div>

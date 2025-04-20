@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
+const accountRoutes = require('./routes/accountRoutes');
 const connectDB = require('./config/db');
 require('dotenv').config();
 
@@ -71,6 +72,9 @@ const verifyCaptcha = async (token) => {
 // Routes
 app.use('/api/dropdown', require('./routes/dropdownRoutes'));
 app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
+
+// Routes (Admin)
+app.use('/api/admin', accountRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

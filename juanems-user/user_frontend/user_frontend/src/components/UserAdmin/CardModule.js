@@ -1,13 +1,22 @@
 import React from 'react';
-import { FileTextOutlined } from '@ant-design/icons';
+import { FaRegFileAlt } from "react-icons/fa";
 import '../../css/UserAdmin/CardModule.css';
+import { useNavigate } from 'react-router-dom';
 
-const CardModule = ({ title, description, isActive = false, isInvisible = false }) => {
+const CardModule = ({ title, description, path, isActive = false, isInvisible = false}) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (path) {
+      navigate(path);
+    }
+  };
+
   return (
-    <div className={`card-modules ${isActive ? 'active' : ''} ${isInvisible ? 'invisible-module' : ''}`}>
+    <div onClick={handleClick} className={`card-modules ${isActive ? 'active' : ''} ${isInvisible ? 'invisible-module' : ''}`}>
       <div className='card-content'>
         <div className='icon-container'>
-          <FileTextOutlined />
+          <FaRegFileAlt />
         </div>
       </div>
       <div className='card-content'>

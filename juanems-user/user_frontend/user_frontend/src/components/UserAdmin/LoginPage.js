@@ -1,4 +1,5 @@
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { FaUser } from "react-icons/fa";
+import { FaLock } from "react-icons/fa";
 import { Button, Input } from 'antd';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -33,9 +34,9 @@ const LoginPage = () => {
         <div className="right-box">
           <h1 className='login-title'>Sign In</h1>
           <label className="input-label">Employee No.</label>
-          <Input className="custom-input" addonBefore={<UserOutlined />} placeholder="Enter Employee No." />
+          <Input className="custom-input" addonBefore={<FaUser/>} placeholder="Enter Employee No." />
           <label className="input-label">Password</label>
-          <Input className="custom-input" addonBefore={<LockOutlined />} placeholder="Enter Password" />
+          <Input className="custom-input" addonBefore={<FaLock/>} placeholder="Enter Password" />
           <Button type='ghost' className="login-btn" onClick={handleLogin}>Login</Button>
         </div>
       </div>

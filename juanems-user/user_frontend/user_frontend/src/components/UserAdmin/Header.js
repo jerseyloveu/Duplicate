@@ -2,7 +2,7 @@ import React from 'react';
 import '../../css/UserAdmin/Header.css';
 import '../../css/UserAdmin/Global.css';
 import '../../css/JuanScope/Register.css';
-import { MenuOutlined } from '@ant-design/icons';
+import { IoMdMenu } from "react-icons/io";
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 
 const Header = () => {
@@ -10,7 +10,7 @@ const Header = () => {
     <div className='header-container'>
       <div className='header-blue'>
         <div className='header-section'>
-          <MenuOutlined className="menu-icon" />
+          <IoMdMenu className="menu-icon" />
           <span className="header-text">DEPARTMENT NAME</span>
         </div>
         <img

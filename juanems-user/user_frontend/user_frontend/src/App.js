@@ -12,6 +12,18 @@ import ScopeLogin from './components/JuanScope/ScopeLogin';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
+import Admin_ManageAccountsPage from './components/UserAdmin/ManageAccountsPage';
+import Admin_ManageApplicationsPage from './components/UserAdmin/ManageApplicationsPage';
+import Admin_ManageEnrollmentPage from './components/UserAdmin/ManageEnrollmentPage'; 
+import Admin_ManagePaymentsPage from './components/UserAdmin/ManagePaymentsPage'; 
+import Admin_ManageProgramPage from './components/UserAdmin/ManageProgramPage'; 
+import Admin_ManageQueuePage from './components/UserAdmin/ManageQueuePage'; 
+import Admin_ManageSchedulePage from './components/UserAdmin/ManageSchedulePage'; 
+import Admin_ManageStudentRecordsPage from './components/UserAdmin/ManageStudentRecordsPage'; 
+import Admin_OverallSystemLogs from './components/UserAdmin/OverallSystemLogsPage'; 
+import Admin_CreateAnnouncements from './components/UserAdmin/CreateAnnouncementsPage'; 
+import Admin_CreateAccount from './components/UserAdmin/CreateAccount'; 
+
 function App() {
   return (
     <Router>
@@ -30,6 +42,19 @@ function App() {
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
           <Route path='/admin/dashboard' element={<Admin_DashboardPage/>}/>
+          <Route path='/admin/manage-accounts' element={<Admin_ManageAccountsPage/>}/>
+          <Route path='/admin/manage-applications' element={<Admin_ManageApplicationsPage/>}/>
+          <Route path='/admin/manage-enrollment' element={<Admin_ManageEnrollmentPage/>}/>
+          <Route path='/admin/manage-payments' element={<Admin_ManagePaymentsPage/>}/>
+          <Route path='/admin/manage-program' element={<Admin_ManageProgramPage/>}/>
+          <Route path='/admin/manage-queue' element={<Admin_ManageQueuePage/>}/>
+          <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
+          <Route path='/admin/manage-student-records' element={<Admin_ManageStudentRecordsPage/>}/>
+          <Route path='/admin/manage-overall-system-logs' element={<Admin_OverallSystemLogs/>}/>
+          <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
+          <Route path='/admin/manage-accounts/create' element={<Admin_CreateAccount/>}/>
+          <Route path="/admin/manage-accounts/edit/:id" element={<Admin_CreateAccount />} />
+
         </Routes>
       </div>
     </Router>
