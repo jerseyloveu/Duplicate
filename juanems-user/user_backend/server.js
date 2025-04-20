@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
 const accountRoutes = require('./routes/accountRoutes');
+const subjectRoutes = require('./routes/subjectRoutes');
 const exportFile = require('./routes/exportFile');
 const connectDB = require('./config/db');
 require('dotenv').config();
@@ -13,7 +14,6 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 
 // Test database connection
@@ -77,6 +77,7 @@ app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
 // Routes (Admin)
 app.use('/api/admin', accountRoutes);
 app.use('/api/admin/export', exportFile);
+app.use('/api/admin/subjects', subjectRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

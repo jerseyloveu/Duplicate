@@ -49,7 +49,10 @@ const ManageAccountsPage = () => {
         const createdAtFormatted = dayjs(item.createdAt).isValid()
           ? dayjs(item.createdAt).format('MMM D, YYYY h:mm A').toLowerCase()
           : '';
-
+        const updatedAtFormatted = dayjs(item.updatedAt).isValid()
+          ? dayjs(item.updatedAt).format('MMM D, YYYY h:mm A').toLowerCase()
+          : '';
+          
         return (
           fullName.includes(search.toLowerCase()) ||
           item.userID.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,7 +60,8 @@ const ManageAccountsPage = () => {
           item.role.toLowerCase().includes(search.toLowerCase()) ||
           item.status.toLowerCase().includes(search.toLowerCase()) ||
           item.department.toLowerCase().includes(search.toLowerCase()) ||
-          createdAtFormatted.includes(search.toLowerCase()) // This line enables date search
+          createdAtFormatted.includes(search.toLowerCase()) || 
+          updatedAtFormatted.includes(search.toLowerCase())
         );
       });
 

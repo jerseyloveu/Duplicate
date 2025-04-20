@@ -2,30 +2,72 @@ const express = require('express');
 const router = express.Router();
 const pdfService = require('../services/pdf-service');
 const Account = require('../models/Accounts');
+const Subject = require('../models/Subjects');
 
 router.get('/accounts', async (req, res) => {
   try {
     const accounts = await Account.find().lean();
-    
-    // Get current date in YYYY-MM-DD format
+
     const currentDate = new Date().toISOString().split('T')[0];
     const fileName = `accounts-report-${currentDate}.pdf`;
-    
-    // Log the file name to confirm the correct format
-    console.log('Generated file name:', fileName);
 
-    // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-    // Log the headers to confirm
-    console.log('Response Headers:', res.getHeaders());
+    const modifiedAccounts = accounts.map((acc, index) => ({
+      ...acc,
+      __rowNumber: (index + 1).toString(),
+      fullName: `${acc.firstName || ''} ${acc.middleName || ''} ${acc.lastName || ''}`.replace(/\s+/g, ' ').trim(),
+    }));    
 
-    // Create and send the PDF file
-    pdfService.buildPDF(accounts, (chunk) => res.write(chunk), () => res.end());
+    const accountColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'User ID', property: 'userID', width: 100 },
+      { label: 'Name', property: 'fullName', width: 140 }, 
+      { label: 'Email', property: 'email', width: 170 },
+      { label: 'Role', property: 'role', width: 50 },
+      { label: 'Dept.', property: 'department', width: 70 },
+      { label: 'Mobile', property: 'mobile', width: 100 },
+      { label: 'Status', property: 'status', width: 60 },
+    ];    
+
+    pdfService.buildPDF(modifiedAccounts, accountColumns, 'Accounts Report', (chunk) => res.write(chunk), () => res.end());
   } catch (error) {
     console.error('Export failed:', error);
     res.status(500).json({ error: 'Failed to export accounts' });
+  }
+});
+
+router.get('/subjects', async (req, res) => {
+  try {
+    const subjects = await Subject.find().lean();
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `subjects-report-${currentDate}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    // Define columns specific to subjects
+    const subjectColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'Subject ID', property: 'subjectID', width: 70 },
+      { label: 'Code', property: 'subjectCode', width: 60 },
+      { label: 'Name', property: 'subjectName', width: 100 },
+      { label: 'WW', property: 'writtenWork', width: 30 },
+      { label: 'PT', property: 'performanceTask', width: 30 },
+      { label: 'QA', property: 'quarterlyAssessment', width: 30 },
+      { label: 'Classification', property: 'classification', width: 85 },
+      { label: 'Strand', property: 'strand', width: 50 },
+      { label: 'Term', property: 'term', width: 40 },
+      { label: 'Grade Level', property: 'gradeLevel', width: 70 },
+      { label: 'Status', property: 'status', width: 50 },
+    ];
+
+    pdfService.buildPDF(subjects, subjectColumns, 'Subjects Report', (chunk) => res.write(chunk), () => res.end());
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Failed to export subjects' });
   }
 });
 

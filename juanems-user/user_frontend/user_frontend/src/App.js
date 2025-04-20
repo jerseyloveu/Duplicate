@@ -26,6 +26,7 @@ import Admin_CreateAccount from './components/UserAdmin/CreateAccount';
 import Admin_ManageStrandsPage from './components/UserAdmin/ManageStrandsPage'; 
 import Admin_ManageSectionsPage from './components/UserAdmin/ManageSectionsPage'; 
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
+import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 
 function App() {
   return (
@@ -43,9 +44,15 @@ function App() {
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
+
+          {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
           <Route path='/admin/dashboard' element={<Admin_DashboardPage/>}/>
+
           <Route path='/admin/manage-accounts' element={<Admin_ManageAccountsPage/>}/>
+          <Route path='/admin/manage-accounts/create' element={<Admin_CreateAccount/>}/>
+          <Route path="/admin/manage-accounts/edit/:id" element={<Admin_CreateAccount />} />
+
           <Route path='/admin/manage-applications' element={<Admin_ManageApplicationsPage/>}/>
           <Route path='/admin/manage-enrollment' element={<Admin_ManageEnrollmentPage/>}/>
           <Route path='/admin/manage-payments' element={<Admin_ManagePaymentsPage/>}/>
@@ -55,11 +62,13 @@ function App() {
           <Route path='/admin/manage-student-records' element={<Admin_ManageStudentRecordsPage/>}/>
           <Route path='/admin/manage-overall-system-logs' element={<Admin_OverallSystemLogs/>}/>
           <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
-          <Route path='/admin/manage-accounts/create' element={<Admin_CreateAccount/>}/>
-          <Route path="/admin/manage-accounts/edit/:id" element={<Admin_CreateAccount />} />
           <Route path='/admin/manage-strands' element={<Admin_ManageStrandsPage/>}/>
           <Route path='/admin/manage-sections' element={<Admin_ManageSectionsPage/>}/>
+
           <Route path='/admin/manage-subjects' element={<Admin_ManageSubjectsPage/>}/>
+          <Route path='/admin/manage-subjects/create' element={<Admin_CreateSubject/>}/>
+          <Route path="/admin/manage-subjects/edit/:id" element={<Admin_CreateSubject />} />
+
         </Routes>
       </div>
     </Router>
