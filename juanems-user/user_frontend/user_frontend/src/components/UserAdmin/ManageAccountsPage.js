@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button, DatePicker, Input, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import utc from 'dayjs/plugin/utc';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
-import { FaPen, FaPlus } from 'react-icons/fa';
+import { FaPen, FaPlus, FaSearch, FaUserCheck, FaUserTimes } from 'react-icons/fa';
 import { FiFilter } from 'react-icons/fi';
+import { GrPowerReset } from "react-icons/gr";
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft, MdOutlineManageAccounts } from 'react-icons/md';
-import { FaSearch } from "react-icons/fa";
 
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/ManageAccountsPage.css';
 
-import Header from './Header';
 import Footer from './Footer';
+import Header from './Header';
 
 dayjs.extend(utc);
 dayjs.extend(isBetween);
@@ -119,6 +119,24 @@ const ManageAccountsPage = () => {
   const handleBack = () => navigate('/admin/dashboard');
   const handleCreate = () => navigate('/admin/manage-accounts/create');
 
+  const handleStatusToggle = async (record) => {
+    const updatedStatus = record.status === 'Activated' ? 'Deactivated' : 'Activated';
+  
+    try {
+      const response = await fetch(`/api/admin/accounts/${record._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: updatedStatus }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to update status');
+  
+      fetchAccounts(searchTerm); // Refresh table
+    } catch (error) {
+      console.error('Error toggling status:', error);
+    }
+  };
+  
   // Table column definitions
   const columns = [
     {
@@ -227,13 +245,34 @@ const ManageAccountsPage = () => {
       title: 'Action',
       key: 'action',
       fixed: 'right',
-      width: 120,
+      width: 280,
       render: (_, record) => (
-        <Button icon={<FaPen />} onClick={() => navigate(`/admin/manage-accounts/edit/${record.key}`)}>
-          Edit
-        </Button>
-      ),
-    },
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <Button
+            icon={<FaPen />}
+            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+            onClick={() => navigate(`/admin/manage-accounts/edit/${record.key}`)}
+          >
+            Edit
+          </Button>
+          <Button
+            icon={record.status === 'Activated' ? <FaUserTimes /> : <FaUserCheck />}
+            danger={record.status === 'Activated'}
+            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+            onClick={() => handleStatusToggle(record)}
+          >
+            {record.status === 'Activated' ? 'Deactivate' : 'Activate'}
+          </Button>
+          <Button
+            icon={<GrPowerReset />}
+            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+            onClick={() => console.log('Reset password clicked for', record.userID)}
+          >
+            Reset Password
+          </Button>
+        </div>
+      )      
+    }
   ];
 
   // Reusable date range filter component
