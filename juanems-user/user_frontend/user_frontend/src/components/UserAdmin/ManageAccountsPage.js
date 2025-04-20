@@ -199,6 +199,7 @@ const ManageAccountsPage = () => {
       key: 'department',
       filters: [
         { text: 'SHS', value: 'SHS' },
+        { text: 'Faculty', value: 'Faculty' },
         { text: 'Admissions', value: 'Admissions' },
         { text: 'Registrar', value: 'Registrar' },
         { text: 'Accounting', value: 'Accounting' },

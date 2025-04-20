@@ -18,6 +18,7 @@ const generateUserID = (role, department) => {
     return `${currentYear}-${randomID}`;
   } else if (role === 'Staff') {
     const departmentCode = {
+      'Faculty': 'FCT',
       'Admissions': 'ADM',
       'Registrar': 'REG',
       'Accounting': 'ACC',
@@ -296,6 +297,7 @@ const CreateAccount = () => {
                     <Select.Option value="SHS">SHS</Select.Option> // Only show SHS for student
                   ) : (
                     <>
+                      <Select.Option value="Faculty">Faculty</Select.Option>
                       <Select.Option value="Admissions">Admissions</Select.Option>
                       <Select.Option value="Registrar">Registrar</Select.Option>
                       <Select.Option value="Accounting">Accounting</Select.Option>
