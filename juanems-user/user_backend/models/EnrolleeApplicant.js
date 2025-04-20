@@ -36,6 +36,9 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   lastOtpAttempt: { 
     type: Date 
   },
+  passwordResetOtp: { type: String },
+  passwordResetOtpExpires: { type: Date },
+  lastPasswordReset: { type: Date },
   verificationExpires: { 
     type: Date, 
     default: () => new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
@@ -44,10 +47,21 @@ const enrolleeApplicantSchema = new mongoose.Schema({
 
 // Hash password before save
 enrolleeApplicantSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  // Only hash the password if it has been modified and is not already hashed
+  if (!this.isModified('password') || this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
+    return next();
+  }
+
+  try {
+    console.log('Original password before hash:', this.password); // Debug log
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    console.log('Hashed password:', this.password); // Debug log
+    next();
+  } catch (err) {
+    console.error('Error hashing password:', err);
+    next(err);
+  }
 });
 
 // Method to check if OTP is valid

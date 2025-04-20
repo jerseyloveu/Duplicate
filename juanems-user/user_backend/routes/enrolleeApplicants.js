@@ -4,6 +4,7 @@ const EnrolleeApplicant = require('../models/EnrolleeApplicant');
 const emailService = require('../utils/emailService');
 const { generateOTP, sendOTP } = require('../utils/emailService');
 const otpGenerator = require('otp-generator');
+const bcrypt = require('bcryptjs');
 
 function generateStudentID() {
   const year = new Date().getFullYear();
@@ -237,6 +238,8 @@ router.get('/verification-status/:email', async (req, res) => {
     }
 
     const response = {
+      status: applicant.status,
+      firstName: applicant.firstName, // Add this line
       isLockedOut: applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date(),
       lockoutTimeLeft: applicant.otpAttemptLockout ? Math.ceil((applicant.otpAttemptLockout - new Date()) / 1000) : 0,
       otpTimeLeft: applicant.otpExpires ? Math.ceil((applicant.otpExpires - new Date()) / 1000) : 0,
@@ -247,6 +250,165 @@ router.get('/verification-status/:email', async (req, res) => {
   } catch (error) {
     console.error('Error getting verification status:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add this route to enrolleeApplicants.js
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+        errorType: 'validation'
+      });
+    }
+
+    // Find the applicant
+    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    if (!applicant) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Generate a secure random password
+    const newPassword = generateRandomPassword();
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update the password
+    applicant.password = hashedPassword;
+    await applicant.save();
+
+    // Send email with new password
+    try {
+      await emailService.sendPasswordEmail(
+        applicant.email,
+        applicant.firstName,
+        newPassword,
+        applicant.studentID
+      );
+
+      return res.json({
+        message: 'Password reset successful. New password has been sent to your email.',
+      });
+    } catch (emailError) {
+      console.error('Failed to send password email:', emailError);
+      return res.status(500).json({
+        message: 'Password was reset but failed to send email. Please contact support.',
+        errorType: 'email_failed'
+      });
+    }
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
+      message: 'Server error during password reset',
+      errorType: 'server_error'
+    });
+  }
+});
+
+// Add these new routes
+router.post('/request-password-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if email exists
+    const user = await EnrolleeApplicant.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'Email not found' });
+    }
+
+    // Generate OTP
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
+
+    // In the /request-password-reset route
+    user.passwordResetOtp = otp;
+    user.passwordResetOtpExpires = new Date(Date.now() + 3 * 60 * 1000); // Changed from 10 to 3 minutes
+    await user.save();
+
+    // Send OTP email
+    await emailService.sendOTP(email, user.firstName, otp);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your email'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message || 'Failed to process password reset request'
+    });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    
+    // Find user with passwordResetOtp selected
+    const user = await EnrolleeApplicant.findOne({ email })
+      .select('+passwordResetOtp +passwordResetOtpExpires +password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'Email not found' });
+    }
+
+    // Check OTP
+    if (!user.passwordResetOtp || user.passwordResetOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Check if OTP expired
+    if (user.passwordResetOtpExpires < new Date()) {
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+
+    // Generate new password
+    const newPassword = generateRandomPassword();
+    console.log('Generated new password:', newPassword); // Debug log
+    
+    // Hash the new password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    console.log('Hashed password:', hashedPassword); // Debug log
+
+    // Update password and clear OTP
+    user.password = hashedPassword;
+    user.passwordResetOtp = undefined;
+    user.passwordResetOtpExpires = undefined;
+    user.lastPasswordReset = new Date();
+    
+    // Save the user
+    await user.save();
+    console.log('Password updated in database'); // Debug log
+
+    // Send email with the new password
+    await emailService.sendPasswordResetEmail(
+      email, 
+      user.firstName, 
+      newPassword,
+      user.studentID
+    );
+
+    res.json({ 
+      success: true,
+      message: 'Password reset successful. Your new password has been sent to your email.' 
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ 
+      message: error.message || 'Failed to reset password' 
+    });
   }
 });
 
@@ -292,6 +454,105 @@ router.post('/resend-otp', async (req, res) => {
   } catch (error) {
     console.error('Resend OTP error:', error);
     return res.status(500).json({ message: 'Server error while resending OTP' });
+  }
+});
+
+// Add this new route to get password reset status
+router.get('/password-reset-status/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    if (!applicant) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    const response = {
+      status: applicant.status,
+      firstName: applicant.firstName,
+      isLockedOut: false, // No lockout for password reset (or implement if needed)
+      lockoutTimeLeft: 0,
+      otpTimeLeft: applicant.passwordResetOtpExpires
+        ? Math.ceil((applicant.passwordResetOtpExpires - new Date()) / 1000)
+        : 0,
+      attemptsLeft: 3 // Reset attempts for password reset
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error getting password reset status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required',
+        errorType: 'validation'
+      });
+    }
+
+    // Find user with password selected
+    const applicant = await EnrolleeApplicant.findOne({ email })
+      .select('+password');
+
+    if (!applicant) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Check account status
+    if (applicant.status === 'Pending Verification') {
+      if (applicant.verificationExpires < new Date()) {
+        applicant.status = 'Inactive';
+        await applicant.save();
+        return res.status(403).json({
+          message: 'Verification period has expired. Please register again.',
+          errorType: 'verification_expired'
+        });
+      }
+      return res.status(403).json({
+        message: 'Account requires email verification',
+        errorType: 'pending_verification'
+      });
+    }
+
+    // Debug: Log the input password and stored hash
+    console.log('Input password:', password);
+    console.log('Stored hash:', applicant.password);
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, applicant.password);
+    console.log('Password match:', isMatch); // Debug log
+
+    if (!isMatch) {
+      return res.status(401).json({
+        message: 'Invalid credentials',
+        errorType: 'authentication'
+      });
+    }
+
+    // Successful login
+    res.json({
+      message: 'Login successful',
+      status: applicant.status,
+      email: applicant.email,
+      firstName: applicant.firstName,
+      studentID: applicant.studentID
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      message: 'Server error during login',
+      errorType: 'server_error'
+    });
   }
 });
 

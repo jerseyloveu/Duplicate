@@ -24,6 +24,19 @@ const generateOTP = () => {
   });
 };
 
+function generateRandomPassword() {
+  const length = 12;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+  let password = "";
+  
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  
+  return password;
+}
+
 // Generate and send OTP
 const sendOTP = async (email, name, otp) => {
     try {
@@ -260,11 +273,56 @@ const expireUnverifiedAccounts = async () => {
     }
 };
 
+// In emailService.js, add a new function
+const sendPasswordResetEmail = async (email, name, newPassword, studentID) => {
+  try {
+    const mailOptions = {
+      from: `${config.senderName} <${config.sender}>`,
+      to: email,
+      subject: 'JuanEMS: Your New Password',
+      text: `Dear ${name},\n\nYour password has been successfully reset.\n\nYour new login credentials are:\n\nStudent ID: ${studentID}\nEmail: ${email}\nNew Password: ${newPassword}\n\nIf you didn't request this password reset, please contact our support team immediately.\n\nBest regards,\nJuanEMS Administration`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">JuanEMS</h1>
+            <p style="color: #ecf0f1; margin: 5px 0 0;">Password Reset Notification</p>
+          </div>
+          <div style="padding: 20px;">
+            <h2 style="color: #2A67D5;">Your Password Has Been Reset</h2>
+            <p>Dear ${name},</p>
+            <p>Your password has been successfully reset. Here are your new login credentials:</p>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Student ID:</strong> ${studentID}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>New Password:</strong> ${newPassword}</p>
+            </div>
+            <p style="color: #e74c3c; font-weight: bold;">For your security, please do not share your credentials with anyone.</p>
+            <p>If you didn't request this password reset, please contact our support team immediately.</p>
+            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+            <p>Best regards,</p>
+            <p><strong>JuanEMS Administration</strong></p>
+          </div>
+          <div style="background-color: #C68A00; padding: 15px; text-align: center; font-size: 12px; color: #f5f5f5;">
+            <p>© ${new Date().getFullYear()} Juan Enrollment Management System. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateOTP,
   sendOTP,
   verifyOTP,
   resendOTP,
   sendPasswordEmail,  // Add this line if it's not already there
-  expireUnverifiedAccounts
+  expireUnverifiedAccounts,
+  sendPasswordResetEmail
 };

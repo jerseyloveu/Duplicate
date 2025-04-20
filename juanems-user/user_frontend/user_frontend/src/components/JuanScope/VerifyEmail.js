@@ -20,21 +20,46 @@ function VerifyEmail() {
   const [canResend, setCanResend] = useState(false);
   const [isLockedOut, setIsLockedOut] = useState(false); // Added this line
   const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const [firstName, setFirstName] = useState(location.state?.firstName || '');
   const inputsRef = useRef([]);
 
 
   // Extract email and firstName from location state
   const email = location.state?.email || '';
-  const firstName = location.state?.firstName || '';
   const studentID = location.state?.studentID || '';
   const fromRegistration = location.state?.fromRegistration || false;
 
-  // Redirect if no email or not from registration
-  useEffect(() => {
-    if (!email || !fromRegistration) {
+// Update the useEffect for redirect in VerifyEmail.js
+useEffect(() => {
+  const fromLogin = location.state?.fromLogin || false;
+  const isPasswordReset = location.state?.isPasswordReset || false;
+  
+  if (!email) {
+    if (fromLogin) {
+      // If coming from login but no email, go back to login
+      navigate('/scope-login');
+    } else {
+      // Otherwise, go to register
       navigate('/register');
     }
-  }, [email, fromRegistration, navigate]);
+  }
+  
+  // If this is for password reset, fetch the user's first name
+  if (isPasswordReset && email && !firstName) {
+    const fetchUserDetails = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/enrollee-applicants/verification-status/${email}`);
+        const data = await response.json();
+        if (response.ok && data.firstName) {
+          setFirstName(data.firstName);
+        }
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+      }
+    };
+    fetchUserDetails();
+  }
+}, [email, location.state, navigate]);
 
   // Timer for OTP expiration
   // Replace your existing OTP timer useEffect with this:
@@ -79,19 +104,26 @@ function VerifyEmail() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Add this useEffect hook near the top of your component
   useEffect(() => {
     const fetchVerificationStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/enrollee-applicants/verification-status/${email}`);
+        const isPasswordReset = location.state?.isPasswordReset || false;
+        let endpoint = `/api/enrollee-applicants/verification-status/${email}`;
+        
+        if (isPasswordReset) {
+          endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
+        }
+  
+        const response = await fetch(`http://localhost:5000${endpoint}`);
         const data = await response.json();
-
+  
         if (response.ok) {
           setIsLockedOut(data.isLockedOut);
           if (data.isLockedOut) {
             setLockoutCountdown(data.lockoutTimeLeft);
             setOtpCountdown(0);
           } else {
+            // For password reset, we want to show the countdown from the passwordResetOtpExpires
             setOtpCountdown(Math.max(0, data.otpTimeLeft));
             setCanResend(data.otpTimeLeft <= 0);
           }
@@ -101,12 +133,12 @@ function VerifyEmail() {
         console.error('Error fetching verification status:', error);
       }
     };
-
+  
     if (email) {
       fetchVerificationStatus();
     }
-  }, [email]);
-
+  }, [email, location.state]);
+  
   // Handle OTP input change
   const handleChange = (index, value) => {
     if (!/^\d*$/.test(value)) return; // Only allow digits
@@ -143,44 +175,53 @@ function VerifyEmail() {
     }
   };
 
-  // Submit OTP
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const otpString = otp.join('');
+ // Update the handleSubmit function in VerifyEmail.js
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  const otpString = otp.join('');
 
-    if (otpString.length !== 6) {
-      setError('Please enter the complete 6-digit code');
-      return;
+  if (otpString.length !== 6) {
+    setError('Please enter the complete 6-digit code');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const isPasswordReset = location.state?.isPasswordReset || false;
+    
+    let endpoint = '/api/enrollee-applicants/verify-otp';
+    if (isPasswordReset) {
+      endpoint = '/api/enrollee-applicants/reset-password';
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:5000/api/enrollee-applicants/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          otp: otpString
-        }),
-      });
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        otp: otpString
+      }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        if (data.lockout) {
-          setIsLockedOut(true);
-          setLockoutCountdown(300); // 5 minutes in seconds
-          setOtpCountdown(0);
-          setCanResend(false);
-        }
-        if (data.attemptsLeft !== undefined) {
-          setAttemptsLeft(data.attemptsLeft);
-        }
-        throw new Error(data.message || 'Verification failed');
-      }
+    if (!response.ok) {
+      throw new Error(data.message || 'Verification failed');
+    }
 
+    if (isPasswordReset) {
+      setSuccess('Password reset successful! Your new password has been sent to your email.');
+      setTimeout(() => {
+        navigate('/scope-login', {
+          state: {
+            fromPasswordReset: true,
+            email: email
+          }
+        });
+      }, 3000);
+    } else {
       setSuccess('Email verified successfully!');
       setTimeout(() => {
         navigate('/scope-login', {
@@ -190,56 +231,63 @@ function VerifyEmail() {
           }
         });
       }, 2000);
-    } catch (err) {
-      setError(err.message || 'Verification failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    setError(err.message || 'Verification failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Resend OTP
-  const handleResend = async () => {
-    if (!canResend) return;
+  // Update the handleResend function
+const handleResend = async () => {
+  if (!canResend) return;
 
-    setResendLoading(true);
-    setError('');
-    setSuccess('');
+  setResendLoading(true);
+  setError('');
+  setSuccess('');
 
-    try {
-      const response = await fetch('http://localhost:5000/api/enrollee-applicants/resend-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend verification code');
-      }
-
-      // Reset all counters and states
-      setOtpCountdown(180);
-      setLockoutCountdown(0);
-      setIsLockedOut(false);
-      setCanResend(false);
-      setAttemptsLeft(3);
-      setSuccess('New verification code sent to your email');
-
-      // Clear current OTP
-      setOtp(['', '', '', '', '', '']);
-      inputsRef.current[0].focus();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to resend verification code. Please try again.');
-    } finally {
-      setResendLoading(false);
+  try {
+    const isPasswordReset = location.state?.isPasswordReset || false;
+    let endpoint = '/api/enrollee-applicants/resend-otp';
+    if (isPasswordReset) {
+      endpoint = '/api/enrollee-applicants/request-password-reset';
     }
-  };
+
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to resend verification code');
+    }
+
+    // Reset all counters and states
+    setOtpCountdown(180);
+    setLockoutCountdown(0);
+    setIsLockedOut(false);
+    setCanResend(false);
+    setAttemptsLeft(3);
+    setSuccess('New verification code sent to your email');
+
+    // Clear current OTP
+    setOtp(['', '', '', '', '', '']);
+    inputsRef.current[0].focus();
+
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccess(''), 3000);
+  } catch (err) {
+    setError(err.message || 'Failed to resend verification code. Please try again.');
+  } finally {
+    setResendLoading(false);
+  }
+};
 
   return (
     <div className="juan-verify-container">
@@ -258,15 +306,20 @@ function VerifyEmail() {
       </header>
 
       <div className="juan-verify-main">
-        <div className="juan-verify-card">
-          <div className="juan-verify-icon">
-            <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
-          </div>
-          <h2>Email Verification</h2>
-          <p className="juan-verify-description">
-            We've sent a verification code to <strong>{email}</strong>.
-            Please enter the 6-digit code below to verify your account.
-          </p>
+      <div className="juan-verify-card">
+        <div className="juan-verify-icon">
+          <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
+        </div>
+        <h2>
+          {location.state?.isPasswordReset 
+            ? 'Password Reset Verification' 
+            : 'Email Verification'}
+        </h2>
+        <p className="juan-verify-description">
+          {location.state?.isPasswordReset
+            ? `We've sent a verification code to ${email} to reset your password. Please enter the 6-digit code below.`
+            : `We've sent a verification code to ${email}. Please enter the 6-digit code below to verify your account.`}
+        </p>
 
           {/* OTP Input */}
           <form onSubmit={handleSubmit} className="juan-otp-form" onPaste={handlePaste}>
