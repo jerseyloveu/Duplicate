@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
 const accountRoutes = require('./routes/accountRoutes');
+const exportFile = require('./routes/exportFile');
 const connectDB = require('./config/db');
 require('dotenv').config();
 
@@ -75,6 +76,7 @@ app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
 
 // Routes (Admin)
 app.use('/api/admin', accountRoutes);
+app.use('/api/admin/export', exportFile);
 
 // Test route
 app.get("/api/test", (req, res) => {

@@ -41,15 +41,15 @@ const ManageAccountsPage = () => {
 
       const result = await response.json();
 
-  
+
       // Filter and format data
       const filteredData = result.data.filter(item => {
         const fullName = `${item.firstName} ${item.middleName || ''} ${item.lastName}`.toLowerCase();
-        
+
         const createdAtFormatted = dayjs(item.createdAt).isValid()
           ? dayjs(item.createdAt).format('MMM D, YYYY h:mm A').toLowerCase()
           : '';
-      
+
         return (
           fullName.includes(search.toLowerCase()) ||
           item.userID.toLowerCase().includes(search.toLowerCase()) ||
@@ -60,7 +60,7 @@ const ManageAccountsPage = () => {
           createdAtFormatted.includes(search.toLowerCase()) // This line enables date search
         );
       });
-      
+
 
       const formattedData = filteredData.map((item, index) => ({
         ...item,
@@ -91,6 +91,29 @@ const ManageAccountsPage = () => {
     setSorter({});
     setSearchTerm('');
     fetchAccounts('');
+  };
+
+  const handleExport = () => {
+    // Get the current date in YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `accounts-report-${currentDate}.pdf`;
+  
+    fetch('http://localhost:5000/api/admin/export/accounts', {
+      method: 'GET',
+    })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      })
+      .catch(error => {
+        console.error('Export failed:', error);
+      });
   };
 
   const handleBack = () => navigate('/admin/dashboard');
@@ -254,7 +277,7 @@ const ManageAccountsPage = () => {
           <div className="left-tools">
             <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>
             <Button icon={<HiOutlineRefresh />} onClick={() => fetchAccounts(searchTerm)}>Refresh</Button>
-            <Button icon={<BiExport />}>Export</Button>
+            <Button icon={<BiExport />} onClick={handleExport}>Export</Button>
           </div>
           <div className="right-tools">
             <Input
@@ -262,7 +285,6 @@ const ManageAccountsPage = () => {
               allowClear
               style={{ width: 300 }}
               value={searchTerm}
-              onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
               suffix={<FaSearch style={{ color: '#aaa' }} />}
             />
@@ -275,10 +297,11 @@ const ManageAccountsPage = () => {
 
         {/* Accounts table */}
         <Table
+          style={{ width: '100%', flex: 1 }} // You can use any shade you want
           columns={columns}
           dataSource={Array.isArray(dataSource) ? dataSource : []}
           loading={loading}
-          scroll={{ x: 'max-content', y: 275 }}
+          scroll={{ x: true}}
           pagination
           bordered
           onChange={(pagination, filters, sorter) => {
@@ -286,6 +309,7 @@ const ManageAccountsPage = () => {
             setSorter(sorter);
           }}
         />
+
       </div>
       <Footer />
     </div>
