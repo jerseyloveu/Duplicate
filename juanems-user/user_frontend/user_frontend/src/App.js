@@ -23,6 +23,9 @@ import Admin_ManageStudentRecordsPage from './components/UserAdmin/ManageStudent
 import Admin_OverallSystemLogs from './components/UserAdmin/OverallSystemLogsPage'; 
 import Admin_CreateAnnouncements from './components/UserAdmin/CreateAnnouncementsPage'; 
 import Admin_CreateAccount from './components/UserAdmin/CreateAccount'; 
+import Admin_ManageStrandsPage from './components/UserAdmin/ManageStrandsPage'; 
+import Admin_ManageSectionsPage from './components/UserAdmin/ManageSectionsPage'; 
+import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 
 function App() {
   return (
@@ -54,7 +57,9 @@ function App() {
           <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
           <Route path='/admin/manage-accounts/create' element={<Admin_CreateAccount/>}/>
           <Route path="/admin/manage-accounts/edit/:id" element={<Admin_CreateAccount />} />
-
+          <Route path='/admin/manage-strands' element={<Admin_ManageStrandsPage/>}/>
+          <Route path='/admin/manage-sections' element={<Admin_ManageSectionsPage/>}/>
+          <Route path='/admin/manage-subjects' element={<Admin_ManageSubjectsPage/>}/>
         </Routes>
       </div>
     </Router>
