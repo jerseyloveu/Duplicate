@@ -485,6 +485,7 @@ router.get('/password-reset-status/:email', async (req, res) => {
   }
 });
 
+// Update the login route in enrolleeApplicants.js
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -507,6 +508,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Track login attempt - increment counter regardless of outcome
+    applicant.loginAttempts += 1;
+
     // Check account status
     if (applicant.status === 'Pending Verification') {
       if (applicant.verificationExpires < new Date()) {
@@ -517,9 +521,12 @@ router.post('/login', async (req, res) => {
           errorType: 'verification_expired'
         });
       }
+      await applicant.save(); // Save the login attempt count
       return res.status(403).json({
         message: 'Account requires email verification',
-        errorType: 'pending_verification'
+        errorType: 'pending_verification',
+        email: applicant.email,
+        firstName: applicant.firstName
       });
     }
 
@@ -532,11 +539,17 @@ router.post('/login', async (req, res) => {
     console.log('Password match:', isMatch); // Debug log
 
     if (!isMatch) {
+      await applicant.save(); // Save the login attempt count
       return res.status(401).json({
         message: 'Invalid credentials',
         errorType: 'authentication'
       });
     }
+
+    // Successful login - update activity status
+    applicant.activityStatus = 'Online';
+    applicant.lastLogin = new Date();
+    await applicant.save();
 
     // Successful login
     res.json({
@@ -544,13 +557,94 @@ router.post('/login', async (req, res) => {
       status: applicant.status,
       email: applicant.email,
       firstName: applicant.firstName,
-      studentID: applicant.studentID
+      studentID: applicant.studentID,
+      activityStatus: applicant.activityStatus,
+      loginAttempts: applicant.loginAttempts
     });
 
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
       message: 'Server error during login',
+      errorType: 'server_error'
+    });
+  }
+});
+
+// Add a new route for logout
+router.post('/logout', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+        errorType: 'validation'
+      });
+    }
+
+    // Find the user
+    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    if (!applicant) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Update activity status
+    applicant.activityStatus = 'Offline';
+    applicant.lastLogout = new Date();
+    await applicant.save();
+
+    res.json({
+      message: 'Logout successful',
+      activityStatus: applicant.activityStatus
+    });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      message: 'Server error during logout',
+      errorType: 'server_error'
+    });
+  }
+});
+
+// Add a new route to get user activity
+router.get('/activity/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+        errorType: 'validation'
+      });
+    }
+
+    // Find the user
+    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    if (!applicant) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    res.json({
+      activityStatus: applicant.activityStatus,
+      loginAttempts: applicant.loginAttempts,
+      lastLogin: applicant.lastLogin,
+      lastLogout: applicant.lastLogout
+    });
+
+  } catch (error) {
+    console.error('Activity fetch error:', error);
+    res.status(500).json({
+      message: 'Server error while fetching activity data',
       errorType: 'server_error'
     });
   }

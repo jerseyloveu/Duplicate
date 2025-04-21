@@ -72,50 +72,61 @@ function ScopeLogin() {
     }
   };
 
-  // Update the handleSubmit function in ScopeLogin.js
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoginError('');
+// Update the handleSubmit function in ScopeLogin.js
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoginError('');
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) {
+    return;
+  }
 
-    try {
-      const response = await fetch('http://localhost:5000/api/enrollee-applicants/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const response = await fetch('http://localhost:5000/api/enrollee-applicants/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        // Handle different error types
-        if (data.errorType === 'pending_verification') {
-          // Navigate to verify-email and resend OTP
-          navigate('/verify-email', {
-            state: {
-              email: data.email,
-              firstName: data.firstName,
-              fromRegistration: false,
-              fromLogin: true
-            }
-          });
-          return;
-        }
-        throw new Error(data.message || 'Login failed');
+    if (!response.ok) {
+      // Handle different error types
+      if (data.errorType === 'pending_verification') {
+        // Navigate to verify-email and resend OTP
+        navigate('/verify-email', {
+          state: {
+            email: data.email,
+            firstName: data.firstName,
+            fromRegistration: false,
+            fromLogin: true
+          }
+        });
+        return;
       }
-
-      // Successful login - navigate to dashboard
-      navigate('/scope-dashboard');
-
-    } catch (err) {
-      setLoginError(err.message || 'Login failed. Please try again.');
+      throw new Error(data.message || 'Login failed');
     }
-  };
+
+    // Store user data in localStorage
+    localStorage.setItem('userEmail', data.email);
+    localStorage.setItem('firstName', data.firstName);
+    localStorage.setItem('studentID', data.studentID);
+    
+    // Log activity info for tracking
+    console.log('Login Activity:', {
+      activityStatus: data.activityStatus,
+      loginAttempts: data.loginAttempts
+    });
+
+    // Successful login - navigate to dashboard
+    navigate('/scope-dashboard');
+
+  } catch (err) {
+    setLoginError(err.message || 'Login failed. Please try again.');
+  }
+};
 
 // Update the handleForgotPassword function
 const handleForgotPassword = async () => {

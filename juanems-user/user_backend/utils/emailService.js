@@ -205,13 +205,13 @@ const resendOTP = async (email) => {
   }
 };
 
-const sendPasswordEmail = async (email, name, password, studentID) => {
+const sendPasswordEmail = async (email, name, password) => {
   try {
     const mailOptions = {
       from: `${config.senderName} <${config.sender}>`,
       to: email,
       subject: 'JuanEMS: Your Account Login Credentials',
-      text: `Dear ${name},\n\nThank you for verifying your account with Juan Enrollment Management System (JuanEMS).\n\nYour account login credentials are:\n\nStudent ID: ${studentID}\nEmail: ${email}\nPassword: ${password}\n\nPlease keep this information secure and do not share it with anyone.\n\nYou can now log in to your account using these credentials.\n\nBest regards,\nJuanEMS Administration`,
+      text: `Dear ${name},\n\nThank you for verifying your account with Juan Enrollment Management System (JuanEMS).\n\nYour account login credentials are:\n\nEmail: ${email}\nPassword: ${password}\n\nPlease keep this information secure and do not share it with anyone.\n\nYou can now log in to your account using these credentials.\n\nBest regards,\nJuanEMS Administration`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
@@ -224,7 +224,6 @@ const sendPasswordEmail = async (email, name, password, studentID) => {
             <p>Thank you for verifying your account with Juan Enrollment Management System (JuanEMS).</p>
             <p>Here are your login credentials:</p>
             <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0;">
-              <p><strong>Student ID:</strong> ${studentID}</p>
               <p><strong>Email:</strong> ${email}</p>
               <p><strong>Password:</strong> ${password}</p>
             </div>
@@ -274,13 +273,13 @@ const expireUnverifiedAccounts = async () => {
 };
 
 // In emailService.js, add a new function
-const sendPasswordResetEmail = async (email, name, newPassword, studentID) => {
+const sendPasswordResetEmail = async (email, name, newPassword) => {
   try {
     const mailOptions = {
       from: `${config.senderName} <${config.sender}>`,
       to: email,
       subject: 'JuanEMS: Your New Password',
-      text: `Dear ${name},\n\nYour password has been successfully reset.\n\nYour new login credentials are:\n\nStudent ID: ${studentID}\nEmail: ${email}\nNew Password: ${newPassword}\n\nIf you didn't request this password reset, please contact our support team immediately.\n\nBest regards,\nJuanEMS Administration`,
+      text: `Dear ${name},\n\nYour password has been successfully reset.\n\nYour new login credentials are:\n\nEmail: ${email}\nNew Password: ${newPassword}\n\nIf you didn't request this password reset, please contact our support team immediately.\n\nBest regards,\nJuanEMS Administration`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
@@ -292,7 +291,6 @@ const sendPasswordResetEmail = async (email, name, newPassword, studentID) => {
             <p>Dear ${name},</p>
             <p>Your password has been successfully reset. Here are your new login credentials:</p>
             <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0;">
-              <p><strong>Student ID:</strong> ${studentID}</p>
               <p><strong>Email:</strong> ${email}</p>
               <p><strong>New Password:</strong> ${newPassword}</p>
             </div>

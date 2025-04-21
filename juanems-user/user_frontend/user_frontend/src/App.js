@@ -8,7 +8,7 @@ import Register2 from './components/JuanScope/Register2'
 import Register3 from './components/JuanScope/Register3';
 import VerifyEmail from './components/JuanScope/VerifyEmail';
 import ScopeLogin from './components/JuanScope/ScopeLogin';
-
+import ScopeDashboard from './components/JuanScope/ScopeDashboard';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -29,6 +29,7 @@ import Admin_CreateSection from './components/UserAdmin/CreateSection';
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 
+
 function App() {
   return (
     <Router>
@@ -45,6 +46,7 @@ function App() {
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
+          <Route path="/scope-dashboard" element={<ScopeDashboard />} /> {/* Add this new route */}
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
