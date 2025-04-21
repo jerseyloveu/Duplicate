@@ -9,6 +9,10 @@ import Register3 from './components/JuanScope/Register3';
 import VerifyEmail from './components/JuanScope/VerifyEmail';
 import ScopeLogin from './components/JuanScope/ScopeLogin';
 import ScopeDashboard from './components/JuanScope/ScopeDashboard';
+import AboutPage from './components/JuanEMS/AboutPage';
+import TermsOfUsePage from './components/JuanEMS/TermsOfUsePage';
+import PrivacyPolicyPage from './components/JuanEMS/PrivacyPolicyPage';
+
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -29,7 +33,6 @@ import Admin_CreateSection from './components/UserAdmin/CreateSection';
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 
-
 function App() {
   return (
     <Router>
@@ -40,6 +43,10 @@ function App() {
 
           {/* Other routes */}
           <Route path="/home" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+
           <Route path="/register" element={<Register />} /> 
           <Route path="/register2" element={<Register2 />} /> 
           <Route path="/register3" element={<Register3 />} /> 
