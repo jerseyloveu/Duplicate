@@ -24,6 +24,7 @@ import Admin_OverallSystemLogs from './components/UserAdmin/OverallSystemLogsPag
 import Admin_CreateAnnouncements from './components/UserAdmin/CreateAnnouncementsPage'; 
 import Admin_CreateAccount from './components/UserAdmin/CreateAccount'; 
 import Admin_ManageStrandsPage from './components/UserAdmin/ManageStrandsPage'; 
+import Admin_CreateStrand from './components/UserAdmin/CreateStrand'; 
 import Admin_ManageSectionsPage from './components/UserAdmin/ManageSectionsPage'; 
 import Admin_CreateSection from './components/UserAdmin/CreateSection'; 
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
@@ -63,15 +64,18 @@ function App() {
           <Route path='/admin/manage-student-records' element={<Admin_ManageStudentRecordsPage/>}/>
           <Route path='/admin/manage-overall-system-logs' element={<Admin_OverallSystemLogs/>}/>
           <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
-          <Route path='/admin/manage-strands' element={<Admin_ManageStrandsPage/>}/>
           
+          <Route path='/admin/manage-strands' element={<Admin_ManageStrandsPage/>}/>
+          <Route path='/admin/manage-strands/create' element={<Admin_CreateStrand/>}/>
+          <Route path="/admin/manage-strands/edit/:id" element={<Admin_CreateStrand />}/>
+
           <Route path='/admin/manage-sections' element={<Admin_ManageSectionsPage/>}/>
           <Route path='/admin/manage-sections/create' element={<Admin_CreateSection/>}/>
-          <Route path="/admin/manage-sections/edit/:id" element={<Admin_CreateSection />} />
+          <Route path="/admin/manage-sections/edit/:id" element={<Admin_CreateSection/>} />
 
           <Route path='/admin/manage-subjects' element={<Admin_ManageSubjectsPage/>}/>
           <Route path='/admin/manage-subjects/create' element={<Admin_CreateSubject/>}/>
-          <Route path="/admin/manage-subjects/edit/:id" element={<Admin_CreateSubject />} />
+          <Route path="/admin/manage-subjects/edit/:id" element={<Admin_CreateSubject/>}/>
 
         </Routes>
       </div>

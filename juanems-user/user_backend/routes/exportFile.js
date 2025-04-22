@@ -3,6 +3,7 @@ const router = express.Router();
 const pdfService = require('../services/pdf-service');
 const Account = require('../models/Accounts');
 const Subject = require('../models/Subjects');
+const Strand = require('../models/Strands');
 
 router.get('/accounts', async (req, res) => {
   try {
@@ -104,5 +105,33 @@ router.get('/sections', async (req, res) => {
   }
 });
 
+router.get('/strands', async (req, res) => {
+  try {
+    const strands = await Strand.find().lean();
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `strands-report-${currentDate}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const modifiedStrands = strands.map((strand, index) => ({
+      ...strand,
+      __rowNumber: (index + 1).toString(),
+    }));
+
+    const strandColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'Strand Code', property: 'strandCode', width: 80 },
+      { label: 'Strand Name', property: 'strandName', width: 150 },
+      { label: 'Status', property: 'status', width: 60 },
+    ];
+
+    pdfService.buildPDF(modifiedStrands, strandColumns, 'Strands Report', (chunk) => res.write(chunk), () => res.end());
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Failed to export strands' });
+  }
+});
 
 module.exports = router;
