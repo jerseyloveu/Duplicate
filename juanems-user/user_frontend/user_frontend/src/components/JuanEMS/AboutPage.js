@@ -14,22 +14,22 @@ function AboutPage() {
         triggerOnce: true,
         threshold: 0.1,
     });
-    
+
     const [introRef, introInView] = useInView({
         triggerOnce: true,
         threshold: 0.1,
     });
-    
+
     const [techRef, techInView] = useInView({
         triggerOnce: true,
         threshold: 0.1,
     });
-    
+
     const [teamRef, teamInView] = useInView({
         triggerOnce: true,
         threshold: 0.1,
     });
-    
+
     const [footerRef, footerInView] = useInView({
         triggerOnce: true,
         threshold: 0.1,
