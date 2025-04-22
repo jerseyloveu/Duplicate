@@ -29,37 +29,37 @@ function VerifyEmail() {
   const studentID = location.state?.studentID || '';
   const fromRegistration = location.state?.fromRegistration || false;
 
-// Update the useEffect for redirect in VerifyEmail.js
-useEffect(() => {
-  const fromLogin = location.state?.fromLogin || false;
-  const isPasswordReset = location.state?.isPasswordReset || false;
-  
-  if (!email) {
-    if (fromLogin) {
-      // If coming from login but no email, go back to login
-      navigate('/scope-login');
-    } else {
-      // Otherwise, go to register
-      navigate('/register');
-    }
-  }
-  
-  // If this is for password reset, fetch the user's first name
-  if (isPasswordReset && email && !firstName) {
-    const fetchUserDetails = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/enrollee-applicants/verification-status/${email}`);
-        const data = await response.json();
-        if (response.ok && data.firstName) {
-          setFirstName(data.firstName);
-        }
-      } catch (error) {
-        console.error('Error fetching user details:', error);
+  // Update the useEffect for redirect in VerifyEmail.js
+  useEffect(() => {
+    const fromLogin = location.state?.fromLogin || false;
+    const isPasswordReset = location.state?.isPasswordReset || false;
+
+    if (!email) {
+      if (fromLogin) {
+        // If coming from login but no email, go back to login
+        navigate('/scope-login');
+      } else {
+        // Otherwise, go to register
+        navigate('/register');
       }
-    };
-    fetchUserDetails();
-  }
-}, [email, location.state, navigate]);
+    }
+
+    // If this is for password reset, fetch the user's first name
+    if (isPasswordReset && email && !firstName) {
+      const fetchUserDetails = async () => {
+        try {
+          const response = await fetch(`http://localhost:5000/api/enrollee-applicants/verification-status/${email}`);
+          const data = await response.json();
+          if (response.ok && data.firstName) {
+            setFirstName(data.firstName);
+          }
+        } catch (error) {
+          console.error('Error fetching user details:', error);
+        }
+      };
+      fetchUserDetails();
+    }
+  }, [email, location.state, navigate]);
 
   // Timer for OTP expiration
   // Replace your existing OTP timer useEffect with this:
@@ -109,14 +109,14 @@ useEffect(() => {
       try {
         const isPasswordReset = location.state?.isPasswordReset || false;
         let endpoint = `/api/enrollee-applicants/verification-status/${email}`;
-        
+
         if (isPasswordReset) {
           endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
         }
-  
+
         const response = await fetch(`http://localhost:5000${endpoint}`);
         const data = await response.json();
-  
+
         if (response.ok) {
           setIsLockedOut(data.isLockedOut);
           if (data.isLockedOut) {
@@ -133,12 +133,12 @@ useEffect(() => {
         console.error('Error fetching verification status:', error);
       }
     };
-  
+
     if (email) {
       fetchVerificationStatus();
     }
   }, [email, location.state]);
-  
+
   // Handle OTP input change
   const handleChange = (index, value) => {
     if (!/^\d*$/.test(value)) return; // Only allow digits
@@ -175,119 +175,119 @@ useEffect(() => {
     }
   };
 
- // Update the handleSubmit function in VerifyEmail.js
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  const otpString = otp.join('');
+  // Update the handleSubmit function in VerifyEmail.js
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const otpString = otp.join('');
 
-  if (otpString.length !== 6) {
-    setError('Please enter the complete 6-digit code');
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const isPasswordReset = location.state?.isPasswordReset || false;
-    
-    let endpoint = '/api/enrollee-applicants/verify-otp';
-    if (isPasswordReset) {
-      endpoint = '/api/enrollee-applicants/reset-password';
+    if (otpString.length !== 6) {
+      setError('Please enter the complete 6-digit code');
+      return;
     }
 
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        otp: otpString
-      }),
-    });
+    setLoading(true);
+    try {
+      const isPasswordReset = location.state?.isPasswordReset || false;
 
-    const data = await response.json();
+      let endpoint = '/api/enrollee-applicants/verify-otp';
+      if (isPasswordReset) {
+        endpoint = '/api/enrollee-applicants/reset-password';
+      }
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Verification failed');
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          otp: otpString
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Verification failed');
+      }
+
+      if (isPasswordReset) {
+        setSuccess('Password reset successful! Your new password has been sent to your email.');
+        setTimeout(() => {
+          navigate('/scope-login', {
+            state: {
+              fromPasswordReset: true,
+              email: email
+            }
+          });
+        }, 3000);
+      } else {
+        setSuccess('Email verified successfully!');
+        setTimeout(() => {
+          navigate('/scope-login', {
+            state: {
+              fromVerification: true,
+              studentID: data.data?.studentID || studentID
+            }
+          });
+        }, 2000);
+      }
+    } catch (err) {
+      setError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    if (isPasswordReset) {
-      setSuccess('Password reset successful! Your new password has been sent to your email.');
-      setTimeout(() => {
-        navigate('/scope-login', {
-          state: {
-            fromPasswordReset: true,
-            email: email
-          }
-        });
-      }, 3000);
-    } else {
-      setSuccess('Email verified successfully!');
-      setTimeout(() => {
-        navigate('/scope-login', {
-          state: {
-            fromVerification: true,
-            studentID: data.data?.studentID || studentID
-          }
-        });
-      }, 2000);
-    }
-  } catch (err) {
-    setError(err.message || 'Verification failed. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Update the handleResend function
-const handleResend = async () => {
-  if (!canResend) return;
+  const handleResend = async () => {
+    if (!canResend) return;
 
-  setResendLoading(true);
-  setError('');
-  setSuccess('');
+    setResendLoading(true);
+    setError('');
+    setSuccess('');
 
-  try {
-    const isPasswordReset = location.state?.isPasswordReset || false;
-    let endpoint = '/api/enrollee-applicants/resend-otp';
-    if (isPasswordReset) {
-      endpoint = '/api/enrollee-applicants/request-password-reset';
+    try {
+      const isPasswordReset = location.state?.isPasswordReset || false;
+      let endpoint = '/api/enrollee-applicants/resend-otp';
+      if (isPasswordReset) {
+        endpoint = '/api/enrollee-applicants/request-password-reset';
+      }
+
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend verification code');
+      }
+
+      // Reset all counters and states
+      setOtpCountdown(180);
+      setLockoutCountdown(0);
+      setIsLockedOut(false);
+      setCanResend(false);
+      setAttemptsLeft(3);
+      setSuccess('New verification code sent to your email');
+
+      // Clear current OTP
+      setOtp(['', '', '', '', '', '']);
+      inputsRef.current[0].focus();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to resend verification code. Please try again.');
+    } finally {
+      setResendLoading(false);
     }
-
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to resend verification code');
-    }
-
-    // Reset all counters and states
-    setOtpCountdown(180);
-    setLockoutCountdown(0);
-    setIsLockedOut(false);
-    setCanResend(false);
-    setAttemptsLeft(3);
-    setSuccess('New verification code sent to your email');
-
-    // Clear current OTP
-    setOtp(['', '', '', '', '', '']);
-    inputsRef.current[0].focus();
-
-    // Clear success message after 3 seconds
-    setTimeout(() => setSuccess(''), 3000);
-  } catch (err) {
-    setError(err.message || 'Failed to resend verification code. Please try again.');
-  } finally {
-    setResendLoading(false);
-  }
-};
+  };
 
   return (
     <div className="juan-verify-container">
@@ -306,20 +306,20 @@ const handleResend = async () => {
       </header>
 
       <div className="juan-verify-main">
-      <div className="juan-verify-card">
-        <div className="juan-verify-icon">
-          <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
-        </div>
-        <h2>
-          {location.state?.isPasswordReset 
-            ? 'Password Reset Verification' 
-            : 'Email Verification'}
-        </h2>
-        <p className="juan-verify-description">
-          {location.state?.isPasswordReset
-            ? `We've sent a verification code to ${email} to reset your password. Please enter the 6-digit code below.`
-            : `We've sent a verification code to ${email}. Please enter the 6-digit code below to verify your account.`}
-        </p>
+        <div className="juan-verify-card">
+          <div className="juan-verify-icon">
+            <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
+          </div>
+          <h2>
+            {location.state?.isPasswordReset
+              ? 'Password Reset Verification'
+              : 'Email Verification'}
+          </h2>
+          <p className="juan-verify-description">
+            {location.state?.isPasswordReset
+              ? `We've sent a verification code to ${email} to reset your password. Please enter the 6-digit code below.`
+              : `We've sent a verification code to ${email}. Please enter the 6-digit code below to verify your account.`}
+          </p>
 
           {/* OTP Input */}
           <form onSubmit={handleSubmit} className="juan-otp-form" onPaste={handlePaste}>
@@ -408,11 +408,11 @@ const handleResend = async () => {
         <div className="juan-footer-content">
           {/* About, Terms, Privacy links */}
           <div className="juan-footer-links">
-            <a href="/about" className="juan-footer-link">About</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/terms" className="juan-footer-link">Terms of Use</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/privacy" className="juan-footer-link">Privacy</a>
+            <a href="/about" className="footer-link">About</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/terms-of-use" className="footer-link">Terms of Use</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/privacy" className="footer-link">Privacy</a>
           </div>
 
           {/* Footer content remains the same */}

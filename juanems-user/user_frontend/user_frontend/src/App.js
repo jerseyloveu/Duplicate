@@ -8,6 +8,10 @@ import Register2 from './components/JuanScope/Register2'
 import Register3 from './components/JuanScope/Register3';
 import VerifyEmail from './components/JuanScope/VerifyEmail';
 import ScopeLogin from './components/JuanScope/ScopeLogin';
+import ScopeDashboard from './components/JuanScope/ScopeDashboard';
+import AboutPage from './components/JuanEMS/AboutPage';
+import TermsOfUsePage from './components/JuanEMS/TermsOfUsePage';
+import PrivacyPolicyPage from './components/JuanEMS/PrivacyPolicyPage';
 
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
@@ -40,12 +44,17 @@ function App() {
 
           {/* Other routes */}
           <Route path="/home" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+
           <Route path="/register" element={<Register />} /> 
           <Route path="/register2" element={<Register2 />} /> 
           <Route path="/register3" element={<Register3 />} /> 
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
+          <Route path="/scope-dashboard" element={<ScopeDashboard />} /> {/* Add this new route */}
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>

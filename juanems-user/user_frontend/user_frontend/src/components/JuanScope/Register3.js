@@ -104,77 +104,77 @@ function Register3() {
   };
 
   // In handleSubmit function, update the submit confirmation function
- // In Register3.js, modify the confirmRegistration function
-// In Register3.js, modify the confirmRegistration function
-const confirmRegistration = async () => {
-  setIsSubmitting(true);
-  try {
-    // Trim string fields
-    const trimmedFormData = {
-      ...formData,
-      firstName: formData.firstName.trim(),
-      middleName: formData.middleName?.trim() || '',
-      lastName: formData.lastName.trim(),
-      email: formData.email.trim(),
-      mobile: formData.mobile.trim(),
-      nationality: formData.nationality.trim(),
-      academicStrand: formData.academicStrand.trim(),
-      academicLevel: formData.applyingFor.trim(),
-      academicTerm: formData.academicTerm.trim(),
-      academicYear: formData.academicYear.trim()
-    };
+  // In Register3.js, modify the confirmRegistration function
+  // In Register3.js, modify the confirmRegistration function
+  const confirmRegistration = async () => {
+    setIsSubmitting(true);
+    try {
+      // Trim string fields
+      const trimmedFormData = {
+        ...formData,
+        firstName: formData.firstName.trim(),
+        middleName: formData.middleName?.trim() || '',
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        mobile: formData.mobile.trim(),
+        nationality: formData.nationality.trim(),
+        academicStrand: formData.academicStrand.trim(),
+        academicLevel: formData.applyingFor.trim(),
+        academicTerm: formData.academicTerm.trim(),
+        academicYear: formData.academicYear.trim()
+      };
 
-    const emailToCheck = trimmedFormData.email;
+      const emailToCheck = trimmedFormData.email;
 
-    // Check for existing active/pending email before submitting
-    const emailCheck = await fetch(`http://localhost:5000/api/enrollee-applicants/check-email/${encodeURIComponent(emailToCheck)}`);
+      // Check for existing active/pending email before submitting
+      const emailCheck = await fetch(`http://localhost:5000/api/enrollee-applicants/check-email/${encodeURIComponent(emailToCheck)}`);
 
-    if (emailCheck.status === 409) {
-      const { message } = await emailCheck.json();
-      setErrors({ submit: message || 'Email is already in use' });
+      if (emailCheck.status === 409) {
+        const { message } = await emailCheck.json();
+        setErrors({ submit: message || 'Email is already in use' });
+        setIsSubmitting(false);
+        setShowConfirmModal(false);
+        return;
+      }
+
+      if (!emailCheck.ok) {
+        throw new Error('Error checking email uniqueness');
+      }
+
+      // Proceed with submission
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...trimmedFormData,
+          captchaToken
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to submit registration');
+      }
+
+      navigate('/verify-email', {
+        state: {
+          email: formData.email,
+          firstName: formData.firstName,
+          fromRegistration: true,
+          studentID: data.data.studentID || '',
+          expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+        }
+      });
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      setErrors({ submit: error.message || 'Registration failed. Please try again.' });
+    } finally {
       setIsSubmitting(false);
       setShowConfirmModal(false);
-      return;
     }
-
-    if (!emailCheck.ok) {
-      throw new Error('Error checking email uniqueness');
-    }
-
-    // Proceed with submission
-    const response = await fetch('http://localhost:5000/api/enrollee-applicants', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...trimmedFormData,
-        captchaToken
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || data.message || 'Failed to submit registration');
-    }
-
-    navigate('/verify-email', {
-      state: {
-        email: formData.email,
-        firstName: formData.firstName,
-        fromRegistration: true,
-        studentID: data.data.studentID || '',
-        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
-      }
-    });
-
-  } catch (error) {
-    console.error('Registration error:', error);
-    setErrors({ submit: error.message || 'Registration failed. Please try again.' });
-  } finally {
-    setIsSubmitting(false);
-    setShowConfirmModal(false);
-  }
-};
+  };
 
   return (
     <div className="juan-register-container">
@@ -367,11 +367,11 @@ const confirmRegistration = async () => {
         <div className="juan-footer-content">
           {/* About, Terms, Privacy links */}
           <div className="juan-footer-links">
-            <a href="/about" className="juan-footer-link">About</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/terms" className="juan-footer-link">Terms of Use</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/privacy" className="juan-footer-link">Privacy</a>
+            <a href="/about" className="footer-link">About</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/terms-of-use" className="footer-link">Terms of Use</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/privacy" className="footer-link">Privacy</a>
           </div>
 
           {/* Footer content remains the same */}

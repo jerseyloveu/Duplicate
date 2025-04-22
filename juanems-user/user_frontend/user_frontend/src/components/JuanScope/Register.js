@@ -706,11 +706,11 @@ function Register() {
         <div className="juan-footer-content">
           {/* About, Terms, Privacy links */}
           <div className="juan-footer-links">
-            <a href="/about" className="juan-footer-link">About</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/terms" className="juan-footer-link">Terms of Use</a>
-            <span className="juan-footer-link-separator">|</span>
-            <a href="/privacy" className="juan-footer-link">Privacy</a>
+            <a href="/about" className="footer-link">About</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/terms-of-use" className="footer-link">Terms of Use</a>
+            <span className="footer-link-separator">|</span>
+            <a href="/privacy" className="footer-link">Privacy</a>
           </div>
 
           {/* Facebook link */}

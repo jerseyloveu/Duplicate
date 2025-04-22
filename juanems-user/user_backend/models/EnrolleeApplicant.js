@@ -42,6 +42,22 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   verificationExpires: { 
     type: Date, 
     default: () => new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+  },
+  // New fields for user activity tracking
+  loginAttempts: { 
+    type: Number, 
+    default: 0 
+  },
+  activityStatus: { 
+    type: String, 
+    enum: ['Online', 'Offline'], 
+    default: 'Offline' 
+  },
+  lastLogin: { 
+    type: Date 
+  },
+  lastLogout: { 
+    type: Date 
   }
 });
 

@@ -300,7 +300,7 @@ function HomePage() {
                     <div className="footer-links">
                         <a href="/about" className="footer-link">About</a>
                         <span className="footer-link-separator">|</span>
-                        <a href="/terms" className="footer-link">Terms of Use</a>
+                        <a href="/terms-of-use" className="footer-link">Terms of Use</a>
                         <span className="footer-link-separator">|</span>
                         <a href="/privacy" className="footer-link">Privacy</a>
                     </div>
