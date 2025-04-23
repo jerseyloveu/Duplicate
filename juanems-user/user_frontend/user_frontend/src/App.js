@@ -35,6 +35,7 @@ import Admin_ManageSectionsPage from './components/UserAdmin/ManageSectionsPage'
 import Admin_CreateSection from './components/UserAdmin/CreateSection'; 
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
+import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
 
 function App() {
   return (
@@ -91,6 +92,8 @@ function App() {
           <Route path='/admin/manage-subjects' element={<Admin_ManageSubjectsPage/>}/>
           <Route path='/admin/manage-subjects/create' element={<Admin_CreateSubject/>}/>
           <Route path="/admin/manage-subjects/edit/:id" element={<Admin_CreateSubject/>}/>
+
+          <Route path='/admin/access-control' element={<Admin_AccessControl/>}/>
 
         </Routes>
       </div>

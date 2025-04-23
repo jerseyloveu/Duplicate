@@ -28,7 +28,7 @@ const ManageStudentRecordsPage = () => {
         <div className="arrows" onClick={handleBack}>
           <MdOutlineKeyboardArrowLeft />
         </div>
-        <p className="heading">Manage Schedule</p>
+        <p className="heading">Manage Student Records</p>
       </div>
       <div className='content-process'>
         <div className='card-container'>

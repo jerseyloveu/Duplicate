@@ -122,6 +122,7 @@ const ManageAccountsPage = () => {
 
   const handleBack = () => navigate('/admin/dashboard');
   const handleCreate = () => navigate('/admin/manage-accounts/create');
+  const handleAccessControl = () => navigate('/admin/access-control');
 
   const handleStatusToggle = async (record) => {
     const updatedStatus = record.status === 'Active' ? 'Inactive' : 'Active';
@@ -332,7 +333,7 @@ const ManageAccountsPage = () => {
               onChange={(e) => handleSearch(e.target.value)}
               suffix={<FaSearch style={{ color: '#aaa' }} />}
             />
-            <Button icon={<MdOutlineManageAccounts />}>Access Control</Button>
+            <Button icon={<MdOutlineManageAccounts/>} onClick={handleAccessControl}>Access Control</Button>
             <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
               Create Account
             </Button>
