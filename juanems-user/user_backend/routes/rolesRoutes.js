@@ -2,46 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Roles = require('../models/Roles'); // Updated model
 
-// CREATE role access
-// POST /api/admin/roles/create-role
-router.post('/create-role', async (req, res) => {
+// FETCH role access 
+// GET /api/admin/roles/:roleName
+router.get('/:roleName', async (req, res) => {
     try {
-        const { role, modules } = req.body;
-
-        // Check if role already exists
-        const existing = await Roles.findOne({ role });
-
-        if (existing) {
-            return res.status(409).json({ message: 'Role already exists.' });
-        }
-
-        const newRole = new Roles({ role, modules });
-        await newRole.save();
-
-        res.status(201).json({ message: 'Role created successfully.', data: newRole });
-    } catch (error) {
-        console.error('Create role error:', error);
-        res.status(500).json({ message: 'Server error creating role.' });
-    }
-});
-
-// GET all roles
-// GET /api/admin/roles
-router.get('/', async (req, res) => {
-    try {
-        const roles = await Roles.find().sort({ createdAt: -1 });
-        res.status(200).json({ data: roles });
-    } catch (error) {
-        console.error('Get roles error:', error);
-        res.status(500).json({ message: 'Server error fetching roles.' });
-    }
-});
-
-// GET single role by ID
-// GET /api/admin/roles/:id
-router.get('/:id', async (req, res) => {
-    try {
-        const role = await Roles.findById(req.params.id);
+        const role = await Roles.findOne({ role: req.params.roleName });
 
         if (!role) {
             return res.status(404).json({ message: 'Role not found.' });
@@ -49,7 +14,7 @@ router.get('/:id', async (req, res) => {
 
         res.status(200).json({ data: role });
     } catch (error) {
-        console.error('Get role error:', error);
+        console.error('Get role by name error:', error);
         res.status(500).json({ message: 'Server error retrieving role.' });
     }
 });

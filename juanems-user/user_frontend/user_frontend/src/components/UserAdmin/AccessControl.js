@@ -78,11 +78,14 @@ const RoleAccessForm = ({ role }) => {
     useEffect(() => {
         const fetchRoleData = async () => {
             try {
+                // Use the role name to find the role
                 const response = await fetch(`/api/admin/roles/${role}`);
                 if (response.ok) {
-                    const data = await response.json();
-                    setSelectedModules(data.modules); // Set modules from DB
+                    const result = await response.json();
+                    // Access modules from the correct path in the response
+                    setSelectedModules(result.data.modules || []);
                 } else {
+                    console.error('Role not found, using defaults');
                     setSelectedModules(getAllModuleKeys()); // Use default if no role data found
                 }
             } catch (error) {
