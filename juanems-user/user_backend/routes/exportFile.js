@@ -22,14 +22,13 @@ router.get('/accounts', async (req, res) => {
     }));    
 
     const accountColumns = [
-      { label: '#', property: '__rowNumber', width: 25 },
+      { label: '#', property: '__rowNumber', width: 45 },
       { label: 'User ID', property: 'userID', width: 100 },
       { label: 'Name', property: 'fullName', width: 140 }, 
-      { label: 'Email', property: 'email', width: 170 },
-      { label: 'Role', property: 'role', width: 50 },
-      { label: 'Dept.', property: 'department', width: 70 },
-      { label: 'Mobile', property: 'mobile', width: 100 },
-      { label: 'Status', property: 'status', width: 60 },
+      { label: 'Email', property: 'email', width: 190 },
+      { label: 'Role', property: 'role', width: 80 },
+      { label: 'Mobile', property: 'mobile', width: 90 },
+      { label: 'Status', property: 'status', width: 70 },
     ];    
 
     pdfService.buildPDF(modifiedAccounts, accountColumns, 'Accounts Report', (chunk) => res.write(chunk), () => res.end());

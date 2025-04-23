@@ -59,7 +59,6 @@ const ManageAccountsPage = () => {
           item.email.toLowerCase().includes(search.toLowerCase()) ||
           item.role.toLowerCase().includes(search.toLowerCase()) ||
           item.status.toLowerCase().includes(search.toLowerCase()) ||
-          item.department.toLowerCase().includes(search.toLowerCase()) ||
           createdAtFormatted.includes(search.toLowerCase()) || 
           updatedAtFormatted.includes(search.toLowerCase())
         );
@@ -177,26 +176,15 @@ const ManageAccountsPage = () => {
       key: 'role',
       filters: [
         { text: 'Student', value: 'Student' },
-        { text: 'Staff', value: 'Staff' },
+        { text: 'Faculty', value: 'Faculty' },
+        { text: 'Admissions (Staff)', value: 'Admissions (Staff)' },
+        { text: 'Registrar (Staff)', value: 'Registrar (Staff)' },
+        { text: 'Accounting (Staff)', value: 'Accounting (Staff)' },
+        { text: 'Administration (Sub-Admin)', value: 'Administration (Sub-Admin)' },
+        { text: 'IT (Super Admin)', value: 'IT (Super Admin)' },
       ],
       onFilter: (value, record) => record.role.includes(value),
       filteredValue: tableFilters.role || null,
-    },
-    {
-      title: 'Department',
-      width: 150,
-      dataIndex: 'department',
-      key: 'department',
-      filters: [
-        { text: 'SHS', value: 'SHS' },
-        { text: 'Faculty', value: 'Faculty' },
-        { text: 'Admissions', value: 'Admissions' },
-        { text: 'Registrar', value: 'Registrar' },
-        { text: 'Accounting', value: 'Accounting' },
-        { text: 'IT', value: 'IT' },
-      ],
-      onFilter: (value, record) => record.department.includes(value),
-      filteredValue: tableFilters.department || null,
     },
     {
       title: 'Status',

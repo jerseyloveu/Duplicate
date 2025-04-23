@@ -14,7 +14,6 @@ router.post('/create-account', async (req, res) => {
         email,
         mobile,
         role,
-        department,
         password,
         status
       } = req.body;
@@ -42,7 +41,6 @@ router.post('/create-account', async (req, res) => {
         email,
         mobile,
         role,
-        department,
         password,
         status: status || 'Pending Verification'
       });

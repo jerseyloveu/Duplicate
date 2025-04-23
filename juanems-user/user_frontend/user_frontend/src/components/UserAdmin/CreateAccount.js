@@ -11,23 +11,15 @@ import '../../css/UserAdmin/CreateAccount.css';
 import '../../css/UserAdmin/Global.css';
 import '../../css/JuanScope/Register.css';
 
-const generateUserID = (role, department) => {
+const generateUserID = (role) => {
+  // May still change depending on the client 
   const currentYear = new Date().getFullYear().toString();
   const randomID = Math.random().toString().slice(2, 8); // 6 random digits
 
-  if (role === 'Student') {
-    return `${currentYear}-${randomID}`;
-  } else if (role === 'Staff' || role === 'Sub-Admin' || role === 'Super Admin') {
-    const departmentCode = {
-      'Faculty': 'FCT',
-      'Admissions': 'ADM',
-      'Registrar': 'REG',
-      'Accounting': 'ACC',
-      'IT': 'IT',
-      'Administration': 'ADMIN',
-    }[department] || 'STAFF';
-    return `${departmentCode}-${currentYear}-${randomID}`;
-  }
+  // Use 'STD' for students, 'EMP' for everyone else
+  const roleCode = role === 'Student' ? 'STD' : 'EMP';
+
+  return `${roleCode}-${currentYear}-${randomID}`;
 };
 
 const generatePassword = () => { // Simple password generation function (you can customize it as per your needs)
@@ -116,7 +108,6 @@ const CreateAccount = () => {
           email: data.email,
           mobile: formattedMobile,
           role: data.role,
-          department: data.department,
           status: data.status,
         });
 
@@ -156,14 +147,13 @@ const CreateAccount = () => {
         email: formValues.email?.trim() || '',
         mobile: formValues.mobile?.replace(/\D/g, '') || '',
         role: formValues.role || '',
-        department: formValues.department || '',
         status: formValues.status || '',
         password: password || '',
       };
 
       // Generate user ID if not provided
       if (!formValues.userID || !formValues.userID.trim()) {
-        trimmedValues.userID = generateUserID(trimmedValues.role, trimmedValues.department);
+        trimmedValues.userID = generateUserID(trimmedValues.role);
       }
 
       console.log('Creating account with values:', trimmedValues);
@@ -227,11 +217,6 @@ const CreateAccount = () => {
           labelCol={{ xs: { span: 24 }, sm: { span: 6 } }}
           wrapperCol={{ xs: { span: 24 }, sm: { span: 30 } }}
           onFinish={handleSubmit}
-          onValuesChange={(changedValues) => {
-            if (changedValues.role) {
-              form.setFieldsValue({ department: undefined }); // Clears department on role change
-            }
-          }}
         >
           <div className="container-columns">
             <div className="column">
@@ -244,7 +229,7 @@ const CreateAccount = () => {
                 label="User ID"
                 name="userID"
               >
-                <Input placeholder="Auto-generated ID" disabled/>
+                <Input placeholder="Auto-generated ID" disabled />
               </Form.Item>
               <Form.Item
                 label="First Name"
@@ -323,33 +308,12 @@ const CreateAccount = () => {
               >
                 <Select placeholder="Select a role">
                   <Select.Option value="Student">Student</Select.Option>
-                  <Select.Option value="Staff">Staff</Select.Option>
-                  <Select.Option value="Sub-Admin">Sub-Admin</Select.Option>
-                  <Select.Option value="Super Admin">Super Admin</Select.Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                label="Department"
-                name="department"
-                rules={[{ required: true, message: 'Please select a department!' }]}
-              >
-                <Select
-                  placeholder="Select a department"
-                  disabled={!role}  // Disable until role is selected
-                >
-                  {role === 'Student' ? (
-                    <Select.Option value="SHS">SHS</Select.Option> // Only show SHS for student
-                  ) : (
-                    <>
-                      <Select.Option value="Faculty">Faculty</Select.Option>
-                      <Select.Option value="Admissions">Admissions</Select.Option>
-                      <Select.Option value="Registrar">Registrar</Select.Option>
-                      <Select.Option value="Accounting">Accounting</Select.Option>
-                      <Select.Option value="IT">IT</Select.Option>
-                      <Select.Option value="Administration">Administration</Select.Option>
-                    </>
-                  )}
+                  <Select.Option value="Faculty">Faculty</Select.Option>
+                  <Select.Option value="Admissions (Staff)">Admissions (Staff)</Select.Option>
+                  <Select.Option value="Registrar (Staff)">Registrar (Staff)</Select.Option>
+                  <Select.Option value="Accounting (Staff)">Accounting (Staff)</Select.Option>
+                  <Select.Option value="Administration (Sub-Admin)">Administration (Sub-Admin)</Select.Option>
+                  <Select.Option value="IT (Super-Admin)">IT (Super-Admin)</Select.Option>
                 </Select>
               </Form.Item>
 
@@ -424,7 +388,6 @@ const CreateAccount = () => {
                 )}
               </div>
             </div>
-
 
             {/* Confirmation Modal */}
             {showConfirmModal && (
