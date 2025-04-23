@@ -124,7 +124,7 @@ const ManageAccountsPage = () => {
   const handleCreate = () => navigate('/admin/manage-accounts/create');
 
   const handleStatusToggle = async (record) => {
-    const updatedStatus = record.status === 'Activated' ? 'Deactivated' : 'Activated';
+    const updatedStatus = record.status === 'Active' ? 'Inactive' : 'Active';
   
     try {
       const response = await fetch(`/api/admin/accounts/${record._id}`, {
@@ -182,21 +182,6 @@ const ManageAccountsPage = () => {
       filteredValue: tableFilters.role || null,
     },
     {
-      title: 'Status',
-      width: 100,
-      dataIndex: 'status',
-      key: 'status',
-      filters: [
-        { text: 'Activated', value: 'Activated' },
-        { text: 'Deactivated', value: 'Deactivated' },
-      ],
-      onFilter: (value, record) => record.status.includes(value),
-      filteredValue: tableFilters.status || null,
-      render: (status) => (
-        <Tag color={status === 'Activated' ? 'green' : 'volcano'}>{status}</Tag>
-      ),
-    },
-    {
       title: 'Department',
       width: 150,
       dataIndex: 'department',
@@ -211,6 +196,21 @@ const ManageAccountsPage = () => {
       ],
       onFilter: (value, record) => record.department.includes(value),
       filteredValue: tableFilters.department || null,
+    },
+    {
+      title: 'Status',
+      width: 100,
+      dataIndex: 'status',
+      key: 'status',
+      filters: [
+        { text: 'Active', value: 'Active' },
+        { text: 'Inactive', value: 'Inactive' },
+      ],
+      onFilter: (value, record) => record.status.includes(value),
+      filteredValue: tableFilters.status || null,
+      render: (status) => (
+        <Tag color={status === 'Active' ? 'green' : 'volcano'}>{status}</Tag>
+      ),
     },
     {
       title: 'Created At',
@@ -261,12 +261,12 @@ const ManageAccountsPage = () => {
             Edit
           </Button>
           <Button
-            icon={record.status === 'Activated' ? <FaUserTimes /> : <FaUserCheck />}
-            danger={record.status === 'Activated'}
+            icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
+            danger={record.status === 'Active'}
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
             onClick={() => handleStatusToggle(record)}
           >
-            {record.status === 'Activated' ? 'Deactivate' : 'Activate'}
+            {record.status === 'Active' ? 'Inactive' : 'Active'}
           </Button>
           <Button
             icon={<GrPowerReset />}

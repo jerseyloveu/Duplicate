@@ -9,6 +9,7 @@ import Footer from './Footer';
 import Header from './Header';
 import '../../css/UserAdmin/CreateAccount.css';
 import '../../css/UserAdmin/Global.css';
+import '../../css/JuanScope/Register.css';
 
 const generateUserID = (role, department) => {
   const currentYear = new Date().getFullYear().toString();
@@ -16,13 +17,14 @@ const generateUserID = (role, department) => {
 
   if (role === 'Student') {
     return `${currentYear}-${randomID}`;
-  } else if (role === 'Staff') {
+  } else if (role === 'Staff' || role === 'Sub-Admin' || role === 'Super Admin') {
     const departmentCode = {
       'Faculty': 'FCT',
       'Admissions': 'ADM',
       'Registrar': 'REG',
       'Accounting': 'ACC',
       'IT': 'IT',
+      'Administration': 'ADMIN',
     }[department] || 'STAFF';
     return `${departmentCode}-${currentYear}-${randomID}`;
   }
@@ -57,28 +59,54 @@ const CreateAccount = () => {
   const variant = Form.useWatch('variant', form);
   const role = Form.useWatch('role', form);
   const { id } = useParams();
+  const [isChecked, setIsChecked] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formValues, setFormValues] = useState(null);
+
+  const handleCheckboxChange = (e) => {
+    setIsChecked(e.target.checked);
+    if (errors.agreement) {
+      setErrors(prev => ({
+        ...prev,
+        agreement: null
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!isChecked) {
+      newErrors.agreement = 'You must agree to the data privacy agreement';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   useEffect(() => {
     const fetchAccount = async () => {
       if (!id) return; // only fetch if editing
-  
+
       try {
         const res = await fetch(`http://localhost:5000/api/admin/accounts/${id}`);
         const result = await res.json();
-  
+
         if (!res.ok) {
           return message.error(result.message || 'Failed to load account data.');
         }
-  
+
         // Log the fetched data to the console
         console.log('Fetched account data:', result);
-  
+
         // Extract the actual account data from the "data" object
         const data = result.data;
-  
+
         // Check if mobile exists and format it
         const formattedMobile = data.mobile ? formatMobile(data.mobile) : '';
-  
+
         // Use setFieldsValue after form is loaded to set the values correctly
         form.setFieldsValue({
           userID: data.userID,  // Manually set userID here to ensure it populates
@@ -91,48 +119,59 @@ const CreateAccount = () => {
           department: data.department,
           status: data.status,
         });
-  
+
         setMobileNumber(formattedMobile); // Update state for mobile number as well
       } catch (error) {
         console.error('Error fetching account:', error);
         message.error('Error fetching account data.');
       }
     };
-  
+
     fetchAccount();
   }, [id, form]); // Depend on 'id' and 'form' to reload when necessary  
-  
+
+  const handleSubmit = (values) => {
+    if (validateForm()) {
+      setFormValues(values);
+      setShowConfirmModal(true);
+    }
+  };
 
   const handleBack = () => navigate('/admin/manage-accounts');
 
-  const handleSubmit = async (values) => {
+  const confirmAccountCreation = async () => {
+    if (!formValues) return;
+
+    setIsSubmitting(true);
     try {
       // Generate a random password
       const password = generatePassword();
 
       // Trim string fields
       const trimmedValues = {
-        ...values,
-        firstName: values.firstName.trim(),
-        middleName: values.middleName?.trim() || '',
-        lastName: values.lastName.trim(),
-        email: values.email.trim(),
-        mobile: values.mobile.replace(/\D/g, ''),
-        role: values.role,
-        department: values.department,
-        status: values.status,
-        password,
+        ...formValues, // Use formValues instead of undefined values
+        firstName: formValues.firstName?.trim() || '',
+        middleName: formValues.middleName?.trim() || '',
+        lastName: formValues.lastName?.trim() || '',
+        email: formValues.email?.trim() || '',
+        mobile: formValues.mobile?.replace(/\D/g, '') || '',
+        role: formValues.role || '',
+        department: formValues.department || '',
+        status: formValues.status || '',
+        password: password || '',
       };
 
       // Generate user ID if not provided
-      if (!values.userID || !values.userID.trim()) {
+      if (!formValues.userID || !formValues.userID.trim()) {
         trimmedValues.userID = generateUserID(trimmedValues.role, trimmedValues.department);
       }
 
+      console.log('Creating account with values:', trimmedValues);
+
       const url = id
-      ? `http://localhost:5000/api/admin/accounts/${id}`
-      : 'http://localhost:5000/api/admin/create-account';
-    
+        ? `http://localhost:5000/api/admin/accounts/${id}`
+        : 'http://localhost:5000/api/admin/create-account';
+
       const method = id ? 'PUT' : 'POST';
 
       // API call to create the account
@@ -159,11 +198,14 @@ const CreateAccount = () => {
         return message.error('Server error. Please try again later.');
       }
 
-      message.success('Account successfully created!');
+      message.success(id ? 'Account successfully updated!' : 'Account successfully created!');
       navigate('/admin/manage-accounts');
     } catch (error) {
       console.error('Error creating account:', error);
       message.error(error.message || 'Failed to create account. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+      setShowConfirmModal(false);
     }
   };
 
@@ -181,7 +223,7 @@ const CreateAccount = () => {
         <Form
           form={form}
           variant={variant || 'outlined'}
-          initialValues={{ variant: 'outlined', status: 'Deactivated' }} // <-- Add this
+          initialValues={{ variant: 'outlined', status: 'Inactive' }} // <-- Add this
           labelCol={{ xs: { span: 24 }, sm: { span: 6 } }}
           wrapperCol={{ xs: { span: 24 }, sm: { span: 30 } }}
           onFinish={handleSubmit}
@@ -202,7 +244,7 @@ const CreateAccount = () => {
                 label="User ID"
                 name="userID"
               >
-                <Input placeholder="Leave blank to auto-generate ID" />
+                <Input placeholder="Auto-generated ID" disabled/>
               </Form.Item>
               <Form.Item
                 label="First Name"
@@ -273,6 +315,7 @@ const CreateAccount = () => {
                 <IoSettings className="section-icon" />
                 <p className="section-title">ACCOUNT SETTINGS</p>
               </div>
+
               <Form.Item
                 label="Role"
                 name="role"
@@ -281,6 +324,8 @@ const CreateAccount = () => {
                 <Select placeholder="Select a role">
                   <Select.Option value="Student">Student</Select.Option>
                   <Select.Option value="Staff">Staff</Select.Option>
+                  <Select.Option value="Sub-Admin">Sub-Admin</Select.Option>
+                  <Select.Option value="Super Admin">Super Admin</Select.Option>
                 </Select>
               </Form.Item>
 
@@ -302,6 +347,7 @@ const CreateAccount = () => {
                       <Select.Option value="Registrar">Registrar</Select.Option>
                       <Select.Option value="Accounting">Accounting</Select.Option>
                       <Select.Option value="IT">IT</Select.Option>
+                      <Select.Option value="Administration">Administration</Select.Option>
                     </>
                   )}
                 </Select>
@@ -313,8 +359,8 @@ const CreateAccount = () => {
                 rules={[{ required: true, message: 'Please select account status!' }]}
               >
                 <Select placeholder="Select account status">
-                  <Select.Option value="Activated">Activated</Select.Option>
-                  <Select.Option value="Deactivated">Deactivated</Select.Option>
+                  <Select.Option value="Active">Active</Select.Option>
+                  <Select.Option value="Inactive">Inactive</Select.Option>
                 </Select>
               </Form.Item>
 
@@ -328,8 +374,96 @@ const CreateAccount = () => {
               </div>
             </div>
             <div className="column">
+              {/* Form title */}
+              <h3 className="juan-form-title">Data Privacy Agreement</h3>
+              <div className="juan-title-underline"></div>
+              {/* Data Privacy Agreement Checkbox */}
+              <div className="juan-form-group" style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="agreement"
+                    checked={isChecked}
+                    onChange={handleCheckboxChange}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      margin: '2px 0 0 0',
+                      flexShrink: 0
+                    }}
+                    className={`juan-custom-checkbox ${errors.agreement ? 'juan-input-error' : ''}`}
+                  />
+                  <label
+                    htmlFor="agreement"
+                    style={{
+                      textAlign: 'justify',
+                      whiteSpace: 'normal',
+                      wordWrap: 'break-word',
+                      display: 'inline-block',
+                      width: '100%',
+                      fontWeight: 'normal',
+                      fontSize: '13px',
+                      margin: 0
+                    }}
+                  >
+                    {id ? (
+                      // Message for updating an account
+                      "I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. This account update has been carried out by an authorized representative of the institution in accordance with institutional policies."
+                    ) : (
+                      // Message for creating a new account
+                      "I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. This account creation has been carried out by an authorized representative of the institution in accordance with institutional policies."
+                    )}
+                    <br /><br />
+                    In compliance with the Data Privacy Act of 2012, San Juan de Dios Educational Foundation Inc. – College will safeguard all submitted data and use it solely for official academic and administrative purposes.
+                  </label>
+                </div>
+                {errors.agreement && (
+                  <div className="juan-error-message" style={{ color: 'red', marginTop: '5px' }}>
+                    {errors.agreement}
+                  </div>
+                )}
+              </div>
             </div>
+
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+              <div className="juan-modal-overlay">
+                <div className="juan-confirm-modal">
+                  <h3>{id ? 'Confirm Update' : 'Confirm Registration'}</h3>
+                  <p>
+                    {id
+                      ? 'Are you sure all the updated information is correct? Please review before confirming these changes.'
+                      : 'Are you sure all the information provided is correct? Please review before creating this account.'
+                    }
+                  </p>
+                  <div className="juan-modal-buttons">
+                    <button
+                      className="juan-modal-cancel"
+                      onClick={() => setShowConfirmModal(false)}
+                      disabled={isSubmitting}
+                    >
+                      Review Information
+                    </button>
+                    <button
+                      className="juan-modal-confirm"
+                      onClick={confirmAccountCreation}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Submitting...' : id ? 'Yes, Update' : 'Yes, Submit'}
+                    </button>
+                  </div>
+                  {errors.submit && (
+                    <div className="juan-error-message" style={{ marginTop: '10px', textAlign: 'center' }}>
+                      {errors.submit}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
+
         </Form>
       </div>
       <Footer />

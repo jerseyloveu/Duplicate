@@ -23,7 +23,7 @@ dayjs.extend(isBetween);
 
 const { RangePicker } = DatePicker;
 
-const ManageQueuePage = () => {
+const ManageFacultySchedule = () => {
     const navigate = useNavigate();
 
   const handleBack = () => navigate('/admin/dashboard');
@@ -36,7 +36,7 @@ const ManageQueuePage = () => {
           <div className="arrows" onClick={handleBack}>
             <MdOutlineKeyboardArrowLeft />
           </div>
-          <p className="heading">Manage Queue</p>
+          <p className="heading">Manage Faculty Schedule</p>
         </div>
       </div>
       <Footer />
@@ -44,6 +44,6 @@ const ManageQueuePage = () => {
   )
 }
 
-export default ManageQueuePage
+export default ManageFacultySchedule
 
 

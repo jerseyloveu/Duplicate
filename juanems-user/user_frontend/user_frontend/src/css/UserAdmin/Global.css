@@ -87,7 +87,7 @@ p {
   }  
 
 .section-title {
-    color: #5F6366;
+    color: black;
     font-size: 1rem;
     font-weight: 700;
     margin-top: 20px;
@@ -95,7 +95,7 @@ p {
 }
 
 .section-icon {
-    color: #5F6366;
+    color: black;
     font-size: 1rem;
     margin-right: 8px;
 }

@@ -23,6 +23,8 @@ import Admin_ManagePaymentsPage from './components/UserAdmin/ManagePaymentsPage'
 import Admin_ManageProgramPage from './components/UserAdmin/ManageProgramPage'; 
 import Admin_ManageQueuePage from './components/UserAdmin/ManageQueuePage'; 
 import Admin_ManageSchedulePage from './components/UserAdmin/ManageSchedulePage'; 
+import Admin_ManageStudentSchedule from './components/UserAdmin/ManageStudentSchedule'; 
+import Admin_ManageFacultySchedule from './components/UserAdmin/ManageFacultySchedule'; 
 import Admin_ManageStudentRecordsPage from './components/UserAdmin/ManageStudentRecordsPage'; 
 import Admin_OverallSystemLogs from './components/UserAdmin/OverallSystemLogsPage'; 
 import Admin_CreateAnnouncements from './components/UserAdmin/CreateAnnouncementsPage'; 
@@ -69,7 +71,11 @@ function App() {
           <Route path='/admin/manage-payments' element={<Admin_ManagePaymentsPage/>}/>
           <Route path='/admin/manage-program' element={<Admin_ManageProgramPage/>}/>
           <Route path='/admin/manage-queue' element={<Admin_ManageQueuePage/>}/>
+          
           <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
+          <Route path='/admin/manage-student-schedule' element={<Admin_ManageStudentSchedule/>}/>          <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
+          <Route path='/admin/manage-faculty-schedule' element={<Admin_ManageFacultySchedule/>}/>
+
           <Route path='/admin/manage-student-records' element={<Admin_ManageStudentRecordsPage/>}/>
           <Route path='/admin/manage-overall-system-logs' element={<Admin_OverallSystemLogs/>}/>
           <Route path='/admin/create-announcements' element={<Admin_CreateAnnouncements/>}/>
