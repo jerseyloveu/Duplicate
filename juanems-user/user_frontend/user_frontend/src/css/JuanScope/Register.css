@@ -693,6 +693,60 @@
   display: block;
 }
 
+/* Real-time validation styles */
+.juan-error-message {
+  color: #880D0C;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.juan-input-error {
+  border-color: #880D0C !important;
+}
+
+.juan-email-status {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.juan-email-status svg {
+  font-size: 0.9rem;
+}
+
+.juan-email-taken {
+  color: #880D0C;
+}
+
+/* Date picker styling */
+input[type="date"] {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.juan-character-count {
+  font-size: 0.75rem;
+  color: #666;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.juan-character-count.warning {
+  color: #880D0C;
+}
+
+/* Make sure to disable dates in the past */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 /* Form Buttons */
 .juan-form-buttons {
   display: flex;

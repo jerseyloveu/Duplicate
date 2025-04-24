@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faExclamationCircle, faTimes, faCheck, faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -265,8 +265,16 @@ function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(null);
 
-  // Update the useState initialization to properly handle nationality
+  // Calculate minimum date (10 years ago from today)
+  const today = new Date();
+  const minDate = new Date();
+  minDate.setFullYear(today.getFullYear() - 10);
+  const todayISO = today.toISOString().split('T')[0];
+  const minDateISO = minDate.toISOString().split('T')[0];
+
   const [formData, setFormData] = useState(() => {
     const defaultData = {
       firstName: '',
@@ -276,7 +284,6 @@ function Register() {
       email: '',
       mobile: '',
       nationality: '',
-      // Include Register2.js fields with empty defaults
       academicYear: '',
       academicTerm: '',
       applyingFor: '',
@@ -288,16 +295,102 @@ function Register() {
 
   const [errors, setErrors] = useState({});
   const [nationalityOptions, setNationalityOptions] = useState(countries);
+  const [touchedFields, setTouchedFields] = useState({});
 
   // Initialize Fuse.js with memoization for performance
   const fuse = useMemo(() => new Fuse(countries, fuseOptions), []);
 
-  // Get current date for max date restriction
-  const today = new Date().toISOString().split('T')[0];
+  // Real-time validation effect
+  useEffect(() => {
+    const validateField = (name, value) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
+
+      switch (name) {
+        case 'firstName':
+        case 'lastName':
+          if (!value.trim()) return `${name === 'firstName' ? 'First name' : 'Last name'} is required`;
+          if (value.trim().length < 2) return `${name === 'firstName' ? 'First name' : 'Last name'} must be at least 2 characters`;
+          if (value.trim().length > 50) return `${name === 'firstName' ? 'First name' : 'Last name'} cannot exceed 50 characters`;
+          return null;
+
+        case 'dob':
+          if (!value) return 'Date of birth is required';
+          const dobDate = new Date(value);
+          const ageDiff = today.getFullYear() - dobDate.getFullYear();
+          if (dobDate > today) return 'Date cannot be in the future';
+          if (ageDiff < 10) return 'You must be at least 10 years old';
+          return null;
+
+        case 'email':
+          if (!value) return 'Email is required';
+          if (!emailRegex.test(value)) return 'Please enter a valid email address';
+          return null;
+
+        case 'mobile':
+          if (!value) return 'Mobile number is required';
+          if (!phoneRegex.test(value)) return 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
+          return null;
+
+        case 'nationality':
+          return !value.trim() ? 'Nationality is required' : null;
+
+        default:
+          return null;
+      }
+    };
+
+    const newErrors = {};
+    Object.keys(touchedFields).forEach(field => {
+      if (touchedFields[field]) {
+        const error = validateField(field, formData[field]);
+        if (error) newErrors[field] = error;
+      }
+    });
+
+    setErrors(newErrors);
+  }, [formData, touchedFields]);
+
+  // Email availability check effect
+  useEffect(() => {
+    const checkEmailAvailability = async () => {
+      if (!formData.email || errors.email) {
+        setIsEmailAvailable(null);
+        return;
+      }
+
+      setIsCheckingEmail(true);
+      try {
+        const isAvailable = await checkEmailUniqueness(formData.email);
+        setIsEmailAvailable(isAvailable);
+      } catch (error) {
+        console.error('Email check error:', error);
+        setIsEmailAvailable(null);
+      } finally {
+        setIsCheckingEmail(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (touchedFields.email) {
+        checkEmailAvailability();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.email, touchedFields.email]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     const sanitizedValue = value.replace(/<[^>]*>?/gm, '');
+
+    // For name fields, remove extra spaces and count actual letters
+    if (['firstName', 'middleName', 'lastName'].includes(name)) {
+      const trimmedValue = sanitizedValue.trim();
+      if (trimmedValue.length > 50) {
+        return; // Don't update if exceeds max length
+      }
+    }
 
     let processedValue = sanitizedValue;
     if (['firstName', 'middleName', 'lastName'].includes(name)) {
@@ -313,10 +406,21 @@ function Register() {
       [name]: processedValue
     });
 
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null
+    // Mark field as touched
+    if (!touchedFields[name]) {
+      setTouchedFields({
+        ...touchedFields,
+        [name]: true
+      });
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    if (!touchedFields[name]) {
+      setTouchedFields({
+        ...touchedFields,
+        [name]: true
       });
     }
   };
@@ -387,19 +491,45 @@ function Register() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.dob) newErrors.dob = 'Date of birth is required';
+    // First Name validation
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = 'First name must be at least 2 characters';
+    } else if (formData.firstName.trim().length > 50) {
+      newErrors.firstName = 'First name cannot exceed 50 characters';
+    }
+
+    // Last Name validation
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = 'Last name must be at least 2 characters';
+    } else if (formData.lastName.trim().length > 50) {
+      newErrors.lastName = 'Last name cannot exceed 50 characters';
+    }
+
+    if (!formData.dob) {
+      newErrors.dob = 'Date of birth is required';
+    } else {
+      const dobDate = new Date(formData.dob);
+      const ageDiff = today.getFullYear() - dobDate.getFullYear();
+      if (dobDate > today) newErrors.dob = 'Date cannot be in the future';
+      if (ageDiff < 10) newErrors.dob = 'You must be at least 10 years old';
+    }
+
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!emailRegex.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
+
     if (!formData.mobile) {
       newErrors.mobile = 'Mobile number is required';
     } else if (!phoneRegex.test(formData.mobile)) {
       newErrors.mobile = 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
     }
+
     if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
 
     setErrors(newErrors);
@@ -410,32 +540,28 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Mark all fields as touched to show all errors
+    const allFieldsTouched = Object.keys(formData).reduce((acc, field) => {
+      acc[field] = true;
+      return acc;
+    }, {});
+    setTouchedFields(allFieldsTouched);
+
     if (!validateForm()) {
       return;
     }
 
-    try {
-      // Check if email is unique
-      const isEmailUnique = await checkEmailUniqueness(formData.email);
-
-      if (!isEmailUnique) {
-        setErrors({
-          ...errors,
-          email: 'This email is already registered. Please use a different email.'
-        });
-        return;
-      }
-
-      // If email is unique, proceed to next step
-      navigate('/register2', { state: { formData } });
-    } catch (error) {
-      console.error('Error during submission:', error);
+    if (isEmailAvailable === false) {
       setErrors({
         ...errors,
-        submit: 'An error occurred while checking email. Please try again.'
+        email: 'This email is already registered. Please use a different email.'
       });
+      return;
     }
+
+    navigate('/register2', { state: { formData } });
   };
+
 
   const handleCancel = () => {
     setShowCancelConfirm(true);
@@ -514,7 +640,6 @@ function Register() {
                 </p>
               </div>
 
-              {/* Form fields */}
               <form onSubmit={handleSubmit}>
                 <div className="juan-form-grid">
                   {/* First Name */}
@@ -528,10 +653,20 @@ function Register() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      maxLength={50}
                       className={errors.firstName ? 'juan-input-error' : ''}
                     />
-                    {errors.firstName && <span className="juan-error-message">{errors.firstName}</span>}
+                    <div className={`juan-character-count ${formData.firstName.length > 45 ? 'warning' : ''}`}>
+                      {formData.firstName.length}/50
+                    </div>
+                    {errors.firstName && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.firstName}
+                      </span>
+                    )}
                   </div>
+
 
                   {/* Middle Name */}
                   <div className="juan-form-group">
@@ -542,6 +677,7 @@ function Register() {
                       name="middleName"
                       value={formData.middleName}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="Leave blank if not applicable"
                     />
                   </div>
@@ -557,9 +693,18 @@ function Register() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      maxLength={50}
                       className={errors.lastName ? 'juan-input-error' : ''}
                     />
-                    {errors.lastName && <span className="juan-error-message">{errors.lastName}</span>}
+                    <div className={`juan-character-count ${formData.lastName.length > 45 ? 'warning' : ''}`}>
+                      {formData.lastName.length}/50
+                    </div>
+                    {errors.lastName && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.lastName}
+                      </span>
+                    )}
                   </div>
 
                   {/* Date of Birth */}
@@ -573,10 +718,16 @@ function Register() {
                       name="dob"
                       value={formData.dob}
                       onChange={handleInputChange}
-                      max={today}
+                      onBlur={handleBlur}
+                      max={todayISO}
+                      min="1900-01-01" // Set a reasonable minimum date
                       className={errors.dob ? 'juan-input-error' : ''}
                     />
-                    {errors.dob && <span className="juan-error-message">{errors.dob}</span>}
+                    {errors.dob && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.dob}
+                      </span>
+                    )}
                   </div>
 
                   {/* Email */}
@@ -590,16 +741,30 @@ function Register() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       className={errors.email ? 'juan-input-error' : ''}
                       placeholder="juandelacruz@email.com"
                     />
                     {errors.email && (
                       <span className="juan-error-message">
-                        {errors.email}
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.email}
                       </span>
                     )}
-                    {!errors.email && formData.email && (
-                      <span className="juan-email-checking">
+                    {!errors.email && touchedFields.email && formData.email && (
+                      <span className={`juan-email-status ${isEmailAvailable === false ? 'juan-email-taken' : ''}`}>
+                        {isCheckingEmail ? (
+                          <>
+                            <FontAwesomeIcon icon={faSpinner} spin /> Checking availability...
+                          </>
+                        ) : isEmailAvailable === true ? (
+                          <>
+                            <FontAwesomeIcon icon={faCheck} /> Email available
+                          </>
+                        ) : isEmailAvailable === false ? (
+                          <>
+                            <FontAwesomeIcon icon={faTimes} /> Email already registered
+                          </>
+                        ) : null}
                       </span>
                     )}
                   </div>
@@ -615,12 +780,18 @@ function Register() {
                       name="mobile"
                       value={formData.mobile}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       className={errors.mobile ? 'juan-input-error' : ''}
                       placeholder="09XX-XXX-XXXX"
                     />
-                    {errors.mobile && <span className="juan-error-message">{errors.mobile}</span>}
+                    {errors.mobile && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.mobile}
+                      </span>
+                    )}
                   </div>
 
+                  {/* Nationality */}
                   <div className="juan-form-group">
                     <label htmlFor="nationality">
                       Nationality:<span className="juan-required-asterisk">*</span>
@@ -637,8 +808,13 @@ function Register() {
                       className="juan-select-wrapper"
                       classNamePrefix="juan-select"
                       error={errors.nationality ? true : false}
+                      onBlur={() => setTouchedFields({ ...touchedFields, nationality: true })}
                     />
-                    {errors.nationality && <span className="juan-error-message">{errors.nationality}</span>}
+                    {errors.nationality && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.nationality}
+                      </span>
+                    )}
                   </div>
                 </div>
 
