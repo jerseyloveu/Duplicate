@@ -27,28 +27,25 @@ function TermsOfUsePage() {
     return (
         <div className="terms-container">
             {/* Header */}
-            <header className="aboutpage-header" ref={headerRef}>
-                <div className={`header-content ${headerInView ? 'fade-in-up' : ''}`}>
-                    <div className="header-left">
-                        <img
-                            src={SJDEFILogo}
-                            alt="SJDEFI Logo"
-                            className="logohome"
-                        />
-                        <div className="header-text">
-                            <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
-                            <p className="motto">Where faith and reason are expressed in Charity.</p>
-                        </div>
-                    </div>
-                    <div className="header-right">
-                        <p>
-                            Welcome to <strong>JuanEMS</strong>{' '}
-                            <FaRegSmileWink className="icon" />
-                        </p>
+            <header className="homepage-header">
+                <div className="header-left">
+                    <img
+                        src={SJDEFILogo}
+                        alt="SJDEFI Logo"
+                        className="logohome"
+                    />
+                    <div className="header-text">
+                        <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
+                        <p className="motto">Where faith and reason are expressed in Charity.</p>
                     </div>
                 </div>
+                <div className="header-right">
+                    <p>
+                        Welcome to <strong>JuanEMS</strong>{' '}
+                        <FaRegSmileWink className="icon" />
+                    </p>
+                </div>
             </header>
-
             {/* Main Content */}
             <main className="termspage-main">
                 {/* Hero Section */}
@@ -153,7 +150,7 @@ function TermsOfUsePage() {
             {/* Footer */}
             <footer
                 ref={footerRef}
-                className={`aboutpage-footer ${footerInView ? 'fade-in-up' : ''}`}
+                className={`homepage-footer ${footerInView ? 'fade-in-up' : ''}`}
             >
                 {/* Left section - Logo and school name */}
                 <div className="footer-left">
@@ -220,6 +217,7 @@ function TermsOfUsePage() {
                     </div>
                 </div>
             </footer>
+
         </div>
     );
 }

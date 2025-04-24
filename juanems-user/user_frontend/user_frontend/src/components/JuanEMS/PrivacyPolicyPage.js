@@ -26,28 +26,26 @@ function PrivacyPolicyPage() {
 
   return (
     <div className="privacy-container">
-      {/* Header */}
-      <header className="aboutpage-header" ref={headerRef}>
-        <div className={`header-content ${headerInView ? 'fade-in-up' : ''}`}>
-          <div className="header-left">
-            <img
-              src={SJDEFILogo}
-              alt="SJDEFI Logo"
-              className="logohome"
-            />
-            <div className="header-text">
-              <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
-              <p className="motto">Where faith and reason are expressed in Charity.</p>
-            </div>
-          </div>
-          <div className="header-right">
-            <p>
-              Welcome to <strong>JuanEMS</strong>{' '}
-              <FaRegSmileWink className="icon" />
-            </p>
-          </div>
-        </div>
-      </header>
+            {/* Header */}
+            <header className="homepage-header">
+                <div className="header-left">
+                    <img
+                        src={SJDEFILogo}
+                        alt="SJDEFI Logo"
+                        className="logohome"
+                    />
+                    <div className="header-text">
+                        <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
+                        <p className="motto">Where faith and reason are expressed in Charity.</p>
+                    </div>
+                </div>
+                <div className="header-right">
+                    <p>
+                        Welcome to <strong>JuanEMS</strong>{' '}
+                        <FaRegSmileWink className="icon" />
+                    </p>
+                </div>
+            </header>
 
       {/* Main Content */}
       <main className="privacypage-main">
@@ -160,76 +158,77 @@ function PrivacyPolicyPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer
-        ref={footerRef}
-        className={`aboutpage-footer ${footerInView ? 'fade-in-up' : ''}`}
-      >
-        {/* Left section - Logo and school name */}
-        <div className="footer-left">
-          <img
-            src={SJDEFILogo}
-            alt="SJDEFI Logo"
-            className="footer-logo"
-          />
-          <div className="footer-text">
-            <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
-            <p className="footer-motto">Where faith and reason are expressed in Charity.</p>
-          </div>
-        </div>
+            {/* Footer */}
+            <footer
+                ref={footerRef}
+                className={`homepage-footer ${footerInView ? 'fade-in-up' : ''}`}
+            >
+                {/* Left section - Logo and school name */}
+                <div className="footer-left">
+                    <img
+                        src={SJDEFILogo}
+                        alt="SJDEFI Logo"
+                        className="footer-logo"
+                    />
+                    <div className="footer-text">
+                        <h1>SAN JUAN DE DIOS EDUCATIONAL FOUNDATION, INC.</h1>
+                        <p className="footer-motto">Where faith and reason are expressed in Charity.</p>
+                    </div>
+                </div>
 
-        {/* Center and right section - organized in a row */}
-        <div className="footer-content">
-          {/* About, Terms, Privacy links */}
-          <div className="footer-links">
-            <a href="/about" className="footer-link">About</a>
-            <span className="footer-link-separator">|</span>
-            <a href="/terms-of-use" className="footer-link">Terms of Use</a>
-            <span className="footer-link-separator">|</span>
-            <a href="/privacy" className="footer-link">Privacy</a>
-          </div>
+                {/* Center and right section - organized in a row */}
+                <div className="footer-content">
+                    {/* About, Terms, Privacy links */}
+                    <div className="footer-links">
+                        <a href="/about" className="footer-link">About</a>
+                        <span className="footer-link-separator">|</span>
+                        <a href="/terms-of-use" className="footer-link">Terms of Use</a>
+                        <span className="footer-link-separator">|</span>
+                        <a href="/privacy" className="footer-link">Privacy</a>
+                    </div>
 
-          {/* Facebook link */}
-          <a
-            href="https://www.facebook.com/SJDEFIcollege"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-social-link"
-          >
-            <FontAwesomeIcon icon={faFacebookSquare} className="social-icon" />
-            <div className="social-text">
-              <span className="social-find">Find us on</span>
-              <span className="social-platform">Facebook</span>
-            </div>
-          </a>
+                    {/* Facebook link */}
+                    <a
+                        href="https://www.facebook.com/SJDEFIcollege"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="footer-social-link"
+                    >
+                        <FontAwesomeIcon icon={faFacebookSquare} className="social-icon" />
+                        <div className="social-text">
+                            <span className="social-find">Find us on</span>
+                            <span className="social-platform">Facebook</span>
+                        </div>
+                    </a>
 
-          {/* Contact Form section */}
-          <div className="footer-contact-container">
-            <div className="contact-title">
-              <FontAwesomeIcon icon={faPhone} />
-              <span>CONTACT US</span>
-            </div>
-            <div className="contact-items">
-              <div className="contact-item">
-                <FontAwesomeIcon icon={faMapMarkerAlt} />
-                <span>2772 Roxas Blvd., Pasay City, Philippines, 1300</span>
-              </div>
-              <div className="contact-item">
-                <FontAwesomeIcon icon={faPhone} />
-                <span>+632 551-2763</span>
-              </div>
-              <div className="contact-item">
-                <FontAwesomeIcon icon={faEnvelope} />
-                <span>admission_office@sjdefi.edu.ph | registrarsoffice@sjdefi.edu.ph</span>
-              </div>
-              <div className="contact-item">
-                <FontAwesomeIcon icon={faClock} />
-                <span>Monday to Thursday - 7:00 AM to 5:00 PM | Friday - 7:00 AM to 4:00 PM</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+                    {/* Contact Form section */}
+                    <div className="footer-contact-container">
+                        <div className="contact-title">
+                            <FontAwesomeIcon icon={faPhone} />
+                            <span>CONTACT US</span>
+                        </div>
+                        <div className="contact-items">
+                            <div className="contact-item">
+                                <FontAwesomeIcon icon={faMapMarkerAlt} />
+                                <span>2772 Roxas Blvd., Pasay City, Philippines, 1300</span>
+                            </div>
+                            <div className="contact-item">
+                                <FontAwesomeIcon icon={faPhone} />
+                                <span>+632 551-2763</span>
+                            </div>
+                            <div className="contact-item">
+                                <FontAwesomeIcon icon={faEnvelope} />
+                                <span>admission_office@sjdefi.edu.ph | registrarsoffice@sjdefi.edu.ph</span>
+                            </div>
+                            <div className="contact-item">
+                                <FontAwesomeIcon icon={faClock} />
+                                <span>Monday to Thursday - 7:00 AM to 5:00 PM | Friday - 7:00 AM to 4:00 PM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
     </div>
   );
 }

@@ -19,17 +19,17 @@ function SplashScreen() {
   }, [navigate]);
 
   return (
-    <div className="splash-container">
-      <div className={`logo-container ${showSecondSplash ? 'fade-out' : 'fade-in'}`}>
-      <img src={SJDEFILogo} alt="SJDEFI Logo" className="logo" />
-        <h1 className="big-text">SJDEFI</h1>
-        <p className="small-text">San Juan De Dios Educational Foundation, Inc.</p>
+    <div className="splash-screen-container">
+      <div className={`splash-screen-logo-container ${showSecondSplash ? 'fade-out' : 'fade-in'}`}>
+        <img src={SJDEFILogo} alt="SJDEFI Logo" className="splash-screen-logo" />
+        <h1 className="splash-screen-big-text">SJDEFI</h1>
+        <p className="splash-screen-small-text">San Juan De Dios Educational Foundation, Inc.</p>
       </div>
 
-      <div className={`logo-container overlay ${showSecondSplash ? 'fade-in' : 'fade-out'}`}>
-      <img src={JuanEMSLogo} alt="JuanEMS Logo" className="logo" />
-        <h1 className="big-text">JuanEMS</h1>
-        <p className="small-text">Juan Enrollment Management System</p>
+      <div className={`splash-screen-logo-container splash-screen-overlay ${showSecondSplash ? 'fade-in' : 'fade-out'}`}>
+        <img src={JuanEMSLogo} alt="JuanEMS Logo" className="splash-screen-logo" />
+        <h1 className="splash-screen-big-text">JuanEMS</h1>
+        <p className="splash-screen-small-text">Juan Enrollment Management System</p>
       </div>
     </div>
   );
