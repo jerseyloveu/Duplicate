@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faCheck, faArrowLeft, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faCheck, faArrowLeft, faSpinner, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import Select from 'react-select';
 import '../../css/JuanScope/Register.css';
@@ -82,6 +82,7 @@ function Register2() {
     applyingFor: [],
     academicStrand: []
   });
+  const [touchedFields, setTouchedFields] = useState({});
 
   // Fetch dropdown options from backend
   useEffect(() => {
@@ -152,13 +153,50 @@ function Register2() {
     }
   }, [location, navigate]);
 
+  // Real-time validation effect
+  useEffect(() => {
+    const validateField = (name, value) => {
+      switch (name) {
+        case 'academicYear':
+          return !value ? 'Academic Year is required' : null;
+        case 'academicTerm':
+          return !value ? 'Academic Term is required' : null;
+        case 'applyingFor':
+          return !value ? 'Applying For is required' : null;
+        case 'academicStrand':
+          return !value ? 'Academic Strand is required' : null;
+        default:
+          return null;
+      }
+    };
+
+    const newErrors = {};
+    Object.keys(touchedFields).forEach(field => {
+      if (touchedFields[field]) {
+        const error = validateField(field, formData[field]);
+        if (error) newErrors[field] = error;
+      }
+    });
+
+    setErrors(newErrors);
+  }, [formData, touchedFields]);
+
   const handleSelectChange = (selectedOption, { name }) => {
     setFormData({
       ...formData,
       [name]: selectedOption ? selectedOption.value : ''
     });
 
-    if (errors[name]) {
+    // Mark field as touched
+    if (!touchedFields[name]) {
+      setTouchedFields({
+        ...touchedFields,
+        [name]: true
+      });
+    }
+
+    // Clear error if field is now valid
+    if (errors[name] && selectedOption) {
       setErrors({
         ...errors,
         [name]: null
@@ -180,6 +218,16 @@ function Register2() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Mark all fields as touched to show all errors
+    const allFieldsTouched = {
+      academicYear: true,
+      academicTerm: true,
+      applyingFor: true,
+      academicStrand: true
+    };
+    setTouchedFields(allFieldsTouched);
+
     if (validateForm()) {
       navigate('/register3', { state: { formData } });
     }
@@ -393,12 +441,17 @@ function Register2() {
                       placeholder="Select Academic Year"
                       isClearable
                       onChange={(option) => handleSelectChange(option, { name: "academicYear" })}
+                      onBlur={() => setTouchedFields({ ...touchedFields, academicYear: true })}
                       styles={customSelectStyles}
                       className="juan-select-wrapper"
                       classNamePrefix="juan-select"
                       error={errors.academicYear ? true : false}
                     />
-                    {errors.academicYear && <span className="juan-error-message">{errors.academicYear}</span>}
+                    {errors.academicYear && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.academicYear}
+                      </span>
+                    )}
                   </div>
 
                   {/* Academic Term */}
@@ -414,12 +467,17 @@ function Register2() {
                       placeholder="Select Academic Term"
                       isClearable
                       onChange={(option) => handleSelectChange(option, { name: "academicTerm" })}
+                      onBlur={() => setTouchedFields({ ...touchedFields, academicTerm: true })}
                       styles={customSelectStyles}
                       className="juan-select-wrapper"
                       classNamePrefix="juan-select"
                       error={errors.academicTerm ? true : false}
                     />
-                    {errors.academicTerm && <span className="juan-error-message">{errors.academicTerm}</span>}
+                    {errors.academicTerm && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.academicTerm}
+                      </span>
+                    )}
                   </div>
 
                   {/* Applying For */}
@@ -435,12 +493,17 @@ function Register2() {
                       placeholder="Select Application Type"
                       isClearable
                       onChange={(option) => handleSelectChange(option, { name: "applyingFor" })}
+                      onBlur={() => setTouchedFields({ ...touchedFields, applyingFor: true })}
                       styles={customSelectStyles}
                       className="juan-select-wrapper"
                       classNamePrefix="juan-select"
                       error={errors.applyingFor ? true : false}
                     />
-                    {errors.applyingFor && <span className="juan-error-message">{errors.applyingFor}</span>}
+                    {errors.applyingFor && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.applyingFor}
+                      </span>
+                    )}
                   </div>
 
                   {/* Academic Strand */}
@@ -456,12 +519,17 @@ function Register2() {
                       placeholder="Select Academic Strand"
                       isClearable
                       onChange={(option) => handleSelectChange(option, { name: "academicStrand" })}
+                      onBlur={() => setTouchedFields({ ...touchedFields, academicStrand: true })}
                       styles={customSelectStyles}
                       className="juan-select-wrapper"
                       classNamePrefix="juan-select"
                       error={errors.academicStrand ? true : false}
                     />
-                    {errors.academicStrand && <span className="juan-error-message">{errors.academicStrand}</span>}
+                    {errors.academicStrand && (
+                      <span className="juan-error-message">
+                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.academicStrand}
+                      </span>
+                    )}
                   </div>
                 </div>
 
