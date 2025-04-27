@@ -25,6 +25,11 @@ function ScopeLogin() {
       setLoginError(''); // Clear any errors
       alert('Password reset successful. Please check your email for the new password.');
     }
+
+    // Show message if redirected due to inactive account
+    if (location.state?.accountInactive) {
+      setLoginError('Your session was invalidated. Please login again.');
+    }
   }, [location.state]);
 
   const validateForm = () => {
@@ -46,7 +51,6 @@ function ScopeLogin() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Add this function to ScopeLogin.js
   const checkAccountStatus = async (email) => {
     if (!email) return;
 
@@ -72,112 +76,115 @@ function ScopeLogin() {
     }
   };
 
-// Update the handleSubmit function in ScopeLogin.js
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoginError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
 
-  if (!validateForm()) {
-    return;
-  }
-
-  try {
-    const response = await fetch('http://localhost:5000/api/enrollee-applicants/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // Handle different error types
-      if (data.errorType === 'pending_verification') {
-        // Navigate to verify-email and resend OTP
-        navigate('/verify-email', {
-          state: {
-            email: data.email,
-            firstName: data.firstName,
-            fromRegistration: false,
-            fromLogin: true
-          }
-        });
-        return;
-      }
-      throw new Error(data.message || 'Login failed');
+    if (!validateForm()) {
+      return;
     }
 
-    // Store user data in localStorage
-    localStorage.setItem('userEmail', data.email);
-    localStorage.setItem('firstName', data.firstName);
-    localStorage.setItem('studentID', data.studentID);
-    
-    // Log activity info for tracking
-    console.log('Login Activity:', {
-      activityStatus: data.activityStatus,
-      loginAttempts: data.loginAttempts
-    });
+    try {
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim()
+        }),
+      });
 
-    // Successful login - navigate to dashboard
-    navigate('/scope-dashboard');
+      const data = await response.json();
 
-  } catch (err) {
-    setLoginError(err.message || 'Login failed. Please try again.');
-  }
-};
+      if (!response.ok) {
+        // Handle different error types more specifically
+        if (data.errorType === 'pending_verification') {
+          navigate('/verify-email', {
+            state: {
+              email: data.email,
+              firstName: data.firstName,
+              fromRegistration: false,
+              fromLogin: true
+            }
+          });
+          return;
+        }
+        if (data.errorType === 'account_inactive') {
+          setLoginError('Your account is inactive. Please contact support.');
+          return;
+        }
+        throw new Error(data.message || 'Login failed');
+      }
 
-// Update the handleForgotPassword function
-const handleForgotPassword = async () => {
-  if (!email) {
-    setErrors({ email: 'Email is required to reset password' });
-    return;
-  }
+      // In ScopeLogin.js handleSubmit function
+      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('firstName', data.firstName);
+      localStorage.setItem('studentID', data.studentID);
+      localStorage.setItem('lastLogin', data.lastLogin);
+      localStorage.setItem('lastLogout', data.lastLogout);
+      localStorage.setItem('createdAt', data.createdAt); // Make sure this is saved
+      localStorage.setItem('activityStatus', data.activityStatus);
+      localStorage.setItem('loginAttempts', data.loginAttempts.toString());
 
-  // Check if user can request another reset (once per day)
-  const now = new Date();
-  if (lastResetRequest && (now - new Date(lastResetRequest) < 24 * 60 * 60 * 1000)) {
-    setLoginError('You can only request a password reset once per day. Please try again later.');
-    return;
-  }
+      // Successful login - navigate to dashboard
+      navigate('/scope-dashboard');
 
-  setShowResetConfirmation(true);
-};
+    } catch (err) {
+      console.error('Login error:', err);
+      setLoginError(err.message || 'Login failed. Please try again.');
+    }
+  };
 
-// Update the handleConfirmedForgotPassword function
-const handleConfirmedForgotPassword = async () => {
-  setShowResetConfirmation(false);
-  setLoginError('');
-
-  try {
-    const response = await fetch('http://localhost:5000/api/enrollee-applicants/request-password-reset', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to initiate password reset');
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrors({ email: 'Email is required to reset password' });
+      return;
     }
 
-    // Navigate to verify-email with password reset context
-    navigate('/verify-email', {
-      state: {
-        email,
-        isPasswordReset: true, // Flag to indicate this is for password reset
-        fromLogin: true
-      }
-    });
+    // Check if user can request another reset (once per day)
+    const now = new Date();
+    if (lastResetRequest && (now - new Date(lastResetRequest) < 24 * 60 * 60 * 1000)) {
+      setLoginError('You can only request a password reset once per day. Please try again later.');
+      return;
+    }
 
-  } catch (err) {
-    setLoginError(err.message || 'Failed to process password reset request');
-  }
-};
+    setShowResetConfirmation(true);
+  };
+
+  const handleConfirmedForgotPassword = async () => {
+    setShowResetConfirmation(false);
+    setLoginError('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/request-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to initiate password reset');
+      }
+
+      // Navigate to verify-email with password reset context
+      navigate('/verify-email', {
+        state: {
+          email,
+          isPasswordReset: true, // Flag to indicate this is for password reset
+          fromLogin: true
+        }
+      });
+
+    } catch (err) {
+      setLoginError(err.message || 'Failed to process password reset request');
+    }
+  };
 
   const handleGoToHome = () => {
     navigate('/home');

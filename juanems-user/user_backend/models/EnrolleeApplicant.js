@@ -15,6 +15,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   academicStrand: { type: String, required: true },
   academicLevel: { type: String, required: true },
   studentID: { type: String, required: true, unique: true },
+  applicantID: { type: String, required: true, unique: true }, // Add this line
   password: { type: String, required: true },
   temporaryPassword: { type: String, select: false },
   status: {
@@ -61,7 +62,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   }
 });
 
-// Hash password before save
+// In models/EnrolleeApplicant.js, update the pre-save hook
 enrolleeApplicantSchema.pre('save', async function (next) {
   // Only hash the password if it has been modified and is not already hashed
   if (!this.isModified('password') || this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
@@ -69,9 +70,11 @@ enrolleeApplicantSchema.pre('save', async function (next) {
   }
 
   try {
-    console.log('Original password before hash:', this.password); // Debug log
+    // Trim and clean the password before hashing
+    const cleanPassword = this.password.trim();
+    console.log('Original password before hash:', cleanPassword); // Debug log
     const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = await bcrypt.hash(cleanPassword, salt);
     console.log('Hashed password:', this.password); // Debug log
     next();
   } catch (err) {

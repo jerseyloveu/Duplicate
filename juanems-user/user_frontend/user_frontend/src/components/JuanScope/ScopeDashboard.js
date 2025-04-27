@@ -19,40 +19,127 @@ function ScopeDashboard() {
     lastLogout: null
   });
 
-  // Effect to check if user is logged in
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
-    
+    const createdAt = localStorage.getItem('createdAt');
+
     if (!userEmail) {
       navigate('/scope-login');
       return;
     }
 
-    // Fetch user data
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch activity data
-        const activityResponse = await fetch(`http://localhost:5000/api/enrollee-applicants/activity/${userEmail}`);
-        if (activityResponse.ok) {
-          const activityData = await activityResponse.json();
-          setActivityData(activityData);
+
+        // ⬇️ ADD DATE VALIDATION HERE, BEFORE MAKING API REQUESTS ⬇️
+        const createdAtDate = new Date(createdAt);
+        if (isNaN(createdAtDate.getTime())) {
+          console.error("Invalid date stored in localStorage");
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
         }
-        
-        setLoading(false);
+
+        // First verify we're using the most recent active account
+        const verificationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!verificationResponse.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const verificationData = await verificationResponse.json();
+
+        // ⬇️ ADD CONSOLE LOGS HERE ⬇️
+        console.log("Stored timestamp:", createdAt);
+        console.log("Server timestamp:", verificationData.createdAt);
+
+        // Check if the stored account is still the most recent active one
+        if (verificationData.status !== 'Active' ||
+          (createdAt && Math.abs(new Date(verificationData.createdAt).getTime() - new Date(createdAt).getTime()) > 1000)) {
+          // If it's not the same account, log out
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+        // Fetch activity data with the creation timestamp parameter to ensure we get the right account
+        const activityResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(createdAt)}`
+        );
+
+        if (!activityResponse.ok) {
+          throw new Error('Failed to fetch activity data');
+        }
+
+        const activityData = await activityResponse.json();
+
+        setActivityData({
+          activityStatus: activityData.activityStatus || 'Offline',
+          loginAttempts: activityData.loginAttempts || 0,
+          lastLogin: activityData.lastLogin || null,
+          lastLogout: activityData.lastLogout || null
+        });
+
         setUserData({
           email: userEmail,
           firstName: localStorage.getItem('firstName') || 'User',
           studentID: localStorage.getItem('studentID') || 'N/A'
         });
+
+        setLoading(false);
+
       } catch (err) {
-        setError('Failed to load user data');
+        console.error('Error loading dashboard data:', err);
+        setError('Failed to load user data. Please try again.');
         setLoading(false);
       }
     };
 
     fetchUserData();
+
+    // Set up periodic refresh
+    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
+  }, [navigate]);
+
+  // Monitor account status periodically
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const createdAt = localStorage.getItem('createdAt');
+
+        if (!userEmail || !createdAt) return;
+
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const data = await response.json();
+
+        // Verify this is still the most recent active account
+        if (data.status !== 'Active' ||
+          new Date(data.createdAt).getTime() !== new Date(createdAt).getTime()) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+        }
+      } catch (err) {
+        console.error('Error checking account status:', err);
+      }
+    };
+
+    // Check periodically (every minute)
+    const interval = setInterval(checkAccountStatus, 60 * 1000);
+    checkAccountStatus(); // Run immediately
+
+    return () => clearInterval(interval);
   }, [navigate]);
 
   // Format date
@@ -62,10 +149,11 @@ function ScopeDashboard() {
     return date.toLocaleString();
   };
 
-  // Handle logout
   const handleLogout = async () => {
     try {
       const userEmail = localStorage.getItem('userEmail');
+      const createdAt = localStorage.getItem('createdAt');
+
       if (!userEmail) {
         navigate('/scope-login');
         return;
@@ -76,7 +164,10 @@ function ScopeDashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: userEmail }),
+        body: JSON.stringify({
+          email: userEmail,
+          createdAt: createdAt // Pass the ISO string directly
+        }),
       });
 
       if (response.ok) {
@@ -84,7 +175,12 @@ function ScopeDashboard() {
         localStorage.removeItem('userEmail');
         localStorage.removeItem('firstName');
         localStorage.removeItem('studentID');
-        
+        localStorage.removeItem('lastLogin');
+        localStorage.removeItem('lastLogout');
+        localStorage.removeItem('createdAt');
+        localStorage.removeItem('activityStatus');
+        localStorage.removeItem('loginAttempts');
+
         // Redirect to login
         navigate('/scope-login');
       } else {
@@ -107,7 +203,7 @@ function ScopeDashboard() {
           <span>
             <FontAwesomeIcon icon={faUser} /> {userData.firstName} ({userData.studentID})
           </span>
-          <button 
+          <button
             className="scope-dashboard-logout-btn"
             onClick={handleLogout}
           >

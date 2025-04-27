@@ -267,6 +267,13 @@ function Register() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isEmailAvailable, setIsEmailAvailable] = useState(null);
+  // Add this state variable at the top with other state declarations
+  const [emailValidationState, setEmailValidationState] = useState({
+    checking: false,
+    lastCheckedEmail: '',
+    available: null,
+    status: null
+  });
 
   // Calculate minimum date (10 years ago from today)
   const today = new Date();
@@ -351,33 +358,62 @@ function Register() {
     setErrors(newErrors);
   }, [formData, touchedFields]);
 
-  // Email availability check effect
+  // Replace the current email availability check effect with this:
   useEffect(() => {
-    const checkEmailAvailability = async () => {
-      if (!formData.email || errors.email) {
-        setIsEmailAvailable(null);
+    const checkEmailAvailability = async (emailToCheck) => {
+      if (!emailToCheck || errors.email) {
+        setEmailValidationState({
+          checking: false,
+          lastCheckedEmail: '',
+          available: null,
+          status: null
+        });
         return;
       }
 
-      setIsCheckingEmail(true);
+      setEmailValidationState(prev => ({
+        ...prev,
+        checking: true,
+        lastCheckedEmail: emailToCheck
+      }));
+
       try {
-        const isAvailable = await checkEmailUniqueness(formData.email);
-        setIsEmailAvailable(isAvailable);
+        const result = await checkEmailUniqueness(emailToCheck);
+        setEmailValidationState({
+          checking: false,
+          lastCheckedEmail: emailToCheck,
+          available: result.available,
+          status: result.status
+        });
       } catch (error) {
         console.error('Email check error:', error);
-        setIsEmailAvailable(null);
-      } finally {
-        setIsCheckingEmail(false);
+        setEmailValidationState({
+          checking: false,
+          lastCheckedEmail: emailToCheck,
+          available: null,
+          status: null
+        });
       }
     };
 
-    const timer = setTimeout(() => {
-      if (touchedFields.email) {
-        checkEmailAvailability();
+    const debounceTimer = setTimeout(() => {
+      if (touchedFields.email && formData.email) {
+        // Only check if email has changed since last check
+        if (formData.email !== emailValidationState.lastCheckedEmail) {
+          checkEmailAvailability(formData.email);
+        }
+      } else if (formData.email === '') {
+        // Reset validation state when email is cleared
+        setEmailValidationState({
+          checking: false,
+          lastCheckedEmail: '',
+          available: null,
+          status: null
+        });
       }
-    }, 500);
+    }, 500); // 500ms debounce delay
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(debounceTimer);
   }, [formData.email, touchedFields.email]);
 
   const handleInputChange = (e) => {
@@ -453,16 +489,19 @@ function Register() {
   const checkEmailUniqueness = async (email) => {
     try {
       const response = await fetch(`http://localhost:5000/api/enrollee-applicants/check-email/${encodeURIComponent(email)}`);
+      const data = await response.json();
 
       if (response.status === 409) {
-        return false; // Email exists
+        // Active account exists
+        return { available: false, status: data.status };
       }
 
       if (!response.ok) {
         throw new Error('Error checking email uniqueness');
       }
 
-      return true; // Email is unique
+      // Email is available (may have inactive account)
+      return { available: true, status: data.status };
     } catch (error) {
       console.error('Email check error:', error);
       throw error;
@@ -536,7 +575,7 @@ function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Update handleSubmit to pass all form data
+  // Update the handleSubmit function to use the new validation state
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -551,10 +590,37 @@ function Register() {
       return;
     }
 
-    if (isEmailAvailable === false) {
+    // Check if we need to wait for email validation
+    if (formData.email !== emailValidationState.lastCheckedEmail) {
+      setEmailValidationState(prev => ({ ...prev, checking: true }));
+      try {
+        const result = await checkEmailUniqueness(formData.email);
+        setEmailValidationState({
+          checking: false,
+          lastCheckedEmail: formData.email,
+          available: result.available,
+          status: result.status
+        });
+
+        if (!result.available) {
+          setErrors({
+            ...errors,
+            email: 'This email is already registered with an active account. Please use a different email.'
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Email check error:', error);
+        setErrors({
+          ...errors,
+          email: 'Error checking email availability. Please try again.'
+        });
+        return;
+      }
+    } else if (emailValidationState.available === false) {
       setErrors({
         ...errors,
-        email: 'This email is already registered. Please use a different email.'
+        email: 'This email is already registered with an active account. Please use a different email.'
       });
       return;
     }
@@ -751,24 +817,30 @@ function Register() {
                       </span>
                     )}
                     {!errors.email && touchedFields.email && formData.email && (
-                      <span className={`juan-email-status ${isEmailAvailable === false ? 'juan-email-taken' : ''}`}>
-                        {isCheckingEmail ? (
+                      <span className={`juan-email-status ${emailValidationState.checking ? 'juan-email-checking' :
+                        emailValidationState.available === false ? 'juan-email-taken' :
+                          emailValidationState.status === 'Inactive' ? 'juan-email-inactive' :
+                            emailValidationState.available === true ? 'juan-email-available' : ''
+                        }`}>
+                        {emailValidationState.checking ? (
                           <>
                             <FontAwesomeIcon icon={faSpinner} spin /> Checking availability...
                           </>
-                        ) : isEmailAvailable === true ? (
+                        ) : emailValidationState.available === true ? (
                           <>
-                            <FontAwesomeIcon icon={faCheck} /> Email available
+                            <FontAwesomeIcon icon={faCheck} />
+                            {emailValidationState.status === 'Inactive'
+                              ? 'Email available (previous inactive account exists)'
+                              : 'Email available'}
                           </>
-                        ) : isEmailAvailable === false ? (
+                        ) : emailValidationState.available === false ? (
                           <>
-                            <FontAwesomeIcon icon={faTimes} /> Email already registered
+                            <FontAwesomeIcon icon={faTimes} /> Email already registered with active account
                           </>
                         ) : null}
                       </span>
                     )}
                   </div>
-
                   {/* Mobile */}
                   <div className="juan-form-group">
                     <label htmlFor="mobile">
