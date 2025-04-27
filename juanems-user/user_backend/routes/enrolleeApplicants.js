@@ -21,7 +21,7 @@ function generateRandomPassword(length = 12) {
 async function getNextStudentIDSequence(academicYear) {
   // Extract last two digits of the starting year (e.g., "2025" -> "25")
   const yearShort = academicYear.split('-')[0].slice(-2);
-  
+
   // Find the highest existing studentID with this year prefix
   const lastApplicant = await EnrolleeApplicant.findOne({
     studentID: new RegExp(`^${yearShort}-\\d{5}$`)
@@ -34,7 +34,7 @@ async function getNextStudentIDSequence(academicYear) {
   // Extract the numeric part and increment
   const lastNumber = parseInt(lastApplicant.studentID.split('-')[1], 10);
   const nextNumber = lastNumber + 1;
-  
+
   // Pad with leading zeros to make 5 digits
   return `${yearShort}-${nextNumber.toString().padStart(5, '0')}`;
 }
@@ -42,7 +42,7 @@ async function getNextStudentIDSequence(academicYear) {
 async function getNextApplicantIDSequence(academicYear) {
   // Extract full starting year (e.g., "2025-2026" -> "2025")
   const yearFull = academicYear.split('-')[0];
-  
+
   // Find the highest existing applicantID with this year prefix
   const lastApplicant = await EnrolleeApplicant.findOne({
     applicantID: new RegExp(`^${yearFull}-\\d{6}$`)
@@ -55,7 +55,7 @@ async function getNextApplicantIDSequence(academicYear) {
   // Extract the numeric part and increment
   const lastNumber = parseInt(lastApplicant.applicantID.split('-')[1], 10);
   const nextNumber = lastNumber + 1;
-  
+
   // Pad with leading zeros to make 6 digits
   return `${yearFull}-${nextNumber.toString().padStart(6, '0')}`;
 }
@@ -302,6 +302,8 @@ router.post('/verify-otp', async (req, res) => {
     return res.status(500).json({ message: 'Server error during verification' });
   }
 });
+
+
 
 router.get('/verification-status/:email', async (req, res) => {
   try {
@@ -671,11 +673,12 @@ router.post('/login', async (req, res) => {
       email: applicant.email,
       firstName: applicant.firstName,
       studentID: applicant.studentID,
+      applicantID: applicant.applicantID, // Make sure this is included
       activityStatus: applicant.activityStatus,
       loginAttempts: applicant.loginAttempts,
       lastLogin: applicant.lastLogin,
       lastLogout: applicant.lastLogout,
-      createdAt: applicant.createdAt.toISOString() // Make sure to convert to ISO string
+      createdAt: applicant.createdAt.toISOString()
     });
   } catch (error) {
     console.error('Login error:', error);

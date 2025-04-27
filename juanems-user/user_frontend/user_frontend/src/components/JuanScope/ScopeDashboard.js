@@ -2,7 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faSignOutAlt, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import {
+  faUser,
+  faBell,
+  faCompass,
+  faSignOut
+} from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeDashboard.css';
 
@@ -12,16 +17,23 @@ function ScopeDashboard() {
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activityData, setActivityData] = useState({
-    activityStatus: 'Loading...',
-    loginAttempts: 0,
-    lastLogin: null,
-    lastLogout: null
-  });
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
+    const firstName = localStorage.getItem('firstName');
+    const middleName = localStorage.getItem('middleName');
+    const lastName = localStorage.getItem('lastName');
+    const applicantID = localStorage.getItem('applicantID');
 
     if (!userEmail) {
       navigate('/scope-login');
@@ -32,7 +44,6 @@ function ScopeDashboard() {
       try {
         setLoading(true);
 
-        // ⬇️ ADD DATE VALIDATION HERE, BEFORE MAKING API REQUESTS ⬇️
         const createdAtDate = new Date(createdAt);
         if (isNaN(createdAtDate.getTime())) {
           console.error("Invalid date stored in localStorage");
@@ -52,44 +63,46 @@ function ScopeDashboard() {
 
         const verificationData = await verificationResponse.json();
 
-        // ⬇️ ADD CONSOLE LOGS HERE ⬇️
-        console.log("Stored timestamp:", createdAt);
-        console.log("Server timestamp:", verificationData.createdAt);
-
         // Check if the stored account is still the most recent active one
         if (verificationData.status !== 'Active' ||
           (createdAt && Math.abs(new Date(verificationData.createdAt).getTime() - new Date(createdAt).getTime()) > 1000)) {
-          // If it's not the same account, log out
           handleLogout();
           navigate('/scope-login', { state: { accountInactive: true } });
           return;
         }
-        // Fetch activity data with the creation timestamp parameter to ensure we get the right account
-        const activityResponse = await fetch(
+
+        // Fetch user data including applicantID
+        const userResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(createdAt)}`
         );
 
-        if (!activityResponse.ok) {
-          throw new Error('Failed to fetch activity data');
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user data');
         }
 
-        const activityData = await activityResponse.json();
+        const userData = await userResponse.json();
 
-        setActivityData({
-          activityStatus: activityData.activityStatus || 'Offline',
-          loginAttempts: activityData.loginAttempts || 0,
-          lastLogin: activityData.lastLogin || null,
-          lastLogout: activityData.lastLogout || null
-        });
+        // Update localStorage with all user data if not already set
+        if (userData.applicantID && !localStorage.getItem('applicantID')) {
+          localStorage.setItem('applicantID', userData.applicantID);
+        }
+        if (userData.firstName && !localStorage.getItem('firstName')) {
+          localStorage.setItem('firstName', userData.firstName);
+        }
+        if (userData.lastName && !localStorage.getItem('lastName')) {
+          localStorage.setItem('lastName', userData.lastName);
+        }
 
         setUserData({
           email: userEmail,
-          firstName: localStorage.getItem('firstName') || 'User',
-          studentID: localStorage.getItem('studentID') || 'N/A'
+          firstName: localStorage.getItem('firstName') || userData.firstName || 'User',
+          middleName: localStorage.getItem('middleName') || '',
+          lastName: localStorage.getItem('lastName') || userData.lastName || '',
+          studentID: localStorage.getItem('studentID') || userData.studentID || 'N/A',
+          applicantID: localStorage.getItem('applicantID') || userData.applicantID || 'N/A',
         });
 
         setLoading(false);
-
       } catch (err) {
         console.error('Error loading dashboard data:', err);
         setError('Failed to load user data. Please try again.');
@@ -101,7 +114,6 @@ function ScopeDashboard() {
 
     // Set up periodic refresh
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
-
     return () => clearInterval(refreshInterval);
   }, [navigate]);
 
@@ -124,7 +136,6 @@ function ScopeDashboard() {
 
         const data = await response.json();
 
-        // Verify this is still the most recent active account
         if (data.status !== 'Active' ||
           new Date(data.createdAt).getTime() !== new Date(createdAt).getTime()) {
           handleLogout();
@@ -135,18 +146,19 @@ function ScopeDashboard() {
       }
     };
 
-    // Check periodically (every minute)
     const interval = setInterval(checkAccountStatus, 60 * 1000);
-    checkAccountStatus(); // Run immediately
-
+    checkAccountStatus();
     return () => clearInterval(interval);
   }, [navigate]);
 
-  // Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString();
+  const formatEmail = (email) => {
+    if (!email) return '';
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+    const maskedName = name.length > 2
+      ? `${name.substring(0, 2)}${'*'.repeat(name.length - 2)}`
+      : '***';
+    return `${maskedName}@${domain}`;
   };
 
   const handleLogout = async () => {
@@ -166,22 +178,12 @@ function ScopeDashboard() {
         },
         body: JSON.stringify({
           email: userEmail,
-          createdAt: createdAt // Pass the ISO string directly
+          createdAt: createdAt
         }),
       });
 
       if (response.ok) {
-        // Clear local storage
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('firstName');
-        localStorage.removeItem('studentID');
-        localStorage.removeItem('lastLogin');
-        localStorage.removeItem('lastLogout');
-        localStorage.removeItem('createdAt');
-        localStorage.removeItem('activityStatus');
-        localStorage.removeItem('loginAttempts');
-
-        // Redirect to login
+        localStorage.clear();
         navigate('/scope-login');
       } else {
         setError('Failed to logout. Please try again.');
@@ -191,76 +193,110 @@ function ScopeDashboard() {
     }
   };
 
+  const handleAnnouncements = () => {
+    navigate('/announcements');
+  };
+
   return (
     <div className="scope-dashboard-container">
       {/* Header */}
-      <header className="scope-dashboard-header">
-        <div className="scope-dashboard-logo">
-          <img src={SJDEFILogo} alt="SJDEFI Logo" />
-          <h1>JUAN SCOPE</h1>
-        </div>
-        <div className="scope-dashboard-user">
-          <span>
-            <FontAwesomeIcon icon={faUser} /> {userData.firstName} ({userData.studentID})
-          </span>
-          <button
-            className="scope-dashboard-logout-btn"
-            onClick={handleLogout}
-          >
-            <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-          </button>
+      <header className="juan-register-header">
+        <div className="juan-header-left">
+          <img
+            src={SJDEFILogo}
+            alt="SJDEFI Logo"
+            className="juan-logo-register"
+          />
+          <div className="juan-header-text">
+            <h1>JUAN SCOPE</h1>
+          </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="scope-dashboard-main">
-        {loading ? (
-          <div className="scope-dashboard-loading">Loading...</div>
-        ) : error ? (
-          <div className="scope-dashboard-error">{error}</div>
-        ) : (
-          <>
-            <div className="scope-dashboard-welcome">
-              <h2>Welcome, {userData.firstName}!</h2>
-              <p>Student ID: {userData.studentID}</p>
-            </div>
 
-            {/* Activity Tracking Section */}
-            <div className="scope-dashboard-activity-tracker">
-              <h3>
-                <FontAwesomeIcon icon={faChartLine} /> Activity Tracking
-              </h3>
-              <div className="scope-dashboard-activity-stats">
-                <div className="scope-dashboard-stat-item">
-                  <span className="scope-dashboard-stat-label">Current Status:</span>
-                  <span className={`scope-dashboard-status-badge ${activityData.activityStatus === 'Online' ? 'online' : 'offline'}`}>
-                    {activityData.activityStatus}
-                  </span>
+      <div className="scope-dashboard-content">
+        {/* Side Navigation */}
+        <aside className="scope-sidebar">
+          <div className="scope-user-profile">
+            <div className="scope-user-icon">
+              <FontAwesomeIcon icon={faUser} size="2x" />
+            </div>
+            <div className="scope-user-email">
+              {formatEmail(userData.email)}
+            </div>
+            <div className="scope-user-role">Applicant</div>
+            <div className="scope-divider"></div>
+          </div>
+
+          <button className="scope-nav-button">
+            <FontAwesomeIcon icon={faCompass} />
+            <span>Enrollment Process</span>
+          </button>
+
+          <button
+            className="scope-nav-button scope-logout-button"
+            onClick={handleLogout}
+          >
+            <FontAwesomeIcon icon={faSignOut} />
+            <span>Logout</span>
+          </button>
+        </aside>
+
+        {/* Main Content */}
+        <main className="scope-main-content">
+          {loading ? (
+            <div className="scope-loading">Loading...</div>
+          ) : error ? (
+            <div className="scope-error">{error}</div>
+          ) : (
+            <>
+              {/* Top Bar with Date/Time and Bell Icon */}
+              <div className="scope-top-bar">
+                <div className="scope-date-time">
+                  {currentDateTime.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                  {', '}
+                  {currentDateTime.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </div>
-                <div className="scope-dashboard-stat-item">
-                  <span className="scope-dashboard-stat-label">Login Attempts:</span>
-                  <span className="scope-dashboard-stat-value">{activityData.loginAttempts}</span>
+                <button
+                  className="scope-announcement-button"
+                  onClick={handleAnnouncements}
+                >
+                  <FontAwesomeIcon icon={faBell} />
+                </button>
+              </div>
+
+              {/* Welcome Section */}
+              <div className="scope-welcome-section">
+                <h1>
+                  Good day, {userData.firstName}
+                  {userData.middleName && ` ${userData.middleName}`}
+                  {` ${userData.lastName}`}
+                </h1>
+                <p className="scope-welcome-message">Start your application today!</p>
+              </div>
+
+              {/* Applicant Info Card */}
+              <div className="scope-applicant-card">
+                <div className="scope-applicant-icon">
+                  <FontAwesomeIcon icon={faUser} size="3x" />
                 </div>
-                <div className="scope-dashboard-stat-item">
-                  <span className="scope-dashboard-stat-label">Last Login:</span>
-                  <span className="scope-dashboard-stat-value">{formatDate(activityData.lastLogin)}</span>
-                </div>
-                <div className="scope-dashboard-stat-item">
-                  <span className="scope-dashboard-stat-label">Last Logout:</span>
-                  <span className="scope-dashboard-stat-value">{formatDate(activityData.lastLogout)}</span>
+                <div className="scope-applicant-info">
+                  <div className="scope-applicant-id">{userData.applicantID}</div>
+                  <div className="scope-applicant-label">Applicant Number</div>
                 </div>
               </div>
-            </div>
-
-            {/* You can add more dashboard content here */}
-          </>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="scope-dashboard-footer">
-        <p>&copy; 2025 San Juan De Dios Educational Foundation Inc. All rights reserved.</p>
-      </footer>
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

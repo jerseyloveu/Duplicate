@@ -122,12 +122,12 @@ function ScopeLogin() {
       localStorage.setItem('userEmail', data.email);
       localStorage.setItem('firstName', data.firstName);
       localStorage.setItem('studentID', data.studentID);
+      localStorage.setItem('applicantID', data.applicantID); // Add this line
       localStorage.setItem('lastLogin', data.lastLogin);
       localStorage.setItem('lastLogout', data.lastLogout);
-      localStorage.setItem('createdAt', data.createdAt); // Make sure this is saved
+      localStorage.setItem('createdAt', data.createdAt);
       localStorage.setItem('activityStatus', data.activityStatus);
       localStorage.setItem('loginAttempts', data.loginAttempts.toString());
-
       // Successful login - navigate to dashboard
       navigate('/scope-dashboard');
 
