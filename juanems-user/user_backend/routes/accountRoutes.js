@@ -175,7 +175,7 @@ router.put('/accounts/:id', async (req, res) => {
 // Check if email or mobile already exists
 router.post('/check-availability', async (req, res) => {
   try {
-    const { email, mobile } = req.body;
+    const { email, mobile, excludeId } = req.body;
     const query = {};
 
     if (email) {
@@ -185,12 +185,40 @@ router.post('/check-availability', async (req, res) => {
       query.mobile = mobile;
     }
 
+    // Exclude the current account if excludeId is provided (for updates)
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
     // Check if email or mobile exists in the database
     const existingAccount = await Accounts.findOne(query);
 
+    // Check status if account exists
+    let emailInUse = false;
+    let mobileInUse = false;
+    let message = '';
+
+    if (existingAccount) {
+      if (email && existingAccount.email === email) {
+        emailInUse = existingAccount.status !== 'Inactive';
+        if (emailInUse) {
+          message = 'Email is already in use by another account.';
+        }
+      }
+      if (mobile && existingAccount.mobile === mobile) {
+        mobileInUse = existingAccount.status !== 'Inactive';
+        if (mobileInUse) {
+          message = message ? 
+            `${message} Mobile number is already in use by another account.` : 
+            'Mobile number is already in use by another account.';
+        }
+      }
+    }
+
     return res.json({
-      emailInUse: email ? existingAccount?.email === email : false,
-      mobileInUse: mobile ? existingAccount?.mobile === mobile : false,
+      emailInUse,
+      mobileInUse,
+      message: message || ''
     });
   } catch (err) {
     console.error('Error checking availability:', err);

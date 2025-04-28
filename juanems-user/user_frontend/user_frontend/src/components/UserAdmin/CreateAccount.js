@@ -352,6 +352,7 @@ const CreateAccount = () => {
   const [form] = Form.useForm();
   const [mobileNumber, setMobileNumber] = useState('');
   const variant = Form.useWatch('variant', form);
+  const status = Form.useWatch('status', form);
   const role = Form.useWatch('role', form);
   const { id } = useParams();
   const [isChecked, setIsChecked] = useState(false);
@@ -612,12 +613,15 @@ const CreateAccount = () => {
                           headers: {
                             'Content-Type': 'application/json',
                           },
-                          body: JSON.stringify({ mobile: digits }),
+                          body: JSON.stringify({
+                            mobile: digits,
+                            excludeId: id // Pass the current account ID to exclude it from check
+                          }),
                         });
 
                         const data = await res.json();
                         if (data.mobileInUse) {
-                          return Promise.reject('Mobile number is already in use.');
+                          return Promise.reject(data.message || 'Mobile number is already in use.');
                         }
                       } catch (error) {
                         console.error('Validation error:', error);
@@ -708,10 +712,17 @@ const CreateAccount = () => {
               label="Account Status"
               name="status"
               rules={[{ required: true, message: 'Please select account status!' }]}
+              initialValues={{ variant: 'outlined', status: 'Pending Verification' }}
             >
-              <Select placeholder="Select account status">
+              <Select
+                placeholder="Select account status"
+                disabled={status === 'Pending Verification'}
+              >
                 <Select.Option value="Active">Active</Select.Option>
                 <Select.Option value="Inactive">Inactive</Select.Option>
+                {(!status || status === 'Pending Verification') && (
+                  <Select.Option value="Pending Verification">Pending Verification</Select.Option>
+                )}
               </Select>
             </Form.Item>
 
@@ -850,7 +861,7 @@ const CreateAccount = () => {
         <Form
           form={form}
           variant={variant || 'outlined'}
-          initialValues={{ variant: 'outlined', status: 'Inactive' }}
+          initialValues={{ variant: 'outlined', status: 'Pending Verification' }}
           labelCol={{ xs: { span: 24 }, sm: { span: 6 } }}
           wrapperCol={{ xs: { span: 24 }, sm: { span: 30 } }}
           onFinish={handleSubmit}

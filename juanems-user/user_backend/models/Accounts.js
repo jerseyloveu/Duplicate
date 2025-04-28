@@ -10,7 +10,7 @@ const AccountsSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   mobile: { type: String, required: true, unique: true },
   nationality: { type: String }, // Optional: user may set it on their own
-  studentID: { type: String}, // Optional: only for students
+  studentID: { type: String }, // Optional: only for students
   password: { type: String, required: true },
   role: { type: String, required: true },
   hasCustomAccess: {
@@ -18,11 +18,15 @@ const AccountsSchema = new mongoose.Schema({
     default: false
   },
   customModules: {
-      type: [String],
-      default: []
-    },
-    status: {type: String, required: true},
-  }, { timestamps: true });
+    type: [String],
+    default: []
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Pending Verification'],
+    default: 'Pending Verification',
+  },
+}, { timestamps: true });
 // TODO: Extend schema for OTP 
 
 // Hash password before save

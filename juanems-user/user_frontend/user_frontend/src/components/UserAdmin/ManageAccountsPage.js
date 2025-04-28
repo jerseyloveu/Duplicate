@@ -207,12 +207,21 @@ const ManageAccountsPage = () => {
       filters: [
         { text: 'Active', value: 'Active' },
         { text: 'Inactive', value: 'Inactive' },
+        { text: 'Pending Verification', value: 'Pending Verification' },
       ],
       onFilter: (value, record) => record.status.includes(value),
       filteredValue: tableFilters.status || null,
-      render: (status) => (
-        <Tag color={status === 'Active' ? 'green' : 'volcano'}>{status}</Tag>
-      ),
+      render: (status) => {
+        let color;
+        if (status === 'Active') {
+          color = 'green';
+        } else if (status === 'Pending Verification') {
+          color = 'blue';
+        } else {
+          color = 'volcano';
+        }
+        return <Tag color={color}>{status}</Tag>;
+      },
     },
     {
       title: 'Created At',
@@ -262,14 +271,16 @@ const ManageAccountsPage = () => {
           >
             Edit
           </Button>
-          <Button
-            icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
-            danger={record.status === 'Active'}
-            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => handleStatusToggle(record)}
-          >
-            {record.status === 'Active' ? 'Inactive' : 'Active'}
-          </Button>
+          {record.status !== 'Pending Verification' && (
+            <Button
+              icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
+              danger={record.status === 'Active'}
+              style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+              onClick={() => handleStatusToggle(record)}
+            >
+              {record.status === 'Active' ? 'Inactive' : 'Active'}
+            </Button>
+          )}
           <Button
             icon={<GrPowerReset />}
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
