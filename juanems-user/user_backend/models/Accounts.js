@@ -2,19 +2,22 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const AccountsSchema = new mongoose.Schema({
-    userID: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    firstName: { type: String, required: true },
-    middleName: { type: String },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true},
-    mobile: { type: String, required: true, unique: true},
-    role: { type: String, required: true }, 
-    hasCustomAccess: {
-      type: Boolean,
-      default: false
-    },
-    customModules: {
+  userID: { type: String, required: true, unique: true },
+  firstName: { type: String, required: true },
+  middleName: { type: String },
+  lastName: { type: String, required: true },
+  dob: { type: Date }, // optional: user may set it on their own 
+  email: { type: String, required: true, unique: true },
+  mobile: { type: String, required: true, unique: true },
+  nationality: { type: String }, // Optional: user may set it on their own
+  studentID: { type: String}, // Optional: only for students
+  password: { type: String, required: true },
+  role: { type: String, required: true },
+  hasCustomAccess: {
+    type: Boolean,
+    default: false
+  },
+  customModules: {
       type: [String],
       default: []
     },

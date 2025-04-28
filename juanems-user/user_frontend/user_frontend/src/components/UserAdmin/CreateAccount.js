@@ -303,15 +303,26 @@ const CustomAccessForm = ({ role, selectedModules, setSelectedModules, hasCustom
   );
 };
 
-const generateUserID = (role) => {
-  // May still change depending on the client 
-  const currentYear = new Date().getFullYear().toString();
-  const randomID = Math.random().toString().slice(2, 8); // 6 random digits
+const generateUserID = async (role) => {
+  try {
+    const response = await fetch('/api/admin/generate-userid', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role }), // Pass the role to the backend
+    });
 
-  // Use 'STD' for students, 'EMP' for everyone else
-  const roleCode = role === 'Student' ? 'STD' : 'EMP';
+    if (!response.ok) {
+      throw new Error('Failed to generate userID');
+    }
 
-  return `${roleCode}-${currentYear}-${randomID}`;
+    const data = await response.json();
+    return data.userID; // Return the generated userID
+  } catch (error) {
+    console.error('Error generating userID:', error);
+    return null;
+  }
 };
 
 const generatePassword = () => { // Simple password generation function (you can customize it as per your needs)
@@ -382,7 +393,7 @@ const CreateAccount = () => {
     }
   }, [role]);
 
-  
+
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -421,7 +432,7 @@ const CreateAccount = () => {
         setMobileNumber(formattedMobile);
 
         // Set custom access if it exists
-      if (data.hasCustomAccess && data.customModules && data.customModules.length > 0) {
+        if (data.hasCustomAccess && data.customModules && data.customModules.length > 0) {
           setSelectedModules(data.customModules || []);
         } else {
           // Use default role modules
@@ -488,9 +499,12 @@ const CreateAccount = () => {
 
       // Generate user ID if not provided
       if (!formValues.userID || !formValues.userID.trim()) {
-        trimmedValues.userID = generateUserID(trimmedValues.role);
+        const generatedID = await generateUserID(trimmedValues.role);
+        if (!generatedID) {
+          throw new Error('Failed to generate user ID');
+        }
+        trimmedValues.userID = generatedID;
       }
-
       console.log('Creating account with values:', trimmedValues);
 
       const url = id
@@ -555,9 +569,10 @@ const CreateAccount = () => {
             <Form.Item
               label="First Name"
               name="firstName"
+              maxLength={50}
               rules={[{ required: true, message: 'Please input first name!' }]}
             >
-              <Input placeholder="Enter first name" onBeforeInput={handleNameBeforeInput} />
+              <Input maxLength={50} showCount={{ maxLength: 50 }} placeholder="Enter first name" onBeforeInput={handleNameBeforeInput} />
             </Form.Item>
 
             <Form.Item label="Middle Name" name="middleName">
@@ -569,22 +584,47 @@ const CreateAccount = () => {
               name="lastName"
               rules={[{ required: true, message: 'Please input last name!' }]}
             >
-              <Input placeholder="Enter last name" onBeforeInput={handleNameBeforeInput} />
+              <Input maxLength={50} showCount={{ maxLength: 50 }} placeholder="Enter last name" onBeforeInput={handleNameBeforeInput} />
             </Form.Item>
+
 
             <Form.Item
               label="Mobile"
               name="mobile"
+              validateFirst
               rules={[
+                { required: true, message: 'Please input mobile number!' },
                 {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.reject('Please input mobile number!');
-                    }
+                  validator: async (_, value) => {
+                    if (!value) return Promise.reject('Please input mobile number!');
+
                     const digits = value.replace(/\D/g, '');
-                    if (digits.length !== 11) {
-                      return Promise.reject('Number must be 11 digits');
+
+                    if (digits.length !== 11 || !digits.startsWith('09')) {
+                      return Promise.reject('Please enter a valid Philippine mobile number\n(09XX-XXX-XXXX)');
                     }
+
+                    // Only check availability if we're not editing (no id) or if the mobile number has changed
+                    if (!id || digits !== form.getFieldValue('mobile')) {
+                      try {
+                        const res = await fetch('http://localhost:5000/api/admin/check-availability', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ mobile: digits }),
+                        });
+
+                        const data = await res.json();
+                        if (data.mobileInUse) {
+                          return Promise.reject('Mobile number is already in use.');
+                        }
+                      } catch (error) {
+                        console.error('Validation error:', error);
+                        // Don't reject on network errors - let the form submit
+                      }
+                    }
+
                     return Promise.resolve();
                   },
                 },
@@ -605,9 +645,37 @@ const CreateAccount = () => {
             <Form.Item
               label="Email"
               name="email"
+              validateFirst
               rules={[
                 { required: true, message: 'Please input an email address!' },
                 { type: 'email', message: 'Please enter a valid email address!' },
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+
+                    // Only check availability if we're not editing (no id) or if the email has changed
+                    if (!id || value !== form.getFieldValue('email')) {
+                      try {
+                        const res = await fetch('http://localhost:5000/api/admin/check-availability', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ email: value }),
+                        });
+
+                        const data = await res.json();
+                        if (data.emailInUse) {
+                          return Promise.reject('Email is already in use.');
+                        }
+                      } catch (error) {
+                        console.error('Validation error:', error);
+                        // Don't reject on network errors - let the form submit
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             >
               <Input placeholder="juandelacruz@email.com" />
@@ -708,12 +776,12 @@ const CreateAccount = () => {
                   {id ? (
                     // Message for updating an account
                     <span>
-                       <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
                     </span>
                   ) : (
                     // Message for creating a new account
                     <span>
-                       <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
                     </span>
                   )}
                   <br /><br />
