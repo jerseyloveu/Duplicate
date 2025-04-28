@@ -7,33 +7,39 @@ const Accounts = require('../models/Accounts');
 router.post('/create-account', async (req, res) => {
     try {
       const {
-        userID,
         firstName,
         middleName,
         lastName,
         email,
         mobile,
         role,
+        status,
         password,
-        status
+        hasCustomAccess,
+        customModules
       } = req.body;
   
-      const existingUserID = await Accounts.findOne({ userID });
-      if (existingUserID) {
-        return res.status(409).json({ message: 'User ID already exists.' });
+      // Validate required fields
+      if (!firstName || !lastName || !email || !mobile || !role || !status) {
+        return res.status(400).json({ message: 'Missing required fields' });
       }
   
-      const existingEmail = await Accounts.findOne({ email });
-      if (existingEmail) {
-        return res.status(409).json({ message: 'Email already exists.' });
+      // Check if email or mobile already exists
+      const existingUser = await Accounts.findOne({
+        $or: [{ email }, { mobile }]
+      });
+  
+      if (existingUser) {
+        return res.status(409).json({
+          message: 'A user with this email or mobile number already exists'
+        });
       }
   
-      const existingMobile = await Accounts.findOne({ mobile });
-      if (existingMobile) {
-        return res.status(409).json({ message: 'Mobile number already exists.' });
-      }
+      // Generate or use provided userID
+      const userID = req.body.userID || generateUserID(role);
   
-      const newAccount = new Accounts({
+      // Create the new user
+      const newUser = new Accounts({
         userID,
         firstName,
         middleName,
@@ -41,25 +47,31 @@ router.post('/create-account', async (req, res) => {
         email,
         mobile,
         role,
+        status,
         password,
-        status: status || 'Pending Verification'
+        hasCustomAccess, // Add this field
+        customModules   // Add this field
       });
   
-      await newAccount.save();
+      await newUser.save();
   
-      res.status(201).json({
-        message: 'Account created successfully.',
-        data: {
-          userID: newAccount.userID,
-          email: newAccount.email
-        }
+      // Return success without the password
+      const userResponse = newUser.toObject();
+      delete userResponse.password;
+  
+      return res.status(201).json({
+        message: 'Account created successfully',
+        data: userResponse
       });
     } catch (error) {
-      console.error('Admin Create account error:', error);
-      res.status(500).json({ message: 'Server error creating account.' });
+      console.error('Error creating account:', error);
+      return res.status(500).json({
+        message: 'An error occurred while creating the account',
+        error: error.message
+      });
     }
-  });  
-
+  });
+  
 // GET all accounts
 // GET /api/admin/accounts
 router.get('/accounts', async (req, res) => {

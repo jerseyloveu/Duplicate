@@ -187,6 +187,19 @@ const ManageAccountsPage = () => {
       filteredValue: tableFilters.role || null,
     },
     {
+      title: 'Has Custom Access',
+      width: 140,
+      dataIndex: 'hasCustomAccess', 
+      key: 'hasCustomAccess',
+      filters: [
+        { text: 'Yes', value: true },
+        { text: 'No', value: false },
+      ],
+      onFilter: (value, record) => record.hasCustomAccess === value,
+      filteredValue: tableFilters.hasCustomAccess || null,
+      render: (value) => (value ? 'Yes' : 'No'),
+    },
+    {
       title: 'Status',
       width: 100,
       dataIndex: 'status',

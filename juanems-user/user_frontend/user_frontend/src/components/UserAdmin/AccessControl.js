@@ -7,70 +7,144 @@ import Footer from './Footer';
 import Header from './Header';
 import '../../css/UserAdmin/Global.css';
 
-const staffModules = {
+const admissionsModules = {
     'Manage Applications': [
-        'Manage Student Applications',
-        'Manage Exam and Interview Schedules',
-        'Manage Exam and Interview Results',
-        'Manage Enrollment Period',
+      'Manage Student Applications',
+      'Manage Exam and Interview Schedules',
+      'Manage Exam and Interview Results',
+      'Manage Enrollment Period',
+    ],
+    'Manage Accounts': [],
+    'Create Announcements': [],
+  };
+  
+  const registrarModules = {
+    'Manage Student Records': [
+      'Manage Students',
+      'Attendance Summary',
+      'Behavior Summary',
+      'Grade Summary',
+      'Enrollment Summary',
+      'Quarterly Ranking',
+      'Yearly Ranking',
+    ],
+    'Manage Enrollment': [],
+    'Manage Schedule': [
+      'Student Schedule',
+      'Faculty Schedule',
+    ],
+    'Manage Program': [
+      'Manage Strands',
+      'Manage Subjects',
+      'Manage Sections',
+    ],
+    'Manage Queue': [],
+    'Create Announcements': [],
+  };
+  
+  const accountingModules = {
+    'Manage Payments': [
+      'Manage Fees',
+      'Payment History',
+    ],
+    'Manage Queue': [],
+    'Create Announcements': [],
+  };
+  
+  const subAdminModules = {
+    'Manage Accounts': [],
+    'Manage Schedule': [
+      'Student Schedule',
+      'Faculty Schedule',
+    ],
+    'Manage Program': [
+      'Manage Strands',
+      'Manage Subjects',
+      'Manage Sections',
+    ],
+    'Manage Student Records': [
+      'Manage Students',
+      'Attendance Summary',
+      'Behavior Summary',
+      'Grade Summary',
+      'Enrollment Summary',
+      'Quarterly Ranking',
+      'Yearly Ranking',
+    ],
+    'Manage Enrollment': [],
+    'Manage Payments': [
+      'Manage Fees',
+      'Payment History',
+    ],
+    'Overall System Logs': [],
+    'Create Announcements': [],
+  };
+  
+  // Define all staff modules for the super admin
+  const allStaffModules = {
+    'Manage Applications': [
+      'Manage Student Applications',
+      'Manage Exam and Interview Schedules',
+      'Manage Exam and Interview Results',
+      'Manage Enrollment Period',
     ],
     'Manage Accounts': [],
     'Create Announcements': [],
     'Manage Enrollment': [],
     'Manage Schedule': [
-        'Student Schedule',
-        'Faculty Schedule',
+      'Student Schedule',
+      'Faculty Schedule',
     ],
     'Overall System Logs': [],
     'Manage Payments': [
-        'Manage Fees',
-        'Payment History',
+      'Manage Fees',
+      'Payment History',
     ],
     'Manage Program': [
-        'Manage Strands',
-        'Manage Subjects',
-        'Manage Sections',
+      'Manage Strands',
+      'Manage Subjects',
+      'Manage Sections',
     ],
     'Manage Queue': [],
     'Manage Student Records': [
-        'Manage Students',
-        'Attendance Summary',
-        'Behavior Summary',
-        'Grade Summary',
-        'Enrollment Summary',
-        'Quarterly Ranking',
-        'Yearly Ranking',
+      'Manage Students',
+      'Attendance Summary',
+      'Behavior Summary',
+      'Grade Summary',
+      'Enrollment Summary',
+      'Quarterly Ranking',
+      'Yearly Ranking',
     ],
-};
-
-const defaultRoleModules = {
+  };
+  
+  const defaultRoleModules = {
     Faculty: {
-        'Class Schedule': [],
-        'Class Information': [],
-        'Handling of Grades': [],
-        'Viewing of OTE': [],
-        'Teacher Documents': [],
+      'Class Schedule': [],
+      'Class Information': [],
+      'Handling of Grades': [],
+      'Viewing of OTE': [],
+      'Teacher Documents': [],
     },
     Student: {
-        'Student Handbook': [],
-        'Certificate of Registration': [],
-        'Flowchart': [],
-        'Online Class Registration': [],
-        'Viewing of Grades': [],
-        'Class Schedule': [],
-        'Online Teacher\'s Evaluation': [],
-        'Student Ledger': [],
-        'Enrollment': [],
-        'Joining Queue': [],
-        'Pay Bills': [],
+      'Student Handbook': [],
+      'Certificate of Registration': [],
+      'Flowchart': [],
+      'Online Class Registration': [],
+      'Viewing of Grades': [],
+      'Class Schedule': [],
+      'Online Teacher\'s Evaluation': [],
+      'Student Ledger': [],
+      'Enrollment': [],
+      'Joining Queue': [],
+      'Pay Bills': [],
     },
-    'Admissions (Staff)': staffModules,
-    'Registrar (Staff)': staffModules,
-    'Accounting (Staff)': staffModules,
-    'Administration (Sub-Admin)': staffModules,
-    'IT (Super Admin)': staffModules,
-};
-
+    'Admissions (Staff)': admissionsModules,
+    'Registrar (Staff)': registrarModules,
+    'Accounting (Staff)': accountingModules,
+    'Administration (Sub-Admin)': subAdminModules,
+    'IT (Super Admin)': allStaffModules,
+  };
+  
 const RoleAccessForm = ({ role }) => {
     const moduleGroups = defaultRoleModules[role] || {};
     const [selectedModules, setSelectedModules] = useState([]);
