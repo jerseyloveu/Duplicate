@@ -104,40 +104,45 @@ function VerifyEmail() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  useEffect(() => {
-    const fetchVerificationStatus = async () => {
-      try {
-        const isPasswordReset = location.state?.isPasswordReset || false;
-        let endpoint = `/api/enrollee-applicants/verification-status/${email}`;
+// Update the useEffect for fetching verification status
+useEffect(() => {
+  const fetchVerificationStatus = async () => {
+    try {
+      const isPasswordReset = location.state?.isPasswordReset || false;
+      let endpoint = `/api/enrollee-applicants/verification-status/${email}`;
 
-        if (isPasswordReset) {
-          endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
-        }
-
-        const response = await fetch(`http://localhost:5000${endpoint}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setIsLockedOut(data.isLockedOut);
-          if (data.isLockedOut) {
-            setLockoutCountdown(data.lockoutTimeLeft);
-            setOtpCountdown(0);
-          } else {
-            // For password reset, we want to show the countdown from the passwordResetOtpExpires
-            setOtpCountdown(Math.max(0, data.otpTimeLeft));
-            setCanResend(data.otpTimeLeft <= 0);
-          }
-          setAttemptsLeft(data.attemptsLeft);
-        }
-      } catch (error) {
-        console.error('Error fetching verification status:', error);
+      if (isPasswordReset) {
+        endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
       }
-    };
 
-    if (email) {
-      fetchVerificationStatus();
+      const response = await fetch(`http://localhost:5000${endpoint}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsLockedOut(data.isLockedOut);
+        if (data.isLockedOut) {
+          setLockoutCountdown(data.lockoutTimeLeft);
+          setOtpCountdown(0);
+        } else {
+          setOtpCountdown(Math.max(0, data.otpTimeLeft));
+          setCanResend(data.otpTimeLeft <= 0);
+        }
+        setAttemptsLeft(data.attemptsLeft);
+        
+        // Update firstName if it's not set
+        if (data.firstName && !firstName) {
+          setFirstName(data.firstName);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching verification status:', error);
     }
-  }, [email, location.state]);
+  };
+
+  if (email) {
+    fetchVerificationStatus();
+  }
+}, [email, location.state, firstName]);
 
   // Handle OTP input change
   const handleChange = (index, value) => {

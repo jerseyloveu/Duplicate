@@ -17,7 +17,49 @@ function generateRandomPassword(length = 12) {
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-// Create new applicant with OTP
+// Add these new functions at the top of your routes file
+async function getNextStudentIDSequence(academicYear) {
+  // Extract last two digits of the starting year (e.g., "2025" -> "25")
+  const yearShort = academicYear.split('-')[0].slice(-2);
+
+  // Find the highest existing studentID with this year prefix
+  const lastApplicant = await EnrolleeApplicant.findOne({
+    studentID: new RegExp(`^${yearShort}-\\d{5}$`)
+  }).sort({ studentID: -1 });
+
+  if (!lastApplicant) {
+    return `${yearShort}-00001`; // First student of the year
+  }
+
+  // Extract the numeric part and increment
+  const lastNumber = parseInt(lastApplicant.studentID.split('-')[1], 10);
+  const nextNumber = lastNumber + 1;
+
+  // Pad with leading zeros to make 5 digits
+  return `${yearShort}-${nextNumber.toString().padStart(5, '0')}`;
+}
+
+async function getNextApplicantIDSequence(academicYear) {
+  // Extract full starting year (e.g., "2025-2026" -> "2025")
+  const yearFull = academicYear.split('-')[0];
+
+  // Find the highest existing applicantID with this year prefix
+  const lastApplicant = await EnrolleeApplicant.findOne({
+    applicantID: new RegExp(`^${yearFull}-\\d{6}$`)
+  }).sort({ applicantID: -1 });
+
+  if (!lastApplicant) {
+    return `${yearFull}-000001`; // First applicant of the year
+  }
+
+  // Extract the numeric part and increment
+  const lastNumber = parseInt(lastApplicant.applicantID.split('-')[1], 10);
+  const nextNumber = lastNumber + 1;
+
+  // Pad with leading zeros to make 6 digits
+  return `${yearFull}-${nextNumber.toString().padStart(6, '0')}`;
+}
+
 router.post('/', async (req, res) => {
   try {
     const {
@@ -44,8 +86,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Email is already registered with an active or pending application' });
     }
 
-    // Generate new student ID, password and OTP
-    const studentID = generateStudentID();
+    // Generate IDs
+    const studentID = await getNextStudentIDSequence(academicYear);
+    const applicantID = await getNextApplicantIDSequence(academicYear);
     const plainPassword = generateRandomPassword();
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
@@ -64,8 +107,9 @@ router.post('/', async (req, res) => {
       academicStrand,
       academicLevel,
       studentID,
+      applicantID, // Include the new applicantID
       password: plainPassword,
-      temporaryPassword: plainPassword, // Store plain text temporarily
+      temporaryPassword: plainPassword,
       status: 'Pending Verification',
       otp,
       otpExpires,
@@ -74,18 +118,18 @@ router.post('/', async (req, res) => {
 
     await newApplicant.save();
 
-    // Send OTP email - using sendOTP function
+    // Send OTP email
     try {
       await sendOTP(email, firstName, otp);
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
-      // Continue even if email fails - we'll still create the account
     }
 
     res.status(201).json({
       message: 'Registration successful. Please check your email for verification code.',
       data: {
         studentID,
+        applicantID, // Include in response
         email,
         password: plainPassword,
       }
@@ -109,13 +153,31 @@ router.get('/check-email/:email', async (req, res) => {
       return res.status(409).json({ message: 'Email is already registered with an active or pending application' });
     }
 
-    return res.status(200).json({ message: 'Email is available' });
+    // Check for inactive account
+    const existingInactive = await EnrolleeApplicant.findOne({
+      email,
+      status: 'Inactive'
+    });
+
+    if (existingInactive) {
+      return res.status(200).json({
+        message: 'Email is available (previous inactive account exists)',
+        status: 'Inactive'
+      });
+    }
+
+    // No account exists
+    return res.status(200).json({
+      message: 'Email is available',
+      status: 'Available'
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Verify OTP
+// Update the verify-otp endpoint
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -124,22 +186,23 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email and OTP are required' });
     }
 
-    const applicant = await EnrolleeApplicant.findOne({ email }).select('+temporaryPassword');
+    // Find the most recent Pending Verification account for this email
+    const applicant = await EnrolleeApplicant.findOne({
+      email,
+      status: 'Pending Verification'
+    }).sort({ createdAt: -1 }).select('+temporaryPassword');
 
     if (!applicant) {
-      return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: 'Account not found or already verified' });
     }
 
-    // Check if account is already verified
-    if (applicant.status === 'Active') {
-      return res.status(400).json({ message: 'Account is already verified' });
-    }
-
-    // Check if account is expired
+    // Check if account verification period has expired
     if (applicant.verificationExpires < new Date()) {
       applicant.status = 'Inactive';
       await applicant.save();
-      return res.status(400).json({ message: 'Verification period has expired. Please register again.' });
+      return res.status(400).json({
+        message: 'Verification period has expired. Please register again.'
+      });
     }
 
     // Check if user is in lockout period
@@ -189,6 +252,19 @@ router.post('/verify-otp', async (req, res) => {
     applicant.lastOtpAttempt = undefined;
     await applicant.save();
 
+    // Mark any other pending accounts with this email as inactive
+    await EnrolleeApplicant.updateMany(
+      {
+        email,
+        status: 'Pending Verification',
+        _id: { $ne: applicant._id } // Exclude the current applicant
+      },
+      {
+        status: 'Inactive',
+        inactiveReason: 'New registration completed'
+      }
+    );
+
     // Store the temporary password before saving
     const temporaryPassword = applicant.temporaryPassword;
 
@@ -199,15 +275,15 @@ router.post('/verify-otp', async (req, res) => {
           applicant.email,
           applicant.firstName,
           temporaryPassword,
-          applicant.studentID
+          applicant.studentID,
+          applicant.applicantID // Add this parameter
         );
 
         // Only clear after successful email send
         applicant.temporaryPassword = undefined;
       } catch (emailError) {
         console.error('Failed to send password email:', emailError);
-        // Don't clear the temporary password if email fails,
-        // this gives us a chance to retry later
+        // Don't clear the temporary password if email fails
       }
     }
 
@@ -227,11 +303,15 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// Add this new route before module.exports
+
+
 router.get('/verification-status/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email
+    }).sort({ createdAt: -1 });
 
     if (!applicant) {
       return res.status(404).json({ message: 'Account not found' });
@@ -239,11 +319,14 @@ router.get('/verification-status/:email', async (req, res) => {
 
     const response = {
       status: applicant.status,
-      firstName: applicant.firstName, // Add this line
+      firstName: applicant.firstName,
+      createdAt: applicant.createdAt.toISOString(), // Return as ISO string
       isLockedOut: applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date(),
-      lockoutTimeLeft: applicant.otpAttemptLockout ? Math.ceil((applicant.otpAttemptLockout - new Date()) / 1000) : 0,
-      otpTimeLeft: applicant.otpExpires ? Math.ceil((applicant.otpExpires - new Date()) / 1000) : 0,
-      attemptsLeft: 3 - applicant.otpAttempts
+      lockoutTimeLeft: applicant.otpAttemptLockout ?
+        Math.ceil((applicant.otpAttemptLockout - new Date()) / 1000) : 0,
+      otpTimeLeft: applicant.otpExpires ?
+        Math.ceil((applicant.otpExpires - new Date()) / 1000) : 0,
+      attemptsLeft: 3 - (applicant.otpAttempts || 0)
     };
 
     res.status(200).json(response);
@@ -290,7 +373,8 @@ router.post('/forgot-password', async (req, res) => {
         applicant.email,
         applicant.firstName,
         newPassword,
-        applicant.studentID
+        applicant.studentID,
+        applicant.applicantID // Add this
       );
 
       return res.json({
@@ -354,7 +438,7 @@ router.post('/request-password-reset', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    
+
     // Find user with passwordResetOtp selected
     const user = await EnrolleeApplicant.findOne({ email })
       .select('+passwordResetOtp +passwordResetOtpExpires +password');
@@ -376,7 +460,7 @@ router.post('/reset-password', async (req, res) => {
     // Generate new password
     const newPassword = generateRandomPassword();
     console.log('Generated new password:', newPassword); // Debug log
-    
+
     // Hash the new password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
@@ -387,27 +471,27 @@ router.post('/reset-password', async (req, res) => {
     user.passwordResetOtp = undefined;
     user.passwordResetOtpExpires = undefined;
     user.lastPasswordReset = new Date();
-    
+
     // Save the user
     await user.save();
     console.log('Password updated in database'); // Debug log
 
     // Send email with the new password
     await emailService.sendPasswordResetEmail(
-      email, 
-      user.firstName, 
+      email,
+      user.firstName,
       newPassword,
       user.studentID
     );
 
-    res.json({ 
+    res.json({
       success: true,
-      message: 'Password reset successful. Your new password has been sent to your email.' 
+      message: 'Password reset successful. Your new password has been sent to your email.'
     });
   } catch (error) {
     console.error('Password reset error:', error);
-    res.status(500).json({ 
-      message: error.message || 'Failed to reset password' 
+    res.status(500).json({
+      message: error.message || 'Failed to reset password'
     });
   }
 });
@@ -421,16 +505,26 @@ router.post('/resend-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
+    // Find the most recent Pending Verification account
     const applicant = await EnrolleeApplicant.findOne({
       email,
       status: 'Pending Verification'
-    });
+    }).sort({ createdAt: -1 });
 
     if (!applicant) {
       return res.status(404).json({ message: 'Account not found or already verified' });
     }
 
-    // Generate new OTP using otpGenerator
+    // Check if user is in lockout period
+    if (applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date()) {
+      const minutesLeft = Math.ceil((applicant.otpAttemptLockout - new Date()) / (1000 * 60));
+      return res.status(429).json({
+        message: `Please wait ${minutesLeft} minute(s) before requesting a new OTP.`,
+        lockout: true
+      });
+    }
+
+    // Generate new OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
       lowerCaseAlphabets: false,
@@ -438,13 +532,15 @@ router.post('/resend-otp', async (req, res) => {
       specialChars: false
     });
 
-    // Update OTP and expiry
+    // Update OTP and reset attempt counters
     applicant.otp = otp;
     applicant.otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
-    applicant.otpAttempts = 0; // Reset attempts
+    applicant.otpAttempts = 0;
+    applicant.otpAttemptLockout = undefined;
+    applicant.lastOtpAttempt = undefined;
     await applicant.save();
 
-    // Send OTP email using sendOTP function
+    // Send OTP email
     await sendOTP(email, applicant.firstName, otp);
 
     return res.status(200).json({
@@ -485,7 +581,6 @@ router.get('/password-reset-status/:email', async (req, res) => {
   }
 });
 
-// Update the login route in enrolleeApplicants.js
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -497,71 +592,94 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user with password selected
-    const applicant = await EnrolleeApplicant.findOne({ email })
-      .select('+password');
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    // Find the most recent ACTIVE account for this email
+    const applicant = await EnrolleeApplicant.findOne({
+      email: cleanEmail,
+      status: 'Active'
+    }).sort({ createdAt: -1 }).select('+password');
 
     if (!applicant) {
+      // Check for pending verification
+      const pendingAccount = await EnrolleeApplicant.findOne({
+        email: cleanEmail,
+        status: 'Pending Verification'
+      }).sort({ createdAt: -1 });
+
+      if (pendingAccount) {
+        if (pendingAccount.verificationExpires < new Date()) {
+          // Auto-clean expired verification
+          pendingAccount.status = 'Inactive';
+          pendingAccount.inactiveReason = 'Auto-cleaned expired verification';
+          await pendingAccount.save();
+
+          return res.status(403).json({
+            message: 'Verification period expired. Please register again.',
+            errorType: 'verification_expired'
+          });
+        }
+        return res.status(403).json({
+          message: 'Account requires email verification',
+          errorType: 'pending_verification',
+          email: pendingAccount.email,
+          firstName: pendingAccount.firstName
+        });
+      }
+
+      // Check for inactive accounts
+      const inactiveAccount = await EnrolleeApplicant.findOne({
+        email: cleanEmail,
+        status: 'Inactive'
+      });
+
+      if (inactiveAccount) {
+        return res.status(403).json({
+          message: 'Account is inactive. Reason: ' +
+            (inactiveAccount.inactiveReason || 'Unknown reason'),
+          errorType: 'account_inactive'
+        });
+      }
+
       return res.status(404).json({
         message: 'Account not found',
         errorType: 'account_not_found'
       });
     }
 
-    // Track login attempt - increment counter regardless of outcome
+    // Track login attempt
     applicant.loginAttempts += 1;
-
-    // Check account status
-    if (applicant.status === 'Pending Verification') {
-      if (applicant.verificationExpires < new Date()) {
-        applicant.status = 'Inactive';
-        await applicant.save();
-        return res.status(403).json({
-          message: 'Verification period has expired. Please register again.',
-          errorType: 'verification_expired'
-        });
-      }
-      await applicant.save(); // Save the login attempt count
-      return res.status(403).json({
-        message: 'Account requires email verification',
-        errorType: 'pending_verification',
-        email: applicant.email,
-        firstName: applicant.firstName
-      });
-    }
-
-    // Debug: Log the input password and stored hash
-    console.log('Input password:', password);
-    console.log('Stored hash:', applicant.password);
+    await applicant.save();
 
     // Verify password
-    const isMatch = await bcrypt.compare(password, applicant.password);
-    console.log('Password match:', isMatch); // Debug log
+    const isMatch = await bcrypt.compare(cleanPassword, applicant.password);
 
     if (!isMatch) {
-      await applicant.save(); // Save the login attempt count
       return res.status(401).json({
         message: 'Invalid credentials',
         errorType: 'authentication'
       });
     }
 
-    // Successful login - update activity status
+    // Successful login - update activity
     applicant.activityStatus = 'Online';
     applicant.lastLogin = new Date();
     await applicant.save();
 
-    // Successful login
+    // In your login route handler (enrolleeApplicants.js)
     res.json({
       message: 'Login successful',
-      status: applicant.status,
       email: applicant.email,
       firstName: applicant.firstName,
       studentID: applicant.studentID,
+      applicantID: applicant.applicantID, // Make sure this is included
       activityStatus: applicant.activityStatus,
-      loginAttempts: applicant.loginAttempts
+      loginAttempts: applicant.loginAttempts,
+      lastLogin: applicant.lastLogin,
+      lastLogout: applicant.lastLogout,
+      createdAt: applicant.createdAt.toISOString()
     });
-
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
@@ -571,10 +689,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Add a new route for logout
 router.post('/logout', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, createdAt } = req.body;
 
     if (!email) {
       return res.status(400).json({
@@ -583,8 +700,25 @@ router.post('/logout', async (req, res) => {
       });
     }
 
-    // Find the user
-    const applicant = await EnrolleeApplicant.findOne({ email });
+    let query = {
+      email,
+      status: 'Active'
+    };
+
+    // If createdAt is provided, parse it properly
+    if (createdAt) {
+      const date = new Date(createdAt);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({
+          message: 'Invalid createdAt timestamp',
+          errorType: 'validation'
+        });
+      }
+      query.createdAt = date;
+    }
+
+    const applicant = await EnrolleeApplicant.findOne(query)
+      .sort({ createdAt: -1 });
 
     if (!applicant) {
       return res.status(404).json({
@@ -612,24 +746,35 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Add a new route to get user activity
 router.get('/activity/:email', async (req, res) => {
   try {
     const { email } = req.params;
+    const { createdAt } = req.query;
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (!email) {
-      return res.status(400).json({
-        message: 'Email is required',
-        errorType: 'validation'
-      });
+    let query = {
+      email: cleanEmail,
+      status: 'Active'
+    };
+
+    // If createdAt is provided, parse it properly
+    if (createdAt) {
+      const date = new Date(createdAt);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({
+          message: 'Invalid createdAt timestamp',
+          errorType: 'validation'
+        });
+      }
+      query.createdAt = date;
     }
 
-    // Find the user
-    const applicant = await EnrolleeApplicant.findOne({ email });
+    const applicant = await EnrolleeApplicant.findOne(query)
+      .sort({ createdAt: -1 });
 
     if (!applicant) {
       return res.status(404).json({
-        message: 'Account not found',
+        message: 'Active account not found',
         errorType: 'account_not_found'
       });
     }
@@ -638,7 +783,8 @@ router.get('/activity/:email', async (req, res) => {
       activityStatus: applicant.activityStatus,
       loginAttempts: applicant.loginAttempts,
       lastLogin: applicant.lastLogin,
-      lastLogout: applicant.lastLogout
+      lastLogout: applicant.lastLogout,
+      accountCreatedAt: applicant.createdAt
     });
 
   } catch (error) {

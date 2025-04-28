@@ -1,161 +1,294 @@
 /* ScopeDashboard.css */
 .scope-dashboard-container {
-    display: flex;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+/* Main Layout */
+.scope-dashboard-content {
+  display: flex;
+  flex: 1;
+}
+
+/* Sidebar Styles */
+.scope-sidebar {
+  width: 250px;
+  background-color: #00245A;
+  color: white;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 80px);
+}
+
+.scope-user-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.scope-user-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #FFD601;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00245A;
+  margin-bottom: 1rem;
+}
+
+.scope-user-email {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  word-break: break-all;
+  text-align: center;
+}
+
+.scope-user-role {
+  color: #FFD601;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.scope-divider {
+  height: 1px;
+  width: 80%;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 1rem 0;
+}
+
+.scope-nav-button {
+  background-color: #FFD601;
+  color: #00245A;
+  border: none;
+  border-radius: 25px;
+  padding: 0.75rem 1.5rem;
+  margin: 0.5rem 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.scope-nav-button:hover {
+  background-color: #e6c100;
+  transform: translateX(5px);
+}
+
+.scope-logout-button {
+  margin-top: auto;
+  margin-bottom: 1rem;
+}
+
+/* Main Content Styles */
+.scope-main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: #f5f5f5;
+}
+
+.scope-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.scope-date-time {
+  font-size: 1rem;
+  color: #555;
+}
+
+.scope-announcement-button {
+  background: none;
+  border: none;
+  color: #00245A;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.scope-announcement-button:hover {
+  transform: scale(1.1);
+}
+
+.scope-welcome-section {
+  margin-bottom: 2rem;
+}
+
+.scope-welcome-section h1 {
+  color: #00245A;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.scope-welcome-message {
+  color: #555;
+  font-size: 1.2rem;
+}
+
+/* Applicant Card */
+.scope-applicant-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.scope-applicant-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #00245A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFD601;
+}
+
+.scope-applicant-id {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #00245A;
+}
+
+.scope-applicant-label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Activity Tracker */
+.scope-activity-tracker {
+  background-color: white;
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.scope-activity-tracker h2 {
+  color: #00245A;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scope-activity-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.scope-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scope-stat-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.scope-stat-value {
+  font-size: 1.1rem;
+}
+
+.scope-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.scope-status-badge.online {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.scope-status-badge.offline {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+/* Loading and Error States */
+.scope-loading,
+.scope-error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+.scope-error {
+  color: #d32f2f;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .scope-dashboard-content {
     flex-direction: column;
-    min-height: 100vh;
-    background-color: #f5f5f5;
-    font-family: 'Roboto', Arial, sans-serif;
   }
-  
-  /* Header Styles */
-  .scope-dashboard-header {
-    background-color: #1a237e;
-    color: white;
-    padding: 1rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .scope-dashboard-logo {
-    display: flex;
-    align-items: center;
-  }
-  
-  .scope-dashboard-logo img {
-    height: 50px;
-    margin-right: 1rem;
-  }
-  
-  .scope-dashboard-logo h1 {
-    font-size: 1.5rem;
-    margin: 0;
-  }
-  
-  .scope-dashboard-user {
-    display: flex;
-    align-items: center;
+
+  .scope-sidebar {
+    width: 100%;
+    min-height: auto;
+    padding: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 1rem;
   }
-  
-  .scope-dashboard-logout-btn {
-    background-color: #ff3d00;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    transition: background-color 0.3s;
-  }
-  
-  .scope-dashboard-logout-btn:hover {
-    background-color: #dd2c00;
-  }
-  
-  /* Main Content Styles */
-  .scope-dashboard-main {
-    flex: 1;
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+
+  .scope-user-profile {
     width: 100%;
+    margin-bottom: 1rem;
   }
-  
-  .scope-dashboard-loading,
-  .scope-dashboard-error {
-    text-align: center;
-    padding: 2rem;
-    font-size: 1.2rem;
+
+  .scope-nav-button {
+    width: auto;
+    padding: 0.5rem 1rem;
   }
-  
-  .scope-dashboard-error {
-    color: #d32f2f;
-  }
-  
-  .scope-dashboard-welcome {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-  }
-  
-  .scope-dashboard-welcome h2 {
+
+  .scope-logout-button {
     margin-top: 0;
-    color: #1a237e;
   }
-  
-  /* Activity Tracker Styles */
-  .scope-dashboard-activity-tracker {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  
-  .scope-dashboard-activity-tracker h3 {
-    color: #1a237e;
-    margin-top: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 1rem;
-  }
-  
-  .scope-dashboard-activity-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  
-  .scope-dashboard-stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .scope-dashboard-stat-label {
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: #757575;
-  }
-  
-  .scope-dashboard-stat-value {
-    font-size: 1.1rem;
-    color: #333;
-  }
-  
-  .scope-dashboard-status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
-    font-weight: 500;
-    font-size: 0.9rem;
-    width: fit-content;
-  }
-  
-  .scope-dashboard-status-badge.online {
-    background-color: #c8e6c9;
-    color: #2e7d32;
-  }
-  
-  .scope-dashboard-status-badge.offline {
-    background-color: #ffcdd2;
-    color: #c62828;
-  }
-  
-  /* Footer Styles */
-  .scope-dashboard-footer {
-    background-color: #1a237e;
-    color: white;
-    text-align: center;
+
+  .scope-main-content {
     padding: 1rem;
-    margin-top: auto;
   }
+
+  .scope-applicant-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .scope-activity-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .scope-top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
