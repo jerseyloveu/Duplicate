@@ -6,9 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
+import { FaBoxArchive } from "react-icons/fa6";
 import { FaPen, FaPlus, FaSearch, FaUserCheck, FaUserTimes } from 'react-icons/fa';
 import { FiFilter } from 'react-icons/fi';
-import { GrPowerReset } from "react-icons/gr";
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft, MdOutlineManageAccounts } from 'react-icons/md';
 
@@ -207,12 +207,21 @@ const ManageAccountsPage = () => {
       filters: [
         { text: 'Active', value: 'Active' },
         { text: 'Inactive', value: 'Inactive' },
+        { text: 'Pending Verification', value: 'Pending Verification' },
       ],
       onFilter: (value, record) => record.status.includes(value),
       filteredValue: tableFilters.status || null,
-      render: (status) => (
-        <Tag color={status === 'Active' ? 'green' : 'volcano'}>{status}</Tag>
-      ),
+      render: (status) => {
+        let color;
+        if (status === 'Active') {
+          color = 'green';
+        } else if (status === 'Pending Verification') {
+          color = 'blue';
+        } else {
+          color = 'volcano';
+        }
+        return <Tag color={color}>{status}</Tag>;
+      },
     },
     {
       title: 'Created At',
@@ -262,23 +271,25 @@ const ManageAccountsPage = () => {
           >
             Edit
           </Button>
+          {record.status !== 'Pending Verification' && (
+            <Button
+              icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
+              danger={record.status === 'Active'}
+              style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+              onClick={() => handleStatusToggle(record)}
+            >
+              {record.status === 'Active' ? 'Inactive' : 'Active'}
+            </Button>
+          )}
           <Button
-            icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
-            danger={record.status === 'Active'}
+            icon={<FaBoxArchive/>} 
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => handleStatusToggle(record)}
+            onClick={() => console.log('Archive clicked for', record.userID)}
           >
-            {record.status === 'Active' ? 'Inactive' : 'Active'}
-          </Button>
-          <Button
-            icon={<GrPowerReset />}
-            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => console.log('Reset password clicked for', record.userID)}
-          >
-            Reset Password
+            Archive
           </Button>
         </div>
-      )      
+      )
     }
   ];
 

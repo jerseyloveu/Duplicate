@@ -303,15 +303,26 @@ const CustomAccessForm = ({ role, selectedModules, setSelectedModules, hasCustom
   );
 };
 
-const generateUserID = (role) => {
-  // May still change depending on the client 
-  const currentYear = new Date().getFullYear().toString();
-  const randomID = Math.random().toString().slice(2, 8); // 6 random digits
+const generateUserID = async (role) => {
+  try {
+    const response = await fetch('/api/admin/generate-userid', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role }), // Pass the role to the backend
+    });
 
-  // Use 'STD' for students, 'EMP' for everyone else
-  const roleCode = role === 'Student' ? 'STD' : 'EMP';
+    if (!response.ok) {
+      throw new Error('Failed to generate userID');
+    }
 
-  return `${roleCode}-${currentYear}-${randomID}`;
+    const data = await response.json();
+    return data.userID; // Return the generated userID
+  } catch (error) {
+    console.error('Error generating userID:', error);
+    return null;
+  }
 };
 
 const generatePassword = () => { // Simple password generation function (you can customize it as per your needs)
@@ -341,6 +352,7 @@ const CreateAccount = () => {
   const [form] = Form.useForm();
   const [mobileNumber, setMobileNumber] = useState('');
   const variant = Form.useWatch('variant', form);
+  const status = Form.useWatch('status', form);
   const role = Form.useWatch('role', form);
   const { id } = useParams();
   const [isChecked, setIsChecked] = useState(false);
@@ -382,7 +394,7 @@ const CreateAccount = () => {
     }
   }, [role]);
 
-  
+
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -421,7 +433,7 @@ const CreateAccount = () => {
         setMobileNumber(formattedMobile);
 
         // Set custom access if it exists
-      if (data.hasCustomAccess && data.customModules && data.customModules.length > 0) {
+        if (data.hasCustomAccess && data.customModules && data.customModules.length > 0) {
           setSelectedModules(data.customModules || []);
         } else {
           // Use default role modules
@@ -488,9 +500,12 @@ const CreateAccount = () => {
 
       // Generate user ID if not provided
       if (!formValues.userID || !formValues.userID.trim()) {
-        trimmedValues.userID = generateUserID(trimmedValues.role);
+        const generatedID = await generateUserID(trimmedValues.role);
+        if (!generatedID) {
+          throw new Error('Failed to generate user ID');
+        }
+        trimmedValues.userID = generatedID;
       }
-
       console.log('Creating account with values:', trimmedValues);
 
       const url = id
@@ -524,6 +539,16 @@ const CreateAccount = () => {
       }
 
       message.success(id ? 'Account successfully updated!' : 'Account successfully created!');
+      // navigate('/admin/verify-email', {
+      //   state: {
+      //     email: trimmedValues.email,
+      //     firstName: trimmedValues.firstName,
+      //     fromAdmin: true,
+      //     studentID: data.data.studentID || '',
+      //     expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+      //   }
+      // });
+
       navigate('/admin/manage-accounts');
     } catch (error) {
       console.error('Error creating account:', error);
@@ -555,9 +580,10 @@ const CreateAccount = () => {
             <Form.Item
               label="First Name"
               name="firstName"
+              maxLength={50}
               rules={[{ required: true, message: 'Please input first name!' }]}
             >
-              <Input placeholder="Enter first name" onBeforeInput={handleNameBeforeInput} />
+              <Input maxLength={50} showCount={{ maxLength: 50 }} placeholder="Enter first name" onBeforeInput={handleNameBeforeInput} />
             </Form.Item>
 
             <Form.Item label="Middle Name" name="middleName">
@@ -569,22 +595,50 @@ const CreateAccount = () => {
               name="lastName"
               rules={[{ required: true, message: 'Please input last name!' }]}
             >
-              <Input placeholder="Enter last name" onBeforeInput={handleNameBeforeInput} />
+              <Input maxLength={50} showCount={{ maxLength: 50 }} placeholder="Enter last name" onBeforeInput={handleNameBeforeInput} />
             </Form.Item>
+
 
             <Form.Item
               label="Mobile"
               name="mobile"
+              validateFirst
               rules={[
+                { required: true, message: 'Please input mobile number!' },
                 {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.reject('Please input mobile number!');
-                    }
+                  validator: async (_, value) => {
+                    if (!value) return Promise.reject('Please input mobile number!');
+
                     const digits = value.replace(/\D/g, '');
-                    if (digits.length !== 11) {
-                      return Promise.reject('Number must be 11 digits');
+
+                    if (digits.length !== 11 || !digits.startsWith('09')) {
+                      return Promise.reject('Please enter a valid Philippine mobile number\n(09XX-XXX-XXXX)');
                     }
+
+                    // Only check availability if we're not editing (no id) or if the mobile number has changed
+                    if (!id || digits !== form.getFieldValue('mobile')) {
+                      try {
+                        const res = await fetch('http://localhost:5000/api/admin/check-availability', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            mobile: digits,
+                            excludeId: id // Pass the current account ID to exclude it from check
+                          }),
+                        });
+
+                        const data = await res.json();
+                        if (data.mobileInUse) {
+                          return Promise.reject(data.message || 'Mobile number is already in use.');
+                        }
+                      } catch (error) {
+                        console.error('Validation error:', error);
+                        // Don't reject on network errors - let the form submit
+                      }
+                    }
+
                     return Promise.resolve();
                   },
                 },
@@ -605,9 +659,37 @@ const CreateAccount = () => {
             <Form.Item
               label="Email"
               name="email"
+              validateFirst
               rules={[
                 { required: true, message: 'Please input an email address!' },
                 { type: 'email', message: 'Please enter a valid email address!' },
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+
+                    // Only check availability if we're not editing (no id) or if the email has changed
+                    if (!id || value !== form.getFieldValue('email')) {
+                      try {
+                        const res = await fetch('http://localhost:5000/api/admin/check-availability', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ email: value }),
+                        });
+
+                        const data = await res.json();
+                        if (data.emailInUse) {
+                          return Promise.reject('Email is already in use.');
+                        }
+                      } catch (error) {
+                        console.error('Validation error:', error);
+                        // Don't reject on network errors - let the form submit
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             >
               <Input placeholder="juandelacruz@email.com" />
@@ -640,10 +722,17 @@ const CreateAccount = () => {
               label="Account Status"
               name="status"
               rules={[{ required: true, message: 'Please select account status!' }]}
+              initialValues={{ variant: 'outlined', status: 'Pending Verification' }}
             >
-              <Select placeholder="Select account status">
+              <Select
+                placeholder="Select account status"
+                disabled={status === 'Pending Verification'}
+              >
                 <Select.Option value="Active">Active</Select.Option>
                 <Select.Option value="Inactive">Inactive</Select.Option>
+                {(!status || status === 'Pending Verification') && (
+                  <Select.Option value="Pending Verification">Pending Verification</Select.Option>
+                )}
               </Select>
             </Form.Item>
 
@@ -708,12 +797,12 @@ const CreateAccount = () => {
                   {id ? (
                     // Message for updating an account
                     <span>
-                       <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
                     </span>
                   ) : (
                     // Message for creating a new account
                     <span>
-                       <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
                     </span>
                   )}
                   <br /><br />
@@ -782,7 +871,7 @@ const CreateAccount = () => {
         <Form
           form={form}
           variant={variant || 'outlined'}
-          initialValues={{ variant: 'outlined', status: 'Inactive' }}
+          initialValues={{ variant: 'outlined', status: 'Pending Verification' }}
           labelCol={{ xs: { span: 24 }, sm: { span: 6 } }}
           wrapperCol={{ xs: { span: 24 }, sm: { span: 30 } }}
           onFinish={handleSubmit}
