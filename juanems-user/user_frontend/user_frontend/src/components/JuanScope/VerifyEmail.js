@@ -15,36 +15,26 @@ function VerifyEmail() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(180); // 3 minutes for OTP
-  const [lockoutCountdown, setLockoutCountdown] = useState(0); // 5 minutes for lockout
+  const [otpCountdown, setOtpCountdown] = useState(180);
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
   const [canResend, setCanResend] = useState(false);
-  const [isLockedOut, setIsLockedOut] = useState(false); // Added this line
+  const [isLockedOut, setIsLockedOut] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [firstName, setFirstName] = useState(location.state?.firstName || '');
   const inputsRef = useRef([]);
 
-
-  // Extract email and firstName from location state
   const email = location.state?.email || '';
   const studentID = location.state?.studentID || '';
   const fromRegistration = location.state?.fromRegistration || false;
+  const fromLogin = location.state?.fromLogin || false;
+  const isPasswordReset = location.state?.isPasswordReset || false;
+  const isLoginOtp = location.state?.isLoginOtp || false;
 
-  // Update the useEffect for redirect in VerifyEmail.js
   useEffect(() => {
-    const fromLogin = location.state?.fromLogin || false;
-    const isPasswordReset = location.state?.isPasswordReset || false;
-
     if (!email) {
-      if (fromLogin) {
-        // If coming from login but no email, go back to login
-        navigate('/scope-login');
-      } else {
-        // Otherwise, go to register
-        navigate('/register');
-      }
+      navigate(fromLogin ? '/scope-login' : '/register');
     }
 
-    // If this is for password reset, fetch the user's first name
     if (isPasswordReset && email && !firstName) {
       const fetchUserDetails = async () => {
         try {
@@ -59,10 +49,8 @@ function VerifyEmail() {
       };
       fetchUserDetails();
     }
-  }, [email, location.state, navigate]);
+  }, [email, firstName, fromLogin, isPasswordReset, navigate]);
 
-  // Timer for OTP expiration
-  // Replace your existing OTP timer useEffect with this:
   useEffect(() => {
     let timer;
     if (!isLockedOut && otpCountdown > 0) {
@@ -79,7 +67,6 @@ function VerifyEmail() {
     return () => clearTimeout(timer);
   }, [otpCountdown, isLockedOut]);
 
-  // Replace your existing lockout timer useEffect with this:
   useEffect(() => {
     let timer;
     if (isLockedOut && lockoutCountdown > 0) {
@@ -97,78 +84,71 @@ function VerifyEmail() {
     return () => clearTimeout(timer);
   }, [lockoutCountdown, isLockedOut]);
 
-  // Format time as MM:SS
+  useEffect(() => {
+    const fetchVerificationStatus = async () => {
+      try {
+        let endpoint;
+        if (isPasswordReset) {
+          endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
+        } else if (isLoginOtp) {
+          endpoint = `/api/enrollee-applicants/login-otp-status/${email}`;
+        } else {
+          endpoint = `/api/enrollee-applicants/verification-status/${email}`;
+        }
+
+        const response = await fetch(`http://localhost:5000${endpoint}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setIsLockedOut(data.isLockedOut);
+          if (data.isLockedOut) {
+            setLockoutCountdown(data.lockoutTimeLeft);
+            setOtpCountdown(0);
+          } else {
+            setOtpCountdown(Math.max(0, data.otpTimeLeft));
+            setCanResend(data.otpTimeLeft <= 0);
+          }
+          setAttemptsLeft(data.attemptsLeft);
+          if (data.firstName && !firstName) {
+            setFirstName(data.firstName);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching verification status:', error);
+      }
+    };
+
+    if (email) {
+      fetchVerificationStatus();
+    }
+  }, [email, firstName, isPasswordReset, isLoginOtp]);
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-// Update the useEffect for fetching verification status
-useEffect(() => {
-  const fetchVerificationStatus = async () => {
-    try {
-      const isPasswordReset = location.state?.isPasswordReset || false;
-      let endpoint = `/api/enrollee-applicants/verification-status/${email}`;
-
-      if (isPasswordReset) {
-        endpoint = `/api/enrollee-applicants/password-reset-status/${email}`;
-      }
-
-      const response = await fetch(`http://localhost:5000${endpoint}`);
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsLockedOut(data.isLockedOut);
-        if (data.isLockedOut) {
-          setLockoutCountdown(data.lockoutTimeLeft);
-          setOtpCountdown(0);
-        } else {
-          setOtpCountdown(Math.max(0, data.otpTimeLeft));
-          setCanResend(data.otpTimeLeft <= 0);
-        }
-        setAttemptsLeft(data.attemptsLeft);
-        
-        // Update firstName if it's not set
-        if (data.firstName && !firstName) {
-          setFirstName(data.firstName);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching verification status:', error);
-    }
-  };
-
-  if (email) {
-    fetchVerificationStatus();
-  }
-}, [email, location.state, firstName]);
-
-  // Handle OTP input change
   const handleChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return; // Only allow digits
+    if (!/^\d*$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Clear errors
     if (error) setError('');
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputsRef.current[index + 1].focus();
     }
   };
 
-  // Handle key press (backspace)
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputsRef.current[index - 1].focus();
     }
   };
 
-  // Handle paste
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
@@ -180,7 +160,6 @@ useEffect(() => {
     }
   };
 
-  // Update the handleSubmit function in VerifyEmail.js
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
@@ -192,11 +171,13 @@ useEffect(() => {
 
     setLoading(true);
     try {
-      const isPasswordReset = location.state?.isPasswordReset || false;
-
-      let endpoint = '/api/enrollee-applicants/verify-otp';
+      let endpoint;
       if (isPasswordReset) {
         endpoint = '/api/enrollee-applicants/reset-password';
+      } else if (isLoginOtp) {
+        endpoint = '/api/enrollee-applicants/verify-login-otp';
+      } else {
+        endpoint = '/api/enrollee-applicants/verify-otp';
       }
 
       const response = await fetch(`http://localhost:5000${endpoint}`, {
@@ -213,6 +194,7 @@ useEffect(() => {
       const data = await response.json();
 
       if (!response.ok) {
+        setAttemptsLeft(data.attemptsLeft || attemptsLeft);
         throw new Error(data.message || 'Verification failed');
       }
 
@@ -226,6 +208,20 @@ useEffect(() => {
             }
           });
         }, 3000);
+      } else if (isLoginOtp) {
+        setSuccess('Login verified successfully!');
+        localStorage.setItem('userEmail', data.email);
+        localStorage.setItem('firstName', data.firstName);
+        localStorage.setItem('studentID', data.studentID);
+        localStorage.setItem('applicantID', data.applicantID);
+        localStorage.setItem('lastLogin', data.lastLogin);
+        localStorage.setItem('lastLogout', data.lastLogout);
+        localStorage.setItem('createdAt', data.createdAt);
+        localStorage.setItem('activityStatus', data.activityStatus);
+        localStorage.setItem('loginAttempts', data.loginAttempts.toString());
+        setTimeout(() => {
+          navigate('/scope-dashboard');
+        }, 2000);
       } else {
         setSuccess('Email verified successfully!');
         setTimeout(() => {
@@ -244,7 +240,6 @@ useEffect(() => {
     }
   };
 
-  // Update the handleResend function
   const handleResend = async () => {
     if (!canResend) return;
 
@@ -253,10 +248,13 @@ useEffect(() => {
     setSuccess('');
 
     try {
-      const isPasswordReset = location.state?.isPasswordReset || false;
-      let endpoint = '/api/enrollee-applicants/resend-otp';
+      let endpoint;
       if (isPasswordReset) {
         endpoint = '/api/enrollee-applicants/request-password-reset';
+      } else if (isLoginOtp) {
+        endpoint = '/api/enrollee-applicants/resend-login-otp';
+      } else {
+        endpoint = '/api/enrollee-applicants/resend-otp';
       }
 
       const response = await fetch(`http://localhost:5000${endpoint}`, {
@@ -273,7 +271,6 @@ useEffect(() => {
         throw new Error(data.message || 'Failed to resend verification code');
       }
 
-      // Reset all counters and states
       setOtpCountdown(180);
       setLockoutCountdown(0);
       setIsLockedOut(false);
@@ -281,11 +278,9 @@ useEffect(() => {
       setAttemptsLeft(3);
       setSuccess('New verification code sent to your email');
 
-      // Clear current OTP
       setOtp(['', '', '', '', '', '']);
       inputsRef.current[0].focus();
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to resend verification code. Please try again.');
@@ -296,7 +291,6 @@ useEffect(() => {
 
   return (
     <div className="juan-verify-container">
-      {/* Header */}
       <header className="juan-register-header">
         <div className="juan-header-left">
           <img
@@ -312,91 +306,76 @@ useEffect(() => {
 
       <div className="juan-verify-main">
         <div className="juan-verify-card">
-          <div className="juan-verify-icon">
-            <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" />
-          </div>
-          <h2>
-            {location.state?.isPasswordReset
-              ? 'Password Reset Verification'
-              : 'Email Verification'}
-          </h2>
+          <FontAwesomeIcon icon={faEnvelopeOpen} size="3x" className="juan-verify-icon" />
+          <h2>Verify Your Email</h2>
           <p className="juan-verify-description">
-            {location.state?.isPasswordReset
-              ? `We've sent a verification code to ${email} to reset your password. Please enter the 6-digit code below.`
-              : `We've sent a verification code to ${email}. Please enter the 6-digit code below to verify your account.`}
+            {isLoginOtp
+              ? `Please enter the 6-digit verification code sent to ${email} to complete your login.`
+              : isPasswordReset
+              ? `Please enter the 6-digit verification code sent to ${email} to reset your password.`
+              : `Please enter the 6-digit verification code sent to ${email} to verify your account.`}
           </p>
-
-          {/* OTP Input */}
-          <form onSubmit={handleSubmit} className="juan-otp-form" onPaste={handlePaste}>
-            <div className="juan-otp-inputs">
+          <form onSubmit={handleSubmit} className="juan-otp-form">
+            <div className="juan-otp-inputs" onPaste={handlePaste}>
               {otp.map((digit, index) => (
                 <input
                   key={index}
-                  ref={el => inputsRef.current[index] = el}
                   type="text"
                   maxLength="1"
                   value={digit}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
+                  ref={(el) => (inputsRef.current[index] = el)}
                   className="juan-otp-input"
-                  autoFocus={index === 0}
-                  disabled={isLockedOut || loading}
+                  disabled={loading || isLockedOut}
                 />
               ))}
             </div>
-
-            {/* Timer */}
-            <div className="juan-otp-timer">
-              {isLockedOut ? (
-                `Please wait ${formatTime(lockoutCountdown)} before trying again`
-              ) : canResend ? (
-                'OTP has expired'
-              ) : (
-                `OTP expires in ${formatTime(otpCountdown)}`
-              )}
-            </div>
-
-            {/* Error/Success */}
-            {error && (
-              <div className="juan-otp-error">
-                {error}
-                {attemptsLeft < 3 && !error.includes('wait') && (
-                  <div style={{ marginTop: '5px' }}></div>
-                )}
-              </div>
+            {otpCountdown > 0 && (
+              <p className="juan-otp-timer">
+                Code expires in: {formatTime(otpCountdown)}
+              </p>
             )}
-            {success && <div className="juan-otp-success">{success}</div>}
-
-            {/* Actions */}
+            {isLockedOut && (
+              <p className="juan-otp-error">
+                Too many attempts. Please wait {formatTime(lockoutCountdown)} to try again.
+              </p>
+            )}
+            {error && <p className="juan-otp-error">{error}</p>}
+            {success && <p className="juan-otp-success">{success}</p>}
             <div className="juan-otp-actions">
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={!canResend || resendLoading || isLockedOut}
+                disabled={resendLoading || !canResend || isLockedOut}
                 className="juan-resend-button"
               >
-                {resendLoading ? <FontAwesomeIcon icon={faSpinner} spin /> : 'Resend Code'}
+                {resendLoading ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  'Resend Code'
+                )}
               </button>
-
               <button
                 type="submit"
-                className="juan-verify-button"
                 disabled={loading || isLockedOut}
+                className="juan-verify-button"
               >
-                {loading ? <FontAwesomeIcon icon={faSpinner} spin /> : 'Verify Email'}
+                {loading ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  'Verify'
+                )}
               </button>
             </div>
           </form>
-
           <p className="juan-verify-note">
-            Note: If you do not verify your email within 5 days, your registration will expire.
+            If you don’t receive the code, check your spam folder or click Resend Code.
           </p>
         </div>
       </div>
 
-      {/* Footer section remains the same */}
       <footer className="juan-register-footer">
-        {/* Left section - Logo and school name */}
         <div className="juan-footer-left">
           <img
             src={JuanEMSLogo}
@@ -408,10 +387,7 @@ useEffect(() => {
             <p className="juan-footer-motto">© 2025. San Juan De Dios Educational Foundation Inc.</p>
           </div>
         </div>
-
-        {/* Center and right section - organized in a row */}
         <div className="juan-footer-content">
-          {/* About, Terms, Privacy links */}
           <div className="juan-footer-links">
             <a href="/about" className="footer-link">About</a>
             <span className="footer-link-separator">|</span>
@@ -419,8 +395,6 @@ useEffect(() => {
             <span className="footer-link-separator">|</span>
             <a href="/privacy" className="footer-link">Privacy</a>
           </div>
-
-          {/* Footer content remains the same */}
           <a
             href="https://www.facebook.com/SJDEFIcollege"
             target="_blank"
@@ -433,7 +407,6 @@ useEffect(() => {
               <span className="juan-social-platform">Facebook</span>
             </div>
           </a>
-
           <div className="juan-footer-contact-container">
             <div className="juan-contact-title">
               <FontAwesomeIcon icon={faPhone} />

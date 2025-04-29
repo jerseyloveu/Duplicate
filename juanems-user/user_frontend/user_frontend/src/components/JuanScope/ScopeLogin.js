@@ -118,17 +118,15 @@ function ScopeLogin() {
         throw new Error(data.message || 'Login failed');
       }
 
-      localStorage.setItem('userEmail', data.email);
-      localStorage.setItem('firstName', data.firstName);
-      localStorage.setItem('studentID', data.studentID);
-      localStorage.setItem('applicantID', data.applicantID);
-      localStorage.setItem('lastLogin', data.lastLogin);
-      localStorage.setItem('lastLogout', data.lastLogout);
-      localStorage.setItem('createdAt', data.createdAt);
-      localStorage.setItem('activityStatus', data.activityStatus);
-      localStorage.setItem('loginAttempts', data.loginAttempts.toString());
-      navigate('/scope-dashboard');
-
+      // Redirect to verify-email for OTP verification
+      navigate('/verify-email', {
+        state: {
+          email: data.email,
+          firstName: data.firstName,
+          fromLogin: true,
+          isLoginOtp: true
+        }
+      });
     } catch (err) {
       console.error('Login error:', err);
       setLoginError(err.message || 'Login failed. Please try again.');
@@ -176,7 +174,6 @@ function ScopeLogin() {
           fromLogin: true
         }
       });
-
     } catch (err) {
       setLoginError(err.message || 'Failed to process password reset request');
     }

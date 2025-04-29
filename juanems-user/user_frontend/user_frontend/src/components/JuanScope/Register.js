@@ -265,9 +265,8 @@ function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [isEmailAvailable, setIsEmailAvailable] = useState(null);
-  // Add this state variable at the top with other state declarations
+  
+  // Improved email validation state
   const [emailValidationState, setEmailValidationState] = useState({
     checking: false,
     lastCheckedEmail: '',
@@ -280,7 +279,6 @@ function Register() {
   const minDate = new Date();
   minDate.setFullYear(today.getFullYear() - 10);
   const todayISO = today.toISOString().split('T')[0];
-  const minDateISO = minDate.toISOString().split('T')[0];
 
   const [formData, setFormData] = useState(() => {
     const defaultData = {
@@ -299,55 +297,58 @@ function Register() {
     return location.state?.formData || defaultData;
   });
 
-
+  // Use a single touchedFields object that tracks both blur and change events
+  const [touchedFields, setTouchedFields] = useState({});
   const [errors, setErrors] = useState({});
   const [nationalityOptions, setNationalityOptions] = useState(countries);
-  const [touchedFields, setTouchedFields] = useState({});
 
   // Initialize Fuse.js with memoization for performance
   const fuse = useMemo(() => new Fuse(countries, fuseOptions), []);
 
-  // Real-time validation effect
+  // Validation function - extracted for reuse
+  const validateField = (name, value) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
+
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value.trim()) return `${name === 'firstName' ? 'First name' : 'Last name'} is required`;
+        if (value.trim().length < 2) return `${name === 'firstName' ? 'First name' : 'Last name'} must be at least 2 characters`;
+        if (value.trim().length > 50) return `${name === 'firstName' ? 'First name' : 'Last name'} cannot exceed 50 characters`;
+        return null;
+
+      case 'dob':
+        if (!value) return 'Date of birth is required';
+        const dobDate = new Date(value);
+        const ageDiff = today.getFullYear() - dobDate.getFullYear();
+        if (dobDate > today) return 'Date cannot be in the future';
+        if (ageDiff < 10) return 'You must be at least 10 years old';
+        return null;
+
+      case 'email':
+        if (!value) return 'Email is required';
+        if (!emailRegex.test(value)) return 'Please enter a valid email address';
+        return null;
+
+      case 'mobile':
+        if (!value) return 'Mobile number is required';
+        if (!phoneRegex.test(value)) return 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
+        return null;
+
+      case 'nationality':
+        return !value.trim() ? 'Nationality is required' : null;
+
+      default:
+        return null;
+    }
+  };
+
+  // Real-time validation effect - triggers on every form change
   useEffect(() => {
-    const validateField = (name, value) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
-
-      switch (name) {
-        case 'firstName':
-        case 'lastName':
-          if (!value.trim()) return `${name === 'firstName' ? 'First name' : 'Last name'} is required`;
-          if (value.trim().length < 2) return `${name === 'firstName' ? 'First name' : 'Last name'} must be at least 2 characters`;
-          if (value.trim().length > 50) return `${name === 'firstName' ? 'First name' : 'Last name'} cannot exceed 50 characters`;
-          return null;
-
-        case 'dob':
-          if (!value) return 'Date of birth is required';
-          const dobDate = new Date(value);
-          const ageDiff = today.getFullYear() - dobDate.getFullYear();
-          if (dobDate > today) return 'Date cannot be in the future';
-          if (ageDiff < 10) return 'You must be at least 10 years old';
-          return null;
-
-        case 'email':
-          if (!value) return 'Email is required';
-          if (!emailRegex.test(value)) return 'Please enter a valid email address';
-          return null;
-
-        case 'mobile':
-          if (!value) return 'Mobile number is required';
-          if (!phoneRegex.test(value)) return 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
-          return null;
-
-        case 'nationality':
-          return !value.trim() ? 'Nationality is required' : null;
-
-        default:
-          return null;
-      }
-    };
-
     const newErrors = {};
+    
+    // Only validate fields that have been touched or changed
     Object.keys(touchedFields).forEach(field => {
       if (touchedFields[field]) {
         const error = validateField(field, formData[field]);
@@ -358,7 +359,7 @@ function Register() {
     setErrors(newErrors);
   }, [formData, touchedFields]);
 
-  // Replace the current email availability check effect with this:
+  // Email availability check effect
   useEffect(() => {
     const checkEmailAvailability = async (emailToCheck) => {
       if (!emailToCheck || errors.email) {
@@ -368,6 +369,12 @@ function Register() {
           available: null,
           status: null
         });
+        return;
+      }
+
+      // Only check if email is valid format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailToCheck)) {
         return;
       }
 
@@ -396,6 +403,7 @@ function Register() {
       }
     };
 
+    // Debounce email check to avoid too many requests
     const debounceTimer = setTimeout(() => {
       if (touchedFields.email && formData.email) {
         // Only check if email has changed since last check
@@ -414,8 +422,9 @@ function Register() {
     }, 500); // 500ms debounce delay
 
     return () => clearTimeout(debounceTimer);
-  }, [formData.email, touchedFields.email]);
+  }, [formData.email, touchedFields.email, errors.email]);
 
+  // Mark field as both touched and changed on input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     const sanitizedValue = value.replace(/<[^>]*>?/gm, '');
@@ -442,23 +451,20 @@ function Register() {
       [name]: processedValue
     });
 
-    // Mark field as touched
-    if (!touchedFields[name]) {
-      setTouchedFields({
-        ...touchedFields,
-        [name]: true
-      });
-    }
+    // Mark field as touched/changed immediately on input
+    setTouchedFields({
+      ...touchedFields,
+      [name]: true
+    });
   };
 
+  // Also mark as touched on blur for fields that weren't changed but were focused
   const handleBlur = (e) => {
     const { name } = e.target;
-    if (!touchedFields[name]) {
-      setTouchedFields({
-        ...touchedFields,
-        [name]: true
-      });
-    }
+    setTouchedFields({
+      ...touchedFields,
+      [name]: true
+    });
   };
 
   const formatPhilippinePhone = (value) => {
@@ -478,12 +484,12 @@ function Register() {
       ...formData,
       nationality: selectedOption ? selectedOption.label : ''
     });
-    if (errors.nationality) {
-      setErrors({
-        ...errors,
-        nationality: null
-      });
-    }
+    
+    // Mark nationality as touched when a selection is made or cleared
+    setTouchedFields({
+      ...touchedFields,
+      nationality: true
+    });
   };
 
   const checkEmailUniqueness = async (email) => {
@@ -525,68 +531,30 @@ function Register() {
     setNationalityOptions(formattedResults.length > 0 ? formattedResults : countries);
   };
 
-  const validateForm = () => {
+  // Mark all form fields as touched for validation
+  const validateAllFields = () => {
+    const allFieldsTouched = {};
+    ['firstName', 'lastName', 'dob', 'email', 'mobile', 'nationality'].forEach(field => {
+      allFieldsTouched[field] = true;
+    });
+    setTouchedFields(allFieldsTouched);
+    
+    // Run validation on all required fields
     const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
-
-    // First Name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    } else if (formData.firstName.trim().length < 2) {
-      newErrors.firstName = 'First name must be at least 2 characters';
-    } else if (formData.firstName.trim().length > 50) {
-      newErrors.firstName = 'First name cannot exceed 50 characters';
-    }
-
-    // Last Name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    } else if (formData.lastName.trim().length < 2) {
-      newErrors.lastName = 'Last name must be at least 2 characters';
-    } else if (formData.lastName.trim().length > 50) {
-      newErrors.lastName = 'Last name cannot exceed 50 characters';
-    }
-
-    if (!formData.dob) {
-      newErrors.dob = 'Date of birth is required';
-    } else {
-      const dobDate = new Date(formData.dob);
-      const ageDiff = today.getFullYear() - dobDate.getFullYear();
-      if (dobDate > today) newErrors.dob = 'Date cannot be in the future';
-      if (ageDiff < 10) newErrors.dob = 'You must be at least 10 years old';
-    }
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.mobile) {
-      newErrors.mobile = 'Mobile number is required';
-    } else if (!phoneRegex.test(formData.mobile)) {
-      newErrors.mobile = 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
-    }
-
-    if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
-
+    Object.keys(allFieldsTouched).forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    });
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Update the handleSubmit function to use the new validation state
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Mark all fields as touched to show all errors
-    const allFieldsTouched = Object.keys(formData).reduce((acc, field) => {
-      acc[field] = true;
-      return acc;
-    }, {});
-    setTouchedFields(allFieldsTouched);
-
-    if (!validateForm()) {
+    // Validate all fields
+    if (!validateAllFields()) {
       return;
     }
 
@@ -628,7 +596,6 @@ function Register() {
     navigate('/register2', { state: { formData } });
   };
 
-
   const handleCancel = () => {
     setShowCancelConfirm(true);
   };
@@ -639,7 +606,7 @@ function Register() {
   };
 
   return (
-    <div className="juan-register-container">
+<div className="juan-register-container">
       {/* Header */}
       <header className="juan-register-header">
         <div className="juan-header-left">
@@ -732,7 +699,6 @@ function Register() {
                       </span>
                     )}
                   </div>
-
 
                   {/* Middle Name */}
                   <div className="juan-form-group">
@@ -841,6 +807,7 @@ function Register() {
                       </span>
                     )}
                   </div>
+
                   {/* Mobile */}
                   <div className="juan-form-group">
                     <label htmlFor="mobile">
