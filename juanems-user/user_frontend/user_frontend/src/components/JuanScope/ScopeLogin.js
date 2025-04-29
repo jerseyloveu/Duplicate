@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faLock, faEye, faEyeSlash, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import '../../css/JuanScope/ScopeLogin.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';
@@ -18,6 +18,7 @@ function ScopeLogin() {
   const [loginError, setLoginError] = useState('');
   const [lastResetRequest, setLastResetRequest] = useState(null);
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state for tracking form submission
 
   useEffect(() => {
     if (location.state?.fromPasswordReset) {
@@ -81,9 +82,17 @@ function ScopeLogin() {
     e.preventDefault();
     setLoginError('');
 
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
+
+    // Set submitting state to true to show loading and prevent multiple clicks
+    setIsSubmitting(true);
 
     try {
       const response = await fetch('http://localhost:5000/api/enrollee-applicants/login', {
@@ -113,6 +122,7 @@ function ScopeLogin() {
         }
         if (data.errorType === 'account_inactive') {
           setLoginError('Your account is inactive. Please contact support.');
+          setIsSubmitting(false); // Reset submitting state on error
           return;
         }
         throw new Error(data.message || 'Login failed');
@@ -130,6 +140,7 @@ function ScopeLogin() {
     } catch (err) {
       console.error('Login error:', err);
       setLoginError(err.message || 'Login failed. Please try again.');
+      setIsSubmitting(false); // Reset submitting state on error
     }
   };
 
@@ -149,8 +160,11 @@ function ScopeLogin() {
   };
 
   const handleConfirmedForgotPassword = async () => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     setShowResetConfirmation(false);
     setLoginError('');
+    setIsSubmitting(true); // Set loading state
 
     try {
       const response = await fetch('http://localhost:5000/api/enrollee-applicants/request-password-reset', {
@@ -176,6 +190,7 @@ function ScopeLogin() {
       });
     } catch (err) {
       setLoginError(err.message || 'Failed to process password reset request');
+      setIsSubmitting(false); // Reset submitting state on error
     }
   };
 
@@ -227,6 +242,7 @@ function ScopeLogin() {
                   onBlur={(e) => checkAccountStatus(e.target.value)}
                   placeholder="Enter your email"
                   className="scope-login-input-field"
+                  disabled={isSubmitting}
                 />
                 {errors.email && <span className="scope-login-error-message">{errors.email}</span>}
               </div>
@@ -242,11 +258,13 @@ function ScopeLogin() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     className="scope-login-input-field"
+                    disabled={isSubmitting}
                   />
                   <button
                     type="button"
                     className="scope-login-password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isSubmitting}
                   >
                     <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                   </button>
@@ -258,6 +276,7 @@ function ScopeLogin() {
                   type="button"
                   className="scope-login-go-home-btn"
                   onClick={handleGoToHome}
+                  disabled={isSubmitting}
                 >
                   Go back to Home
                 </button>
@@ -265,12 +284,24 @@ function ScopeLogin() {
                   type="button"
                   className="scope-login-forgot-password-btn"
                   onClick={handleForgotPassword}
+                  disabled={isSubmitting}
                 >
                   Forgot Password?
                 </button>
               </div>
-              <button type="submit" className="scope-login-login-button">
-                Login
+              <button 
+                type="submit" 
+                className={`scope-login-login-button ${isSubmitting ? 'scope-login-button-loading' : ''}`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin className="scope-login-spinner" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Login'
+                )}
               </button>
             </form>
           </div>
@@ -285,14 +316,23 @@ function ScopeLogin() {
               <button
                 onClick={() => setShowResetConfirmation(false)}
                 className="scope-login-modal-cancel"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmedForgotPassword}
                 className="scope-login-modal-confirm"
+                disabled={isSubmitting}
               >
-                Confirm
+                {isSubmitting ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin className="scope-login-spinner" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Confirm'
+                )}
               </button>
             </div>
           </div>

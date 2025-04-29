@@ -320,6 +320,37 @@
   cursor: pointer;
 }
 
+
+.scope-login-button-loading {
+  background-color: #94a3b8 !important; /* Light gray when loading */
+  cursor: not-allowed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-login-spinner {
+  font-size: 16px;
+}
+
+.scope-login-login-button:disabled,
+.scope-login-go-home-btn:disabled,
+.scope-login-forgot-password-btn:disabled,
+.scope-login-password-toggle:disabled,
+.scope-login-modal-cancel:disabled,
+.scope-login-modal-confirm:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.scope-login-modal-confirm {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
 .scope-login-modal-confirm {
   padding: 8px 16px;
   background-color: #2A67D5;
