@@ -7,7 +7,7 @@ const SessionManager = ({ children }) => {
   const [showWarning, setShowWarning] = useState(false);
   const [remainingTime, setRemainingTime] = useState(60); // 60 seconds for warning period
 
-  const INACTIVITY_LIMIT = 1 * 60 * 1000; // 5 minutes in milliseconds
+  const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes in milliseconds
   const WARNING_DURATION = 60 * 1000; // 1 minute in milliseconds
 
   let inactivityTimer = null;
