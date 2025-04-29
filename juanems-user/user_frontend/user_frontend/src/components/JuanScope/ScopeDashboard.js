@@ -24,6 +24,7 @@ import {
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import dashboardBg from '../../images/dashboard background.png';
 import '../../css/JuanScope/ScopeDashboard.css';
+import SessionManager from '../JuanScope/SessionManager';
 
 function ScopeDashboard() {
   const navigate = useNavigate();
@@ -35,7 +36,6 @@ function ScopeDashboard() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Update current time every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -68,7 +68,6 @@ function ScopeDashboard() {
           return;
         }
 
-        // First verify we're using the most recent active account
         const verificationResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
         );
@@ -79,7 +78,6 @@ function ScopeDashboard() {
 
         const verificationData = await verificationResponse.json();
 
-        // Check if the stored account is still the most recent active one
         if (verificationData.status !== 'Active' ||
           (createdAt && Math.abs(new Date(verificationData.createdAt).getTime() - new Date(createdAt).getTime()) > 1000)) {
           handleLogout();
@@ -87,7 +85,6 @@ function ScopeDashboard() {
           return;
         }
 
-        // Fetch user data including applicantID
         const userResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(createdAt)}`
         );
@@ -98,7 +95,6 @@ function ScopeDashboard() {
 
         const userData = await userResponse.json();
 
-        // Update localStorage with all user data if not already set
         if (userData.applicantID && !localStorage.getItem('applicantID')) {
           localStorage.setItem('applicantID', userData.applicantID);
         }
@@ -127,13 +123,10 @@ function ScopeDashboard() {
     };
 
     fetchUserData();
-
-    // Set up periodic refresh
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
   }, [navigate]);
 
-  // Monitor account status periodically
   useEffect(() => {
     const checkAccountStatus = async () => {
       try {
@@ -212,12 +205,11 @@ function ScopeDashboard() {
   };
 
   const handleAnnouncements = () => {
-    navigate('/announcements');
+    navigate('/scope-announcements');
   };
 
   const navigateToPage = (path) => {
     navigate(path);
-    // Close sidebar if it's open when navigating
     if (sidebarOpen) {
       setSidebarOpen(false);
     }
@@ -228,266 +220,247 @@ function ScopeDashboard() {
   };
 
   return (
-    <div className="scope-dashboard-container">
-      {/* Header */}
-      <header className="juan-register-header">
-        <div className="juan-header-left">
-          <img
-            src={SJDEFILogo}
-            alt="SJDEFI Logo"
-            className="juan-logo-register"
-          />
-          <div className="juan-header-text">
-            <h1>JUAN SCOPE</h1>
-          </div>
-        </div>
-        <div className="hamburger-menu">
-          <button 
-            className="hamburger-button" 
-            onClick={toggleSidebar}
-            aria-label="Toggle navigation menu"
-          >
-            <FontAwesomeIcon icon={sidebarOpen ? faTimes : faBars} size="lg" />
-          </button>
-        </div>
-      </header>
-
-      <div className="scope-dashboard-content">
-        {/* Side Navigation */}
-        <aside className={`scope-sidebar ${sidebarOpen ? 'open' : ''}`}>
-          <div className="scope-sidebar-content">
-            <div className="scope-user-profile">
-              <div className="scope-user-icon">
-                <FontAwesomeIcon icon={faUser} size="2x" />
-              </div>
-              <div className="scope-user-details">
-                <div className="scope-user-email">
-                  {formatEmail(userData.email)}
-                </div>
-                <div className="scope-user-role">Applicant</div>
-              </div>
-              <div className="scope-divider"></div>
+    <SessionManager>
+      <div className="scope-dashboard-container">
+        <header className="juan-register-header">
+          <div className="juan-header-left">
+            <img
+              src={SJDEFILogo}
+              alt="SJDEFI Logo"
+              className="juan-logo-register"
+            />
+            <div className="juan-header-text">
+              <h1>JUAN SCOPE</h1>
             </div>
-
+          </div>
+          <div className="hamburger-menu">
             <button 
-              className="enrollment-process-button"
-              onClick={() => navigateToPage('/scope-dashboard')}
+              className="hamburger-button" 
+              onClick={toggleSidebar}
+              aria-label="Toggle navigation menu"
             >
-              <FontAwesomeIcon icon={faCompass} className="enrollment-icon" />
-              <span className="enrollment-text">Enrollment Process</span>
-            </button>
-
-            {/* Admission Process Section */}
-            <div className="scope-nav-section">
-              <div className="scope-nav-title">Admission Process</div>
-              <button 
-                className="scope-nav-button" 
-                onClick={() => navigateToPage('/scope-registration')}
-              >
-                <FontAwesomeIcon icon={faFileAlt} />
-                <span>1. Registration</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faClipboardCheck} />
-                <span>2. Exam & Interview Application</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faBook} />
-                <span>3. Admission Requirements</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faFileSignature} />
-                <span>4. Admission Exam Details</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-                <span>5. Exam Fee Payment</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faChartBar} />
-                <span>6. Exam & Interview Result</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-                <span>7. Reservation Payment</span>
-              </button>
-            </div>
-
-            {/* Enrollment Process Section */}
-            <div className="scope-nav-section">
-              <div className="scope-nav-title">Enrollment Process</div>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faCheckCircle} />
-                <span>8. Admission Approval</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faClipboardList} />
-                <span>9. Enrollment Requirements</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faTicketAlt} />
-                <span>10. Voucher Application</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faCheckCircle} />
-                <span>11. Enrollment Approval</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faUserGraduate} />
-                <span>12. Student Assessment</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-                <span>13. Tuition Payment</span>
-              </button>
-              <button 
-                className="scope-nav-button disabled-nav-item"
-                disabled
-              >
-                <FontAwesomeIcon icon={faCalculator} />
-                <span>14. Officially Enrolled</span>
-              </button>
-            </div>
-
-            <button
-              className="scope-nav-button scope-logout-button"
-              onClick={() => setShowLogoutModal(true)}
-            >
-              <FontAwesomeIcon icon={faSignOut} />
-              <span className="nav-text-bold">Logout</span>
+              <FontAwesomeIcon icon={sidebarOpen ? faTimes : faBars} size="lg" />
             </button>
           </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="scope-main-content">
-          {loading ? (
-            <div className="scope-loading">Loading...</div>
-          ) : error ? (
-            <div className="scope-error">{error}</div>
-          ) : (
-            <div className="dashboard-background-container">
-              <div className="dashboard-content">
-                {/* Top Bar with Date/Time and Bell Icon */}
-                <div className="scope-top-section">
-                  <div className="scope-date-time-container">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="date-icon" />
-                    <div className="scope-date-time">
-                      {currentDateTime.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                      {', '}
-                      {currentDateTime.toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                  <button
-                    className="scope-announcement-button"
-                    onClick={handleAnnouncements}
-                  >
-                    <FontAwesomeIcon icon={faBell} />
-                  </button>
+        </header>
+        <div className="scope-dashboard-content">
+          <aside className={`scope-sidebar ${sidebarOpen ? 'open' : ''}`}>
+            <div className="scope-sidebar-content">
+              <div className="scope-user-profile">
+                <div className="scope-user-icon">
+                  <FontAwesomeIcon icon={faUser} size="2x" />
                 </div>
-
-                {/* User Info Row - Welcome on Left, Applicant ID on Right */}
-                <div className="user-info-row">
-                  {/* Welcome Section */}
-                  <div className="scope-welcome-section">
-                    <h1 className="welcome-heading">
-                      Good day, {userData.firstName}
-                      {userData.middleName && ` ${userData.middleName}`}
-                      {` ${userData.lastName}`}
-                    </h1>
-                    <p className="scope-welcome-message">Start your application today!</p>
+                <div className="scope-user-details">
+                  <div className="scope-user-email">
+                    {formatEmail(userData.email)}
                   </div>
-
-                  {/* Applicant Info Card */}
-                  <div className="scope-applicant-info">
-                    <div className="scope-applicant-icon">
-                      <FontAwesomeIcon icon={faUser} size="2x" />
+                  <div className="scope-user-role">Applicant</div>
+                </div>
+                <div className="scope-divider"></div>
+              </div>
+              <button 
+                className="enrollment-process-button"
+                onClick={() => navigateToPage('/scope-dashboard')}
+              >
+                <FontAwesomeIcon icon={faCompass} className="enrollment-icon" />
+                <span className="enrollment-text">Enrollment Process</span>
+              </button>
+              <div className="scope-nav-section">
+                <div className="scope-nav-title">Admission Process</div>
+                <button 
+                  className="scope-nav-button" 
+                  onClick={() => navigateToPage('/scope-registration')}
+                >
+                  <FontAwesomeIcon icon={faFileAlt} />
+                  <span>1. Registration</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faClipboardCheck} />
+                  <span>2. Exam & Interview Application</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faBook} />
+                  <span>3. Admission Requirements</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faFileSignature} />
+                  <span>4. Admission Exam Details</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                  <span>5. Exam Fee Payment</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faChartBar} />
+                  <span>6. Exam & Interview Result</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                  <span>7. Reservation Payment</span>
+                </button>
+              </div>
+              <div className="scope-nav-section">
+                <div className="scope-nav-title">Enrollment Process</div>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  <span>8. Admission Approval</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faClipboardList} />
+                  <span>9. Enrollment Requirements</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faTicketAlt} />
+                  <span>10. Voucher Application</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  <span>11. Enrollment Approval</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faUserGraduate} />
+                  <span>12. Student Assessment</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                  <span>13. Tuition Payment</span>
+                </button>
+                <button 
+                  className="scope-nav-button disabled-nav-item"
+                  disabled
+                >
+                  <FontAwesomeIcon icon={faCalculator} />
+                  <span>14. Officially Enrolled</span>
+                </button>
+              </div>
+              <button
+                className="scope-nav-button scope-logout-button"
+                onClick={() => setShowLogoutModal(true)}
+              >
+                <FontAwesomeIcon icon={faSignOut} />
+                <span className="nav-text-bold">Logout</span>
+              </button>
+            </div>
+          </aside>
+          <main className="scope-main-content">
+            {loading ? (
+              <div className="scope-loading">Loading...</div>
+            ) : error ? (
+              <div className="scope-error">{error}</div>
+            ) : (
+              <div className="dashboard-background-container">
+                <div className="dashboard-content">
+                  <div className="scope-top-section">
+                    <div className="scope-date-time-container">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="date-icon" />
+                      <div className="scope-date-time">
+                        {currentDateTime.toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                        {', '}
+                        {currentDateTime.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
                     </div>
-                    <div className="scope-id-container">
-                      <div className="scope-applicant-id">{userData.applicantID}</div>
-                      <div className="scope-applicant-label">Applicant Number</div>
+                    <button
+                      className="scope-announcement-button"
+                      onClick={handleAnnouncements}
+                    >
+                      <FontAwesomeIcon icon={faBell} />
+                    </button>
+                  </div>
+                  <div className="user-info-row">
+                    <div className="scope-welcome-section">
+                      <h1 className="welcome-heading">
+                        Good day, {userData.firstName}
+                        {userData.middleName && ` ${userData.middleName}`}
+                        {` ${userData.lastName}`}
+                      </h1>
+                      <p className="scope-welcome-message">Start your application today!</p>
+                    </div>
+                    <div className="scope-applicant-info">
+                      <div className="scope-applicant-icon">
+                        <FontAwesomeIcon icon={faUser} size="2x" />
+                      </div>
+                      <div className="scope-id-container">
+                        <div className="scope-applicant-id">{userData.applicantID}</div>
+                        <div className="scope-applicant-label">Applicant Number</div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={toggleSidebar}></div>
-      )}
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="scope-modal-overlay">
-          <div className="scope-confirm-modal">
-            <h3>Confirm Logout</h3>
-            <p>Are you sure you want to logout?</p>
-            <div className="scope-modal-buttons">
-              <button
-                className="scope-modal-cancel"
-                onClick={() => setShowLogoutModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="scope-modal-confirm"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
+            )}
+          </main>
+        </div>
+        {sidebarOpen && (
+          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+        )}
+        {showLogoutModal && (
+          <div className="scope-modal-overlay">
+            <div className="scope-confirm-modal">
+              <h3>Confirm Logout</h3>
+              <p>Are you sure you want to logout?</p>
+              <div className="scope-modal-buttons">
+                <button
+                  className="scope-modal-cancel"
+                  onClick={() => setShowLogoutModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="scope-modal-confirm"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </SessionManager>
   );
 }
 

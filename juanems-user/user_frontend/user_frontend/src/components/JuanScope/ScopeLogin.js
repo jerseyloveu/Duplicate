@@ -1,4 +1,3 @@
-// ScopeLogin.js
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -22,13 +21,16 @@ function ScopeLogin() {
 
   useEffect(() => {
     if (location.state?.fromPasswordReset) {
-      setLoginError(''); // Clear any errors
+      setLoginError('');
       alert('Password reset successful. Please check your email for the new password.');
     }
 
-    // Show message if redirected due to inactive account
     if (location.state?.accountInactive) {
       setLoginError('Your session was invalidated. Please login again.');
+    }
+
+    if (location.state?.sessionExpired) {
+      setLoginError('Your session has expired due to inactivity. Please login again.');
     }
   }, [location.state]);
 
@@ -60,11 +62,10 @@ function ScopeLogin() {
 
       if (response.ok) {
         if (data.status === 'Pending Verification') {
-          // Navigate to verify-email immediately with all required data
           navigate('/verify-email', {
             state: {
               email: email,
-              firstName: data.firstName, // Include firstName from response
+              firstName: data.firstName,
               fromRegistration: false,
               fromLogin: true
             }
@@ -99,7 +100,6 @@ function ScopeLogin() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle different error types more specifically
         if (data.errorType === 'pending_verification') {
           navigate('/verify-email', {
             state: {
@@ -118,17 +118,15 @@ function ScopeLogin() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // In ScopeLogin.js handleSubmit function
       localStorage.setItem('userEmail', data.email);
       localStorage.setItem('firstName', data.firstName);
       localStorage.setItem('studentID', data.studentID);
-      localStorage.setItem('applicantID', data.applicantID); // Add this line
+      localStorage.setItem('applicantID', data.applicantID);
       localStorage.setItem('lastLogin', data.lastLogin);
       localStorage.setItem('lastLogout', data.lastLogout);
       localStorage.setItem('createdAt', data.createdAt);
       localStorage.setItem('activityStatus', data.activityStatus);
       localStorage.setItem('loginAttempts', data.loginAttempts.toString());
-      // Successful login - navigate to dashboard
       navigate('/scope-dashboard');
 
     } catch (err) {
@@ -143,7 +141,6 @@ function ScopeLogin() {
       return;
     }
 
-    // Check if user can request another reset (once per day)
     const now = new Date();
     if (lastResetRequest && (now - new Date(lastResetRequest) < 24 * 60 * 60 * 1000)) {
       setLoginError('You can only request a password reset once per day. Please try again later.');
@@ -172,11 +169,10 @@ function ScopeLogin() {
         throw new Error(data.message || 'Failed to initiate password reset');
       }
 
-      // Navigate to verify-email with password reset context
       navigate('/verify-email', {
         state: {
           email,
-          isPasswordReset: true, // Flag to indicate this is for password reset
+          isPasswordReset: true,
           fromLogin: true
         }
       });
@@ -193,12 +189,9 @@ function ScopeLogin() {
   return (
     <div className="scope-login-container">
       <PasswordNotification />
-      {/* Left side with image and gradient overlay */}
       <div className="scope-login-left-side">
         <div className="scope-login-image-background">
-          {/* Image with gradient overlay */}
           <div className="scope-login-image-overlay"></div>
-          {/* Logo and text */}
           <div className="scope-login-left-content">
             <div className="scope-login-top-logo">
               <img src={SJDEFILogo} alt="SJDEFI Logo" className="scope-login-sjdefi-logo" />
@@ -215,22 +208,16 @@ function ScopeLogin() {
           </div>
         </div>
       </div>
-
-      {/* Right side with form */}
       <div className="scope-login-right-side">
         <div className="scope-login-form-container">
-          {/* JUANSCOPE title with image */}
           <div className="scope-login-scope-title">
             <h1>JUANSC<img src={ScopeImage} alt="O" className="scope-login-scope-image" />PE</h1>
             <p className="scope-login-scope-subtitle">Online Admission Application</p>
           </div>
-
-          {/* Login form */}
           <div className="scope-login-login-form">
             <h2 className="scope-login-form-title">Enroll Now!</h2>
             {loginError && <div className="scope-login-error-message">{loginError}</div>}
             <form onSubmit={handleSubmit}>
-              {/* Email field */}
               <div className="scope-login-form-group">
                 <div className="scope-login-input-label">
                   <FontAwesomeIcon icon={faEnvelope} className="scope-login-input-icon" />
@@ -246,8 +233,6 @@ function ScopeLogin() {
                 />
                 {errors.email && <span className="scope-login-error-message">{errors.email}</span>}
               </div>
-
-              {/* Password field */}
               <div className="scope-login-form-group">
                 <div className="scope-login-input-label">
                   <FontAwesomeIcon icon={faLock} className="scope-login-input-icon" />
@@ -271,8 +256,6 @@ function ScopeLogin() {
                 </div>
                 {errors.password && <span className="scope-login-error-message">{errors.password}</span>}
               </div>
-
-              {/* Links for forgotten password and home */}
               <div className="scope-login-links-container">
                 <button
                   type="button"
@@ -289,8 +272,6 @@ function ScopeLogin() {
                   Forgot Password?
                 </button>
               </div>
-
-              {/* Login button */}
               <button type="submit" className="scope-login-login-button">
                 Login
               </button>
@@ -298,7 +279,6 @@ function ScopeLogin() {
           </div>
         </div>
       </div>
-
       {showResetConfirmation && (
         <div className="scope-login-modal">
           <div className="scope-login-modal-content">
