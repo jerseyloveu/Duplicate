@@ -5,6 +5,8 @@ const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
 const accountRoutes = require('./routes/accountRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
+const strandRoutes = require('./routes/strandRoutes'); 
+const roleRoutes = require('./routes/rolesRoutes'); 
 const exportFile = require('./routes/exportFile');
 const connectDB = require('./config/db');
 require('dotenv').config();
@@ -80,6 +82,8 @@ app.use('/api/admin', accountRoutes);
 app.use('/api/admin/export', exportFile);
 app.use('/api/admin/subjects', subjectRoutes);
 app.use('/api/admin/sections', sectionRoutes);
+app.use('/api/admin/strands', strandRoutes);
+app.use('/api/admin/roles', roleRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

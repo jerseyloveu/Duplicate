@@ -3,6 +3,7 @@ const router = express.Router();
 const pdfService = require('../services/pdf-service');
 const Account = require('../models/Accounts');
 const Subject = require('../models/Subjects');
+const Strand = require('../models/Strands');
 
 router.get('/accounts', async (req, res) => {
   try {
@@ -21,14 +22,13 @@ router.get('/accounts', async (req, res) => {
     }));    
 
     const accountColumns = [
-      { label: '#', property: '__rowNumber', width: 25 },
+      { label: '#', property: '__rowNumber', width: 45 },
       { label: 'User ID', property: 'userID', width: 100 },
       { label: 'Name', property: 'fullName', width: 140 }, 
-      { label: 'Email', property: 'email', width: 170 },
-      { label: 'Role', property: 'role', width: 50 },
-      { label: 'Dept.', property: 'department', width: 70 },
-      { label: 'Mobile', property: 'mobile', width: 100 },
-      { label: 'Status', property: 'status', width: 60 },
+      { label: 'Email', property: 'email', width: 190 },
+      { label: 'Role', property: 'role', width: 80 },
+      { label: 'Mobile', property: 'mobile', width: 90 },
+      { label: 'Status', property: 'status', width: 70 },
     ];    
 
     pdfService.buildPDF(modifiedAccounts, accountColumns, 'Accounts Report', (chunk) => res.write(chunk), () => res.end());
@@ -104,5 +104,33 @@ router.get('/sections', async (req, res) => {
   }
 });
 
+router.get('/strands', async (req, res) => {
+  try {
+    const strands = await Strand.find().lean();
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `strands-report-${currentDate}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const modifiedStrands = strands.map((strand, index) => ({
+      ...strand,
+      __rowNumber: (index + 1).toString(),
+    }));
+
+    const strandColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'Strand Code', property: 'strandCode', width: 80 },
+      { label: 'Strand Name', property: 'strandName', width: 150 },
+      { label: 'Status', property: 'status', width: 60 },
+    ];
+
+    pdfService.buildPDF(modifiedStrands, strandColumns, 'Strands Report', (chunk) => res.write(chunk), () => res.end());
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Failed to export strands' });
+  }
+});
 
 module.exports = router;

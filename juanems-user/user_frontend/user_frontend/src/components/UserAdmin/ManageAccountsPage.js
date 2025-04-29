@@ -59,7 +59,6 @@ const ManageAccountsPage = () => {
           item.email.toLowerCase().includes(search.toLowerCase()) ||
           item.role.toLowerCase().includes(search.toLowerCase()) ||
           item.status.toLowerCase().includes(search.toLowerCase()) ||
-          item.department.toLowerCase().includes(search.toLowerCase()) ||
           createdAtFormatted.includes(search.toLowerCase()) || 
           updatedAtFormatted.includes(search.toLowerCase())
         );
@@ -122,9 +121,10 @@ const ManageAccountsPage = () => {
 
   const handleBack = () => navigate('/admin/dashboard');
   const handleCreate = () => navigate('/admin/manage-accounts/create');
+  const handleAccessControl = () => navigate('/admin/access-control');
 
   const handleStatusToggle = async (record) => {
-    const updatedStatus = record.status === 'Activated' ? 'Deactivated' : 'Activated';
+    const updatedStatus = record.status === 'Active' ? 'Inactive' : 'Active';
   
     try {
       const response = await fetch(`/api/admin/accounts/${record._id}`, {
@@ -176,10 +176,28 @@ const ManageAccountsPage = () => {
       key: 'role',
       filters: [
         { text: 'Student', value: 'Student' },
-        { text: 'Staff', value: 'Staff' },
+        { text: 'Faculty', value: 'Faculty' },
+        { text: 'Admissions (Staff)', value: 'Admissions (Staff)' },
+        { text: 'Registrar (Staff)', value: 'Registrar (Staff)' },
+        { text: 'Accounting (Staff)', value: 'Accounting (Staff)' },
+        { text: 'Administration (Sub-Admin)', value: 'Administration (Sub-Admin)' },
+        { text: 'IT (Super Admin)', value: 'IT (Super Admin)' },
       ],
       onFilter: (value, record) => record.role.includes(value),
       filteredValue: tableFilters.role || null,
+    },
+    {
+      title: 'Has Custom Access',
+      width: 140,
+      dataIndex: 'hasCustomAccess', 
+      key: 'hasCustomAccess',
+      filters: [
+        { text: 'Yes', value: true },
+        { text: 'No', value: false },
+      ],
+      onFilter: (value, record) => record.hasCustomAccess === value,
+      filteredValue: tableFilters.hasCustomAccess || null,
+      render: (value) => (value ? 'Yes' : 'No'),
     },
     {
       title: 'Status',
@@ -187,30 +205,14 @@ const ManageAccountsPage = () => {
       dataIndex: 'status',
       key: 'status',
       filters: [
-        { text: 'Activated', value: 'Activated' },
-        { text: 'Deactivated', value: 'Deactivated' },
+        { text: 'Active', value: 'Active' },
+        { text: 'Inactive', value: 'Inactive' },
       ],
       onFilter: (value, record) => record.status.includes(value),
       filteredValue: tableFilters.status || null,
       render: (status) => (
-        <Tag color={status === 'Activated' ? 'green' : 'volcano'}>{status}</Tag>
+        <Tag color={status === 'Active' ? 'green' : 'volcano'}>{status}</Tag>
       ),
-    },
-    {
-      title: 'Department',
-      width: 150,
-      dataIndex: 'department',
-      key: 'department',
-      filters: [
-        { text: 'SHS', value: 'SHS' },
-        { text: 'Faculty', value: 'Faculty' },
-        { text: 'Admissions', value: 'Admissions' },
-        { text: 'Registrar', value: 'Registrar' },
-        { text: 'Accounting', value: 'Accounting' },
-        { text: 'IT', value: 'IT' },
-      ],
-      onFilter: (value, record) => record.department.includes(value),
-      filteredValue: tableFilters.department || null,
     },
     {
       title: 'Created At',
@@ -261,12 +263,12 @@ const ManageAccountsPage = () => {
             Edit
           </Button>
           <Button
-            icon={record.status === 'Activated' ? <FaUserTimes /> : <FaUserCheck />}
-            danger={record.status === 'Activated'}
+            icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
+            danger={record.status === 'Active'}
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
             onClick={() => handleStatusToggle(record)}
           >
-            {record.status === 'Activated' ? 'Deactivate' : 'Activate'}
+            {record.status === 'Active' ? 'Inactive' : 'Active'}
           </Button>
           <Button
             icon={<GrPowerReset />}
@@ -332,7 +334,7 @@ const ManageAccountsPage = () => {
               onChange={(e) => handleSearch(e.target.value)}
               suffix={<FaSearch style={{ color: '#aaa' }} />}
             />
-            <Button icon={<MdOutlineManageAccounts />}>Access Control</Button>
+            <Button icon={<MdOutlineManageAccounts/>} onClick={handleAccessControl}>Access Control</Button>
             <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
               Create Account
             </Button>

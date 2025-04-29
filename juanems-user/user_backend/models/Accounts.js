@@ -7,10 +7,17 @@ const AccountsSchema = new mongoose.Schema({
     firstName: { type: String, required: true },
     middleName: { type: String },
     lastName: { type: String, required: true },
-    email: { type: String, required: true },
-    mobile: { type: String, required: true },
-    role: { type: String }, // Optional
-    department: { type: String, required: true },
+    email: { type: String, required: true, unique: true},
+    mobile: { type: String, required: true, unique: true},
+    role: { type: String, required: true }, 
+    hasCustomAccess: {
+      type: Boolean,
+      default: false
+    },
+    customModules: {
+      type: [String],
+      default: []
+    },
     status: {type: String, required: true},
   }, { timestamps: true });
 // TODO: Extend schema for OTP 
