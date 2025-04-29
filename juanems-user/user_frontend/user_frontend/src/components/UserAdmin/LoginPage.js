@@ -60,23 +60,6 @@ const LoginPage = () => {
     }
 
     try {
-      // First check account status as part of the login flow
-      const statusResponse = await fetch(`http://localhost:5000/api/admin/verification-status/${email.trim()}`);
-      const statusData = await statusResponse.json();
-
-      if (statusResponse.ok && statusData.status === 'Pending Verification') {
-        navigate('/admin/verify-email', {
-          state: {
-            email: email.trim(),
-            firstName: statusData.firstName,
-            fromRegistration: false,
-            fromLogin: true
-          }
-        });
-        return;
-      }
-
-      // Continue with regular login process
       const response = await fetch('http://localhost:5000/api/admin/login', {
         method: 'POST',
         headers: {
@@ -91,7 +74,6 @@ const LoginPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle different error types more specifically
         if (data.errorType === 'pending_verification') {
           navigate('/admin/verify-email', {
             state: {

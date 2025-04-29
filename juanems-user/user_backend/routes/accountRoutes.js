@@ -103,6 +103,12 @@ router.post('/create-account', async (req, res) => {
         plainPassword,
         studentID
       );
+
+      // After successful email sending, remove the temporary password from the database
+      await Accounts.findByIdAndUpdate(
+        newUser._id,
+        { $unset: { temporaryPassword: "" } }
+      );
     } catch (emailError) {
       console.error('Failed to send credentials email:', emailError);
       return res.status(500).json({
@@ -138,123 +144,80 @@ router.post('/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-      return res.status(400).json({ message: 'Email and OTP are required' });
+      return res.status(400).json({
+        message: 'Email and OTP are required',
+        errorType: 'validation'
+      });
     }
 
-    // Find the account for this email with Pending Verification status
-    const account = await Accounts.findOne({
-      email,
-      status: 'Pending Verification'
-    }).sort({ createdAt: -1 }).select('+temporaryPassword');
+    const account = await Accounts.findOne({ email }).sort({ createdAt: -1 });
 
     if (!account) {
-      return res.status(404).json({ message: 'Account not found or already verified' });
-    }
-
-     // Check if account verification period has expired
-     if (account.verificationExpires < new Date()) {
-      account.status = 'Inactive';
-      await account.save();
-      return res.status(400).json({
-        message: 'Verification period has expired. Please register again.'
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
       });
     }
 
-    // Check if account is in lockout period
+    // Check for OTP attempt lockout
     if (account.otpAttemptLockout && account.otpAttemptLockout > new Date()) {
-      const minutesLeft = Math.ceil((account.otpAttemptLockout - new Date()) / (1000 * 60));
-      return res.status(429).json({
-        message: `Too many attempts. Please try again in ${minutesLeft} minute(s).`,
-        lockout: true
+      const timeLeft = Math.ceil((account.otpAttemptLockout - new Date()) / 1000);
+      return res.status(403).json({
+        message: `Too many OTP attempts. Try again in ${timeLeft} seconds.`,
+        errorType: 'otp_lockout',
+        lockoutTimeLeft: timeLeft
       });
     }
 
-    // Check if OTP is expired
-    if (!account.isOtpValid()) {
-      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
-    }
-
-    // Check if OTP matches
-    if (account.otp !== otp) {
-      // Increment failed attempts
-      account.otpAttempts += 1;
-      account.lastOtpAttempt = new Date();
-
-      // Check if we need to lock the account
-      if (account.otpAttempts >= 3) {
-        account.otpAttemptLockout = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
-        await account.save();
-        return res.status(429).json({
-          message: 'Too many incorrect attempts. Please try again in 5 minutes.',
-          lockout: true
-        });
-      }
-
+    // Verify OTP
+    if (account.otp === otp && account.otpExpires > new Date()) {
+      // OTP is valid
+      account.status = 'Active'; // Or whatever status you want after verification
+      account.otp = null;
+      account.otpExpires = null;
+      account.otpAttempts = 0;
+      account.otpAttemptLockout = null;
       await account.save();
-      const attemptsLeft = 3 - account.otpAttempts;
-      return res.status(400).json({
-        message: `Invalid OTP. ${attemptsLeft} attempt(s) left.`,
-        attemptsLeft
+
+      return res.json({
+        message: 'OTP verification successful',
+        email: account.email,
+        firstName: account.firstName
       });
     }
 
-    // OTP is valid, update account status
-    account.status = 'Active';
-    account.otp = undefined;
-    account.otpExpires = undefined;
-    account.otpAttempts = 0;
-    account.otpAttemptLockout = undefined;
-    account.lastOtpAttempt = undefined;
+    // OTP is invalid
+    account.otpAttempts += 1;
+    account.lastOtpAttempt = new Date();
+
+    // Implement lockout after 3 failed attempts
+    if (account.otpAttempts >= 3) {
+      account.otpAttemptLockout = new Date(Date.now() + 15 * 60 * 1000); // 15 minute lockout
+      await account.save();
+
+      return res.status(403).json({
+        message: 'Too many OTP attempts. Please try again after 15 minutes.',
+        errorType: 'otp_lockout',
+        lockoutTimeLeft: 900 // 15 minutes in seconds
+      });
+    }
+
     await account.save();
 
-    // Mark any other pending accounts with this email as inactive
-    await Accounts.updateMany(
-      {
-        email,
-        status: 'Pending Verification',
-        _id: { $ne: account._id } // Exclude the current applicant
-      },
-      {
-        status: 'Inactive',
-        inactiveReason: 'New registration completed'
-      }
-    );
-
-    // Store the temporary password before saving
-    const temporaryPassword = account.temporaryPassword;
-
-    // Send credentials email first before removing the temporary password
-    if (temporaryPassword) {
-      try {
-        await emailService.sendAdminPasswordEmail(
-          account.email,
-          account.firstName,
-          temporaryPassword,
-          account.studentID,
-        );
-
-        // Only clear after successful email send
-        account.temporaryPassword = undefined;
-      } catch (emailError) {
-        console.error('Failed to send password email:', emailError);
-        // Don't clear the temporary password if email fails
-      }
-    }
-
-    return res.status(200).json({
-      message: 'Email verification successful.',
-      data: {
-        studentID: account.studentID,
-        role: account.role,
-        isAdminStaff: isAdminStaff(account.role)
-      }
+    return res.status(401).json({
+      message: 'Invalid OTP',
+      errorType: 'invalid_otp',
+      attemptsLeft: 3 - account.otpAttempts
     });
+
   } catch (error) {
     console.error('OTP verification error:', error);
-    return res.status(500).json({ message: 'Server error during verification' });
+    res.status(500).json({
+      message: 'Server error during OTP verification',
+      errorType: 'server_error'
+    });
   }
 });
-
 
 router.get('/verification-status/:email', async (req, res) => {
   try {
@@ -573,8 +536,29 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Check for OTP attempt lockout
+    if (account.otpAttemptLockout && account.otpAttemptLockout > new Date()) {
+      const timeLeft = Math.ceil((account.otpAttemptLockout - new Date()) / 1000);
+      return res.status(403).json({
+        message: `Too many OTP attempts. Try again in ${timeLeft} seconds.`,
+        errorType: 'otp_lockout',
+        lockoutTimeLeft: timeLeft
+      });
+    }
+
     // Handle pending verification for admin accounts
     if (account.status === 'Pending Verification') {
+      // Check if there's a valid existing OTP
+      if (account.isOtpValid()) {
+        return res.status(403).json({
+          message: 'Verification OTP already sent. Please check your email.',
+          errorType: 'pending_verification',
+          email: account.email,
+          firstName: account.firstName,
+          otpSent: false // Indicates we didn't send a new one
+        });
+      }
+
       // Generate new OTP
       const otp = generateOTP();
       const otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
@@ -584,7 +568,8 @@ router.post('/login', async (req, res) => {
       
       account.otp = otp;
       account.otpExpires = otpExpires;
-      account.otpAttempts = 0;
+      account.otpAttempts = 0; // Reset attempts when generating new OTP
+      account.otpAttemptLockout = null; // Clear any existing lockout
       await account.save();
       
       try {
