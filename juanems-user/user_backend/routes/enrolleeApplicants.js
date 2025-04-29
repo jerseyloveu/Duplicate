@@ -6,58 +6,39 @@ const { generateOTP, sendOTP } = require('../utils/emailService');
 const otpGenerator = require('otp-generator');
 const bcrypt = require('bcryptjs');
 
-function generateStudentID() {
-  const year = new Date().getFullYear();
-  const randomNum = Math.floor(100000 + Math.random() * 900000);
-  return `${year}-${randomNum}`;
-}
-
-function generateRandomPassword(length = 12) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
-
-// Add these new functions at the top of your routes file
 async function getNextStudentIDSequence(academicYear) {
-  // Extract last two digits of the starting year (e.g., "2025" -> "25")
   const yearShort = academicYear.split('-')[0].slice(-2);
-
-  // Find the highest existing studentID with this year prefix
   const lastApplicant = await EnrolleeApplicant.findOne({
     studentID: new RegExp(`^${yearShort}-\\d{5}$`)
   }).sort({ studentID: -1 });
 
   if (!lastApplicant) {
-    return `${yearShort}-00001`; // First student of the year
+    return `${yearShort}-00001`;
   }
 
-  // Extract the numeric part and increment
   const lastNumber = parseInt(lastApplicant.studentID.split('-')[1], 10);
   const nextNumber = lastNumber + 1;
-
-  // Pad with leading zeros to make 5 digits
   return `${yearShort}-${nextNumber.toString().padStart(5, '0')}`;
 }
 
 async function getNextApplicantIDSequence(academicYear) {
-  // Extract full starting year (e.g., "2025-2026" -> "2025")
   const yearFull = academicYear.split('-')[0];
-
-  // Find the highest existing applicantID with this year prefix
   const lastApplicant = await EnrolleeApplicant.findOne({
     applicantID: new RegExp(`^${yearFull}-\\d{6}$`)
   }).sort({ applicantID: -1 });
 
   if (!lastApplicant) {
-    return `${yearFull}-000001`; // First applicant of the year
+    return `${yearFull}-000001`;
   }
 
-  // Extract the numeric part and increment
   const lastNumber = parseInt(lastApplicant.applicantID.split('-')[1], 10);
   const nextNumber = lastNumber + 1;
-
-  // Pad with leading zeros to make 6 digits
   return `${yearFull}-${nextNumber.toString().padStart(6, '0')}`;
+}
+
+function generateRandomPassword(length = 12) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 router.post('/', async (req, res) => {
@@ -76,7 +57,6 @@ router.post('/', async (req, res) => {
       academicLevel,
     } = req.body;
 
-    // Check for existing active or pending records with this email
     const existingActive = await EnrolleeApplicant.findOne({
       email,
       status: { $in: ['Pending Verification', 'Active'] }
@@ -86,14 +66,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Email is already registered with an active or pending application' });
     }
 
-    // Generate IDs
     const studentID = await getNextStudentIDSequence(academicYear);
     const applicantID = await getNextApplicantIDSequence(academicYear);
     const plainPassword = generateRandomPassword();
     const otp = generateOTP();
-    const otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+    const otpExpires = new Date(Date.now() + 3 * 60 * 1000);
 
-    // Create new record
     const newApplicant = new EnrolleeApplicant({
       firstName,
       middleName,
@@ -107,18 +85,17 @@ router.post('/', async (req, res) => {
       academicStrand,
       academicLevel,
       studentID,
-      applicantID, // Include the new applicantID
+      applicantID,
       password: plainPassword,
       temporaryPassword: plainPassword,
       status: 'Pending Verification',
       otp,
       otpExpires,
-      verificationExpires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days
+      verificationExpires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
     });
 
     await newApplicant.save();
 
-    // Send OTP email
     try {
       await sendOTP(email, firstName, otp);
     } catch (emailError) {
@@ -129,7 +106,7 @@ router.post('/', async (req, res) => {
       message: 'Registration successful. Please check your email for verification code.',
       data: {
         studentID,
-        applicantID, // Include in response
+        applicantID,
         email,
         password: plainPassword,
       }
@@ -140,7 +117,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Check email availability
 router.get('/check-email/:email', async (req, res) => {
   try {
     const email = req.params.email.toLowerCase();
@@ -153,7 +129,6 @@ router.get('/check-email/:email', async (req, res) => {
       return res.status(409).json({ message: 'Email is already registered with an active or pending application' });
     }
 
-    // Check for inactive account
     const existingInactive = await EnrolleeApplicant.findOne({
       email,
       status: 'Inactive'
@@ -166,7 +141,6 @@ router.get('/check-email/:email', async (req, res) => {
       });
     }
 
-    // No account exists
     return res.status(200).json({
       message: 'Email is available',
       status: 'Available'
@@ -176,8 +150,6 @@ router.get('/check-email/:email', async (req, res) => {
   }
 });
 
-// Verify OTP
-// Update the verify-otp endpoint
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -186,7 +158,6 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email and OTP are required' });
     }
 
-    // Find the most recent Pending Verification account for this email
     const applicant = await EnrolleeApplicant.findOne({
       email,
       status: 'Pending Verification'
@@ -196,7 +167,6 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(404).json({ message: 'Account not found or already verified' });
     }
 
-    // Check if account verification period has expired
     if (applicant.verificationExpires < new Date()) {
       applicant.status = 'Inactive';
       await applicant.save();
@@ -205,7 +175,6 @@ router.post('/verify-otp', async (req, res) => {
       });
     }
 
-    // Check if user is in lockout period
     if (applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date()) {
       const minutesLeft = Math.ceil((applicant.otpAttemptLockout - new Date()) / (1000 * 60));
       return res.status(429).json({
@@ -214,20 +183,16 @@ router.post('/verify-otp', async (req, res) => {
       });
     }
 
-    // Check if OTP is expired
     if (!applicant.isOtpValid()) {
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
 
-    // Check if OTP matches
     if (applicant.otp !== otp) {
-      // Increment failed attempts
       applicant.otpAttempts += 1;
       applicant.lastOtpAttempt = new Date();
 
-      // Check if we need to lock the account
       if (applicant.otpAttempts >= 3) {
-        applicant.otpAttemptLockout = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
+        applicant.otpAttemptLockout = new Date(Date.now() + 5 * 60 * 1000);
         await applicant.save();
         return res.status(429).json({
           message: 'Too many incorrect attempts. Please try again in 5 minutes.',
@@ -243,7 +208,6 @@ router.post('/verify-otp', async (req, res) => {
       });
     }
 
-    // OTP is valid, update account status
     applicant.status = 'Active';
     applicant.otp = undefined;
     applicant.otpExpires = undefined;
@@ -252,12 +216,11 @@ router.post('/verify-otp', async (req, res) => {
     applicant.lastOtpAttempt = undefined;
     await applicant.save();
 
-    // Mark any other pending accounts with this email as inactive
     await EnrolleeApplicant.updateMany(
       {
         email,
         status: 'Pending Verification',
-        _id: { $ne: applicant._id } // Exclude the current applicant
+        _id: { $ne: applicant._id }
       },
       {
         status: 'Inactive',
@@ -265,10 +228,8 @@ router.post('/verify-otp', async (req, res) => {
       }
     );
 
-    // Store the temporary password before saving
     const temporaryPassword = applicant.temporaryPassword;
 
-    // Send credentials email first before removing the temporary password
     if (temporaryPassword) {
       try {
         await emailService.sendPasswordEmail(
@@ -276,18 +237,14 @@ router.post('/verify-otp', async (req, res) => {
           applicant.firstName,
           temporaryPassword,
           applicant.studentID,
-          applicant.applicantID // Add this parameter
+          applicant.applicantID
         );
-
-        // Only clear after successful email send
         applicant.temporaryPassword = undefined;
       } catch (emailError) {
         console.error('Failed to send password email:', emailError);
-        // Don't clear the temporary password if email fails
       }
     }
 
-    // Save the applicant after email handling
     await applicant.save();
 
     return res.status(200).json({
@@ -303,7 +260,83 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+router.post('/verify-login-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
 
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email,
+      status: 'Active'
+    }).sort({ createdAt: -1 }).select('+loginOtp +loginOtpExpires');
+
+    if (!applicant) {
+      return res.status(404).json({ message: 'Account not found or not active' });
+    }
+
+    if (applicant.loginOtpAttemptLockout && applicant.loginOtpAttemptLockout > new Date()) {
+      const minutesLeft = Math.ceil((applicant.loginOtpAttemptLockout - new Date()) / (1000 * 60));
+      return res.status(429).json({
+        message: `Too many attempts. Please try again in ${minutesLeft} minute(s).`,
+        lockout: true
+      });
+    }
+
+    if (!applicant.loginOtp || !applicant.loginOtpExpires || applicant.loginOtpExpires < new Date()) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (applicant.loginOtp !== otp) {
+      applicant.loginOtpAttempts += 1;
+      applicant.lastLoginOtpAttempt = new Date();
+
+      if (applicant.loginOtpAttempts >= 3) {
+        applicant.loginOtpAttemptLockout = new Date(Date.now() + 5 * 60 * 1000);
+        await applicant.save();
+        return res.status(429).json({
+          message: 'Too many incorrect attempts. Please try again in 5 minutes.',
+          lockout: true
+        });
+      }
+
+      await applicant.save();
+      const attemptsLeft = 3 - applicant.loginOtpAttempts;
+      return res.status(400).json({
+        message: `Invalid OTP. ${attemptsLeft} attempt(s) left.`,
+        attemptsLeft
+      });
+    }
+
+    // OTP is valid, complete login
+    applicant.activityStatus = 'Online';
+    applicant.lastLogin = new Date();
+    applicant.loginOtp = undefined;
+    applicant.loginOtpExpires = undefined;
+    applicant.loginOtpAttempts = 0;
+    applicant.loginOtpAttemptLockout = undefined;
+    applicant.lastLoginOtpAttempt = undefined;
+    await applicant.save();
+
+    res.json({
+      message: 'Login successful',
+      email: applicant.email,
+      firstName: applicant.firstName,
+      studentID: applicant.studentID,
+      applicantID: applicant.applicantID,
+      activityStatus: applicant.activityStatus,
+      loginAttempts: applicant.loginAttempts,
+      lastLogin: applicant.lastLogin,
+      lastLogout: applicant.lastLogout,
+      createdAt: applicant.createdAt.toISOString()
+    });
+  } catch (error) {
+    console.error('Login OTP verification error:', error);
+    return res.status(500).json({ message: 'Server error during login OTP verification' });
+  }
+});
 
 router.get('/verification-status/:email', async (req, res) => {
   try {
@@ -320,7 +353,7 @@ router.get('/verification-status/:email', async (req, res) => {
     const response = {
       status: applicant.status,
       firstName: applicant.firstName,
-      createdAt: applicant.createdAt.toISOString(), // Return as ISO string
+      createdAt: applicant.createdAt.toISOString(),
       isLockedOut: applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date(),
       lockoutTimeLeft: applicant.otpAttemptLockout ?
         Math.ceil((applicant.otpAttemptLockout - new Date()) / 1000) : 0,
@@ -336,7 +369,89 @@ router.get('/verification-status/:email', async (req, res) => {
   }
 });
 
-// Add this route to enrolleeApplicants.js
+router.get('/login-otp-status/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email,
+      status: 'Active'
+    }).sort({ createdAt: -1 });
+
+    if (!applicant) {
+      return res.status(404).json({ message: 'Account not found or not active' });
+    }
+
+    const response = {
+      status: applicant.status,
+      firstName: applicant.firstName,
+      createdAt: applicant.createdAt.toISOString(),
+      isLockedOut: applicant.loginOtpAttemptLockout && applicant.loginOtpAttemptLockout > new Date(),
+      lockoutTimeLeft: applicant.loginOtpAttemptLockout ?
+        Math.ceil((applicant.loginOtpAttemptLockout - new Date()) / 1000) : 0,
+      otpTimeLeft: applicant.loginOtpExpires ?
+        Math.ceil((applicant.loginOtpExpires - new Date()) / 1000) : 0,
+      attemptsLeft: 3 - (applicant.loginOtpAttempts || 0)
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error getting login OTP status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/resend-login-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email,
+      status: 'Active'
+    }).sort({ createdAt: -1 });
+
+    if (!applicant) {
+      return res.status(404).json({ message: 'Account not found or not active' });
+    }
+
+    if (applicant.loginOtpAttemptLockout && applicant.loginOtpAttemptLockout > new Date()) {
+      const minutesLeft = Math.ceil((applicant.loginOtpAttemptLockout - new Date()) / (1000 * 60));
+      return res.status(429).json({
+        message: `Please wait ${minutesLeft} minute(s) before requesting a new OTP.`,
+        lockout: true
+      });
+    }
+
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
+
+    applicant.loginOtp = otp;
+    applicant.loginOtpExpires = new Date(Date.now() + 3 * 60 * 1000);
+    applicant.loginOtpAttempts = 0;
+    applicant.loginOtpAttemptLockout = undefined;
+    applicant.lastLoginOtpAttempt = undefined;
+    await applicant.save();
+
+    await sendOTP(email, applicant.firstName, otp, 'login');
+
+    return res.status(200).json({
+      message: 'New verification code sent to your email',
+      expiresIn: 180
+    });
+  } catch (error) {
+    console.error('Resend login OTP error:', error);
+    return res.status(500).json({ message: 'Server error while resending OTP' });
+  }
+});
+
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -348,7 +463,6 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Find the applicant
     const applicant = await EnrolleeApplicant.findOne({ email });
 
     if (!applicant) {
@@ -358,23 +472,20 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Generate a secure random password
     const newPassword = generateRandomPassword();
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Update the password
     applicant.password = hashedPassword;
     await applicant.save();
 
-    // Send email with new password
     try {
       await emailService.sendPasswordEmail(
         applicant.email,
         applicant.firstName,
         newPassword,
         applicant.studentID,
-        applicant.applicantID // Add this
+        applicant.applicantID
       );
 
       return res.json({
@@ -387,7 +498,6 @@ router.post('/forgot-password', async (req, res) => {
         errorType: 'email_failed'
       });
     }
-
   } catch (error) {
     console.error('Password reset error:', error);
     res.status(500).json({
@@ -397,18 +507,15 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Add these new routes
 router.post('/request-password-reset', async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Check if email exists
     const user = await EnrolleeApplicant.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'Email not found' });
     }
 
-    // Generate OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
       lowerCaseAlphabets: false,
@@ -416,12 +523,10 @@ router.post('/request-password-reset', async (req, res) => {
       specialChars: false
     });
 
-    // In the /request-password-reset route
     user.passwordResetOtp = otp;
-    user.passwordResetOtpExpires = new Date(Date.now() + 3 * 60 * 1000); // Changed from 10 to 3 minutes
+    user.passwordResetOtpExpires = new Date(Date.now() + 3 * 60 * 1000);
     await user.save();
 
-    // Send OTP email
     await emailService.sendOTP(email, user.firstName, otp);
 
     res.json({
@@ -439,7 +544,6 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    // Find user with passwordResetOtp selected
     const user = await EnrolleeApplicant.findOne({ email })
       .select('+passwordResetOtp +passwordResetOtpExpires +password');
 
@@ -447,36 +551,25 @@ router.post('/reset-password', async (req, res) => {
       return res.status(404).json({ message: 'Email not found' });
     }
 
-    // Check OTP
     if (!user.passwordResetOtp || user.passwordResetOtp !== otp) {
       return res.status(400).json({ message: 'Invalid verification code' });
     }
 
-    // Check if OTP expired
     if (user.passwordResetOtpExpires < new Date()) {
       return res.status(400).json({ message: 'Verification code has expired' });
     }
 
-    // Generate new password
     const newPassword = generateRandomPassword();
-    console.log('Generated new password:', newPassword); // Debug log
-
-    // Hash the new password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    console.log('Hashed password:', hashedPassword); // Debug log
 
-    // Update password and clear OTP
     user.password = hashedPassword;
     user.passwordResetOtp = undefined;
     user.passwordResetOtpExpires = undefined;
     user.lastPasswordReset = new Date();
 
-    // Save the user
     await user.save();
-    console.log('Password updated in database'); // Debug log
 
-    // Send email with the new password
     await emailService.sendPasswordResetEmail(
       email,
       user.firstName,
@@ -496,7 +589,6 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-// Resend OTP
 router.post('/resend-otp', async (req, res) => {
   try {
     const { email } = req.body;
@@ -505,7 +597,6 @@ router.post('/resend-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Find the most recent Pending Verification account
     const applicant = await EnrolleeApplicant.findOne({
       email,
       status: 'Pending Verification'
@@ -515,7 +606,6 @@ router.post('/resend-otp', async (req, res) => {
       return res.status(404).json({ message: 'Account not found or already verified' });
     }
 
-    // Check if user is in lockout period
     if (applicant.otpAttemptLockout && applicant.otpAttemptLockout > new Date()) {
       const minutesLeft = Math.ceil((applicant.otpAttemptLockout - new Date()) / (1000 * 60));
       return res.status(429).json({
@@ -524,7 +614,6 @@ router.post('/resend-otp', async (req, res) => {
       });
     }
 
-    // Generate new OTP
     const otp = otpGenerator.generate(6, {
       digits: true,
       lowerCaseAlphabets: false,
@@ -532,20 +621,18 @@ router.post('/resend-otp', async (req, res) => {
       specialChars: false
     });
 
-    // Update OTP and reset attempt counters
     applicant.otp = otp;
-    applicant.otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+    applicant.otpExpires = new Date(Date.now() + 3 * 60 * 1000);
     applicant.otpAttempts = 0;
     applicant.otpAttemptLockout = undefined;
     applicant.lastOtpAttempt = undefined;
     await applicant.save();
 
-    // Send OTP email
     await sendOTP(email, applicant.firstName, otp);
 
     return res.status(200).json({
       message: 'New verification code sent to your email',
-      expiresIn: 180 // 3 minutes in seconds
+      expiresIn: 180
     });
   } catch (error) {
     console.error('Resend OTP error:', error);
@@ -553,7 +640,6 @@ router.post('/resend-otp', async (req, res) => {
   }
 });
 
-// Add this new route to get password reset status
 router.get('/password-reset-status/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -566,12 +652,12 @@ router.get('/password-reset-status/:email', async (req, res) => {
     const response = {
       status: applicant.status,
       firstName: applicant.firstName,
-      isLockedOut: false, // No lockout for password reset (or implement if needed)
+      isLockedOut: false,
       lockoutTimeLeft: 0,
       otpTimeLeft: applicant.passwordResetOtpExpires
         ? Math.ceil((applicant.passwordResetOtpExpires - new Date()) / 1000)
         : 0,
-      attemptsLeft: 3 // Reset attempts for password reset
+      attemptsLeft: 3
     };
 
     res.status(200).json(response);
@@ -595,14 +681,12 @@ router.post('/login', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // Find the most recent ACTIVE account for this email
     const applicant = await EnrolleeApplicant.findOne({
       email: cleanEmail,
       status: 'Active'
     }).sort({ createdAt: -1 }).select('+password');
 
     if (!applicant) {
-      // Check for pending verification
       const pendingAccount = await EnrolleeApplicant.findOne({
         email: cleanEmail,
         status: 'Pending Verification'
@@ -610,11 +694,9 @@ router.post('/login', async (req, res) => {
 
       if (pendingAccount) {
         if (pendingAccount.verificationExpires < new Date()) {
-          // Auto-clean expired verification
           pendingAccount.status = 'Inactive';
           pendingAccount.inactiveReason = 'Auto-cleaned expired verification';
           await pendingAccount.save();
-
           return res.status(403).json({
             message: 'Verification period expired. Please register again.',
             errorType: 'verification_expired'
@@ -628,7 +710,6 @@ router.post('/login', async (req, res) => {
         });
       }
 
-      // Check for inactive accounts
       const inactiveAccount = await EnrolleeApplicant.findOne({
         email: cleanEmail,
         status: 'Inactive'
@@ -648,11 +729,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Track login attempt
     applicant.loginAttempts += 1;
     await applicant.save();
 
-    // Verify password
     const isMatch = await bcrypt.compare(cleanPassword, applicant.password);
 
     if (!isMatch) {
@@ -662,23 +741,28 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Successful login - update activity
-    applicant.activityStatus = 'Online';
-    applicant.lastLogin = new Date();
+    // Generate OTP for login
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
+
+    applicant.loginOtp = otp;
+    applicant.loginOtpExpires = new Date(Date.now() + 3 * 60 * 1000);
+    applicant.loginOtpAttempts = 0;
+    applicant.loginOtpAttemptLockout = undefined;
+    applicant.lastLoginOtpAttempt = undefined;
     await applicant.save();
 
-    // In your login route handler (enrolleeApplicants.js)
+    // Explicitly pass 'login' as the type
+    await sendOTP(applicant.email, applicant.firstName, otp, 'login');
+
     res.json({
-      message: 'Login successful',
+      message: 'OTP sent for login verification',
       email: applicant.email,
-      firstName: applicant.firstName,
-      studentID: applicant.studentID,
-      applicantID: applicant.applicantID, // Make sure this is included
-      activityStatus: applicant.activityStatus,
-      loginAttempts: applicant.loginAttempts,
-      lastLogin: applicant.lastLogin,
-      lastLogout: applicant.lastLogout,
-      createdAt: applicant.createdAt.toISOString()
+      firstName: applicant.firstName
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -705,7 +789,6 @@ router.post('/logout', async (req, res) => {
       status: 'Active'
     };
 
-    // If createdAt is provided, parse it properly
     if (createdAt) {
       const date = new Date(createdAt);
       if (isNaN(date.getTime())) {
@@ -727,7 +810,6 @@ router.post('/logout', async (req, res) => {
       });
     }
 
-    // Update activity status
     applicant.activityStatus = 'Offline';
     applicant.lastLogout = new Date();
     await applicant.save();
@@ -736,7 +818,6 @@ router.post('/logout', async (req, res) => {
       message: 'Logout successful',
       activityStatus: applicant.activityStatus
     });
-
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({
@@ -757,7 +838,6 @@ router.get('/activity/:email', async (req, res) => {
       status: 'Active'
     };
 
-    // If createdAt is provided, parse it properly
     if (createdAt) {
       const date = new Date(createdAt);
       if (isNaN(date.getTime())) {
@@ -786,7 +866,6 @@ router.get('/activity/:email', async (req, res) => {
       lastLogout: applicant.lastLogout,
       accountCreatedAt: applicant.createdAt
     });
-
   } catch (error) {
     console.error('Activity fetch error:', error);
     res.status(500).json({

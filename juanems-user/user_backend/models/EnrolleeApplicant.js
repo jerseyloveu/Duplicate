@@ -15,7 +15,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   academicStrand: { type: String, required: true },
   academicLevel: { type: String, required: true },
   studentID: { type: String, required: true, unique: true },
-  applicantID: { type: String, required: true, unique: true }, // Add this line
+  applicantID: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   temporaryPassword: { type: String, select: false },
   status: {
@@ -24,58 +24,48 @@ const enrolleeApplicantSchema = new mongoose.Schema({
     default: 'Pending Verification',
   },
   createdAt: { type: Date, default: Date.now },
-  // New OTP related fields
+  // OTP for registration
   otp: { type: String },
   otpExpires: { type: Date },
-  otpAttempts: { 
-    type: Number, 
-    default: 0 
-  },
-  otpAttemptLockout: { 
-    type: Date 
-  },
-  lastOtpAttempt: { 
-    type: Date 
-  },
+  otpAttempts: { type: Number, default: 0 },
+  otpAttemptLockout: { type: Date },
+  lastOtpAttempt: { type: Date },
+  // OTP for password reset
   passwordResetOtp: { type: String },
   passwordResetOtpExpires: { type: Date },
   lastPasswordReset: { type: Date },
-  verificationExpires: { 
-    type: Date, 
+  // New OTP for login
+  loginOtp: { type: String },
+  loginOtpExpires: { type: Date },
+  loginOtpAttempts: { type: Number, default: 0 },
+  loginOtpAttemptLockout: { type: Date },
+  lastLoginOtpAttempt: { type: Date },
+  verificationExpires: {
+    type: Date,
     default: () => new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
   },
-  // New fields for user activity tracking
-  loginAttempts: { 
-    type: Number, 
-    default: 0 
+  loginAttempts: { type: Number, default: 0 },
+  activityStatus: {
+    type: String,
+    enum: ['Online', 'Offline'],
+    default: 'Offline'
   },
-  activityStatus: { 
-    type: String, 
-    enum: ['Online', 'Offline'], 
-    default: 'Offline' 
-  },
-  lastLogin: { 
-    type: Date 
-  },
-  lastLogout: { 
-    type: Date 
-  }
+  lastLogin: { type: Date },
+  lastLogout: { type: Date }
 });
 
-// In models/EnrolleeApplicant.js, update the pre-save hook
+// Password hashing pre-save hook
 enrolleeApplicantSchema.pre('save', async function (next) {
-  // Only hash the password if it has been modified and is not already hashed
   if (!this.isModified('password') || this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
     return next();
   }
 
   try {
-    // Trim and clean the password before hashing
     const cleanPassword = this.password.trim();
-    console.log('Original password before hash:', cleanPassword); // Debug log
+    console.log('Original password before hash:', cleanPassword);
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(cleanPassword, salt);
-    console.log('Hashed password:', this.password); // Debug log
+    console.log('Hashed password:', this.password);
     next();
   } catch (err) {
     console.error('Error hashing password:', err);
@@ -88,9 +78,8 @@ enrolleeApplicantSchema.methods.isOtpValid = function() {
   return this.otp && this.otpExpires && this.otpExpires > Date.now();
 };
 
-// Add this to your EnrolleeApplicant model file, before the module.exports
+// Method to get temporary password
 enrolleeApplicantSchema.methods.getPlainPassword = async function() {
-  // We need to fetch the document again with the temporaryPassword selected
   const user = await this.model('EnrolleeApplicant')
     .findById(this._id)
     .select('+temporaryPassword')
