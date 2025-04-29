@@ -315,6 +315,51 @@ const sendPasswordResetEmail = async (email, name, newPassword) => {
   }
 };
 
+const sendAdminPasswordEmail = async (email, name, password) => {
+  try {
+    const mailOptions = {
+      from: `${config.senderName} <${config.sender}>`,
+      to: email,
+      subject: 'JuanEMS: Your Account Login Credentials',
+      text: `Dear ${name},\n\nWe are pleased to welcome you to the Juan Enrollment Management System (JuanEMS).\n\nYour account login credentials are:\n\nEmail: ${email}\nPassword: ${password}\n\nPlease keep this information secure and do not share it with anyone.\n\nYou can now log in to your account using these credentials.\n\nBest regards,\nJuanEMS Administration`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #2A67D5; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">JuanEMS</h1>
+            <p style="color: #ecf0f1; margin: 5px 0 0;">Enrollment Management System</p>
+          </div>
+          <div style="padding: 20px;">
+            <h2 style="color: #2A67D5;">Your Account Login Credentials</h2>
+            <p>Dear ${name},</p>
+            <p>We are pleased to welcome you to the Juan Enrollment Management System (JuanEMS).</p>
+            <p>Here are your login credentials:</p>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 15px 0;">
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Password:</strong> ${password}</p>
+            </div>
+            <p>Please log in to JuanEMS using the above credentials and complete the verification process to activate your account.</p>
+            <p style="color: #e74c3c; font-style: italic;">For your security, please do not share this information with anyone.</p>
+            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+            <p>Best regards,</p>
+            <p><strong>JuanEMS Administration</strong></p>
+          </div>
+          <div style="background-color: #C68A00; padding: 15px; text-align: center; font-size: 12px; color: #f5f5f5;">
+            <p>© ${new Date().getFullYear()} Juan Enrollment Management System. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Password email sent successfully:', result.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error sending password email:', error);
+    throw error;
+  }
+};
+
+
 module.exports = {
   generateOTP,
   sendOTP,
@@ -322,5 +367,6 @@ module.exports = {
   resendOTP,
   sendPasswordEmail,  // Add this line if it's not already there
   expireUnverifiedAccounts,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendAdminPasswordEmail
 };

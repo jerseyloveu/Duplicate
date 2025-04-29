@@ -539,6 +539,16 @@ const CreateAccount = () => {
       }
 
       message.success(id ? 'Account successfully updated!' : 'Account successfully created!');
+      // navigate('/admin/verify-email', {
+      //   state: {
+      //     email: trimmedValues.email,
+      //     firstName: trimmedValues.firstName,
+      //     fromAdmin: true,
+      //     studentID: data.data.studentID || '',
+      //     expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+      //   }
+      // });
+
       navigate('/admin/manage-accounts');
     } catch (error) {
       console.error('Error creating account:', error);

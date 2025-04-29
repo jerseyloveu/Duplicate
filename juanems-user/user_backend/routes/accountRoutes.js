@@ -1,6 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const Accounts = require('../models/Accounts');
+const emailService = require('../utils/emailService');
+const { generateOTP, sendOTP } = require('../utils/emailService');
+const otpGenerator = require('otp-generator');
+const bcrypt = require('bcryptjs');
+
+function generateRandomPassword(length = 12) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+';
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+// Helper function to check if account is admin staff
+function isAdminStaff(role) {
+  const adminRoles = [
+    'Admissions (Staff)',
+    'Registrar (Staff)',
+    'Accounting (Staff)',
+    'IT (Super Admin)',
+    'Administration (Sub-Admin)',
+    'Faculty'
+  ];
+  return adminRoles.includes(role);
+}
 
 // CREATE user account
 // POST /api/admin/create-account
@@ -17,27 +39,32 @@ router.post('/create-account', async (req, res) => {
       studentID,
       role,
       status,
-      password,
       hasCustomAccess,
       customModules
     } = req.body;
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !mobile || !role || !status) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Check if email or mobile already exists
-    const existingUser = await Accounts.findOne({
-      $or: [{ email }, { mobile }]
+    // Check for existing active or pending records with this email
+    const existingActiveEmail = await Accounts.findOne({
+      email,
+      status: { $in: ['Pending Verification', 'Active'] }
     });
 
-    if (existingUser) {
-      return res.status(409).json({
-        message: 'A user with this email or mobile number already exists'
-      });
+    if (existingActiveEmail) {
+      return res.status(400).json({ error: 'Email is already registered with an active or pending application' });
     }
 
+    // Check for existing active or pending records with this mobile number
+    const existingActiveMobile = await Accounts.findOne({
+      mobile,
+      status: { $in: ['Pending Verification', 'Active'] }
+    });
+
+    if (existingActiveMobile) {
+      return res.status(400).json({ error: 'Mobile number is already registered with an active or pending application' });
+    }
+
+    const plainPassword = generateRandomPassword();
+    
     // Generate or use provided userID
     let userID = req.body.userID;
     if (!userID) {
@@ -47,7 +74,7 @@ router.post('/create-account', async (req, res) => {
       }
     }
 
-    // Create the new user
+    // Create the new user with Active status
     const newUser = new Accounts({
       userID,
       firstName,
@@ -58,21 +85,39 @@ router.post('/create-account', async (req, res) => {
       mobile,
       nationality,
       studentID,
+      password: plainPassword,
+      temporaryPassword: plainPassword,
       role,
-      status,
-      password,
-      hasCustomAccess, // Add this field
-      customModules   // Add this field
+      status: 'Pending Verification',
+      hasCustomAccess,
+      customModules
     });
 
     await newUser.save();
 
+    // Send credentials email
+    try {
+      await emailService.sendAdminPasswordEmail(
+        email,
+        firstName,
+        plainPassword,
+        studentID
+      );
+    } catch (emailError) {
+      console.error('Failed to send credentials email:', emailError);
+      return res.status(500).json({
+        message: 'Account created but failed to send email. Please try to resend credentials.',
+        error: emailError.message
+      });
+    }
+
     // Return success without the password
     const userResponse = newUser.toObject();
     delete userResponse.password;
+    delete userResponse.temporaryPassword;
 
     return res.status(201).json({
-      message: 'Account created successfully',
+      message: 'Account created successfully. Login credentials have been sent to the email.',
       data: userResponse
     });
   } catch (error) {
@@ -80,6 +125,641 @@ router.post('/create-account', async (req, res) => {
     return res.status(500).json({
       message: 'An error occurred while creating the account',
       error: error.message
+    });
+  }
+});
+
+
+// Verify OTP
+// Update the verify-otp endpoint
+// Verify OTP (for admin staff that are in pending verification status)
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    // Find the account for this email with Pending Verification status
+    const account = await Accounts.findOne({
+      email,
+      status: 'Pending Verification'
+    }).sort({ createdAt: -1 }).select('+temporaryPassword');
+
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found or already verified' });
+    }
+
+     // Check if account verification period has expired
+     if (account.verificationExpires < new Date()) {
+      account.status = 'Inactive';
+      await account.save();
+      return res.status(400).json({
+        message: 'Verification period has expired. Please register again.'
+      });
+    }
+
+    // Check if account is in lockout period
+    if (account.otpAttemptLockout && account.otpAttemptLockout > new Date()) {
+      const minutesLeft = Math.ceil((account.otpAttemptLockout - new Date()) / (1000 * 60));
+      return res.status(429).json({
+        message: `Too many attempts. Please try again in ${minutesLeft} minute(s).`,
+        lockout: true
+      });
+    }
+
+    // Check if OTP is expired
+    if (!account.isOtpValid()) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Check if OTP matches
+    if (account.otp !== otp) {
+      // Increment failed attempts
+      account.otpAttempts += 1;
+      account.lastOtpAttempt = new Date();
+
+      // Check if we need to lock the account
+      if (account.otpAttempts >= 3) {
+        account.otpAttemptLockout = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
+        await account.save();
+        return res.status(429).json({
+          message: 'Too many incorrect attempts. Please try again in 5 minutes.',
+          lockout: true
+        });
+      }
+
+      await account.save();
+      const attemptsLeft = 3 - account.otpAttempts;
+      return res.status(400).json({
+        message: `Invalid OTP. ${attemptsLeft} attempt(s) left.`,
+        attemptsLeft
+      });
+    }
+
+    // OTP is valid, update account status
+    account.status = 'Active';
+    account.otp = undefined;
+    account.otpExpires = undefined;
+    account.otpAttempts = 0;
+    account.otpAttemptLockout = undefined;
+    account.lastOtpAttempt = undefined;
+    await account.save();
+
+    // Mark any other pending accounts with this email as inactive
+    await Accounts.updateMany(
+      {
+        email,
+        status: 'Pending Verification',
+        _id: { $ne: account._id } // Exclude the current applicant
+      },
+      {
+        status: 'Inactive',
+        inactiveReason: 'New registration completed'
+      }
+    );
+
+    // Store the temporary password before saving
+    const temporaryPassword = account.temporaryPassword;
+
+    // Send credentials email first before removing the temporary password
+    if (temporaryPassword) {
+      try {
+        await emailService.sendAdminPasswordEmail(
+          account.email,
+          account.firstName,
+          temporaryPassword,
+          account.studentID,
+        );
+
+        // Only clear after successful email send
+        account.temporaryPassword = undefined;
+      } catch (emailError) {
+        console.error('Failed to send password email:', emailError);
+        // Don't clear the temporary password if email fails
+      }
+    }
+
+    return res.status(200).json({
+      message: 'Email verification successful.',
+      data: {
+        studentID: account.studentID,
+        role: account.role,
+        isAdminStaff: isAdminStaff(account.role)
+      }
+    });
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    return res.status(500).json({ message: 'Server error during verification' });
+  }
+});
+
+
+router.get('/verification-status/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const account = await Accounts.findOne({
+      email
+    }).sort({ createdAt: -1 });
+
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    const response = {
+      status: account.status,
+      firstName: account.firstName,
+      createdAt: account.createdAt.toISOString(), // Return as ISO string
+      isLockedOut: account.otpAttemptLockout && account.otpAttemptLockout > new Date(),
+      lockoutTimeLeft: account.otpAttemptLockout ?
+        Math.ceil((account.otpAttemptLockout - new Date()) / 1000) : 0,
+      otpTimeLeft: account.otpExpires ?
+        Math.ceil((account.otpExpires - new Date()) / 1000) : 0,
+      attemptsLeft: 3 - (account.otpAttempts || 0)
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error getting verification status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+        errorType: 'validation'
+      });
+    }
+
+    // Find the account
+    const account = await Accounts.findOne({ email });
+
+    if (!account) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Generate a secure random password
+    const newPassword = generateRandomPassword();
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update the password
+    account.password = hashedPassword;
+    await account.save();
+
+    // Send email with new password
+    try {
+      await emailService.sendAdminPasswordEmail(
+        account.email,
+        account.firstName,
+        newPassword,
+        account.studentID,
+      );
+
+      return res.json({
+        message: 'Password reset successful. New password has been sent to your email.',
+      });
+    } catch (emailError) {
+      console.error('Failed to send password email:', emailError);
+      return res.status(500).json({
+        message: 'Password was reset but failed to send email. Please contact support.',
+        errorType: 'email_failed'
+      });
+    }
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
+      message: 'Server error during password reset',
+      errorType: 'server_error'
+    });
+  }
+});
+
+
+router.post('/request-password-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if email exists
+    const account = await Accounts.findOne({ email });
+    if (!account) {
+      return res.status(404).json({ message: 'Email not found' });
+    }
+
+    // Generate OTP
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
+
+    // In the /request-password-reset route
+    account.passwordResetOtp = otp;
+    account.passwordResetOtpExpires = new Date(Date.now() + 3 * 60 * 1000); // Changed from 10 to 3 minutes
+    await account.save();
+
+    // Send OTP email
+    await emailService.sendOTP(email, account.firstName, otp);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to your email'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message || 'Failed to process password reset request'
+    });
+  }
+});
+
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Find user with passwordResetOtp selected
+    const account = await Accounts.findOne({ email })
+      .select('+passwordResetOtp +passwordResetOtpExpires +password');
+
+    if (!account) {
+      return res.status(404).json({ message: 'Email not found' });
+    }
+
+    // Check OTP
+    if (!account.passwordResetOtp || account.passwordResetOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Check if OTP expired
+    if (account.passwordResetOtpExpires < new Date()) {
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+
+    // Generate new password
+    const newPassword = generateRandomPassword();
+    console.log('Generated new password:', newPassword); // Debug log
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    console.log('Hashed password:', hashedPassword); // Debug log
+
+    // Update password and clear OTP
+    account.password = hashedPassword;
+    account.passwordResetOtp = undefined;
+    account.passwordResetOtpExpires = undefined;
+    account.lastPasswordReset = new Date();
+
+    // Save the user
+    await account.save();
+    console.log('Password updated in database'); // Debug log
+
+    // Send email with the new password
+    await emailService.sendPasswordResetEmail(
+      email,
+      account.firstName,
+      newPassword,
+      account.studentID
+    );
+
+    res.json({
+      success: true,
+      message: 'Password reset successful. Your new password has been sent to your email.'
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
+      message: error.message || 'Failed to reset password'
+    });
+  }
+});
+
+
+// Resend OTP
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Find the most recent Pending Verification account
+    const account = await Accounts.findOne({
+      email,
+      status: 'Pending Verification'
+    }).sort({ createdAt: -1 });
+
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found or already verified' });
+    }
+
+    // Check if user is in lockout period
+    if (account.otpAttemptLockout && account.otpAttemptLockout > new Date()) {
+      const minutesLeft = Math.ceil((account.otpAttemptLockout - new Date()) / (1000 * 60));
+      return res.status(429).json({
+        message: `Please wait ${minutesLeft} minute(s) before requesting a new OTP.`,
+        lockout: true
+      });
+    }
+
+    // Generate new OTP
+    const otp = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false
+    });
+
+    // Update OTP and reset attempt counters
+    account.otp = otp;
+    account.otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+    account.otpAttempts = 0;
+    account.otpAttemptLockout = undefined;
+    account.lastOtpAttempt = undefined;
+    await account.save();
+
+    // Send OTP email
+    await sendOTP(email, account.firstName, otp);
+
+    return res.status(200).json({
+      message: 'New verification code sent to your email',
+      expiresIn: 180 // 3 minutes in seconds
+    });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    return res.status(500).json({ message: 'Server error while resending OTP' });
+  }
+});
+
+
+// Add this new route to get password reset status
+router.get('/password-reset-status/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const account = await Accounts.findOne({ email });
+
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    const response = {
+      status: account.status,
+      firstName: account.firstName,
+      isLockedOut: false, // No lockout for password reset (or implement if needed)
+      lockoutTimeLeft: 0,
+      otpTimeLeft: account.passwordResetOtpExpires
+        ? Math.ceil((account.passwordResetOtpExpires - new Date()) / 1000)
+        : 0,
+      attemptsLeft: 3 // Reset attempts for password reset
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Error getting password reset status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required',
+        errorType: 'validation'
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    // Find the account
+    const account = await Accounts.findOne({
+      email: cleanEmail
+    }).sort({ createdAt: -1 }).select('+password');
+
+    if (!account) {
+      console.log(`Login attempt for non-existent email: ${cleanEmail}`);
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Check if this is an admin staff account
+    const isAdminAccount = isAdminStaff(account.role);
+
+    // For non-admin accounts, reject immediately
+    if (!isAdminAccount) {
+      console.log(`Non-admin login attempt by ${cleanEmail} (Role: ${account.role})`);
+      return res.status(403).json({
+        message: 'Access restricted to admin staff only',
+        errorType: 'access_denied'
+      });
+    }
+
+    // Handle pending verification for admin accounts
+    if (account.status === 'Pending Verification') {
+      // Generate new OTP
+      const otp = generateOTP();
+      const otpExpires = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+      
+      console.log(`Generated OTP for ${cleanEmail}: ${otp}`);
+      console.log(`OTP expires at: ${otpExpires}`);
+      
+      account.otp = otp;
+      account.otpExpires = otpExpires;
+      account.otpAttempts = 0;
+      await account.save();
+      
+      try {
+        console.log(`Attempting to send OTP to ${cleanEmail}...`);
+        await sendOTP(account.email, account.firstName, otp);
+        console.log(`OTP successfully sent to ${cleanEmail}`);
+        
+        return res.status(403).json({
+          message: 'Admin account requires verification. A verification code has been sent to your email.',
+          errorType: 'pending_verification',
+          email: account.email,
+          firstName: account.firstName,
+          otpSent: true
+        });
+      } catch (emailError) {
+        console.error(`Failed to send OTP email to ${cleanEmail}:`, emailError);
+        return res.status(500).json({
+          message: 'Failed to send verification code. Please try again later.',
+          errorType: 'email_failure'
+        });
+      }
+    }
+
+    // For inactive admin accounts
+    if (account.status === 'Inactive') {
+      console.log(`Login attempt for inactive admin account: ${cleanEmail}`);
+      return res.status(403).json({
+        message: 'Admin account is inactive. Please contact system administrator.',
+        errorType: 'account_inactive'
+      });
+    }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(cleanPassword, account.password);
+
+    if (!isMatch) {
+      // Track failed attempt
+      account.loginAttempts += 1;
+      await account.save();
+      console.log(`Failed login attempt for ${cleanEmail}. Attempt ${account.loginAttempts}`);
+      
+      return res.status(401).json({
+        message: 'Invalid credentials',
+        errorType: 'authentication'
+      });
+    }
+
+    // Successful login
+    account.activityStatus = 'Online';
+    account.lastLogin = new Date();
+    account.loginAttempts = 0; // Reset on successful login
+    await account.save();
+    console.log(`Successful login for admin ${cleanEmail}`);
+
+    res.json({
+      message: 'Admin login successful',
+      email: account.email,
+      firstName: account.firstName,
+      role: account.role,
+      activityStatus: account.activityStatus,
+      isAdminStaff: true
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      message: 'Server error during admin login',
+      errorType: 'server_error'
+    });
+  }
+});
+
+
+router.post('/logout', async (req, res) => {
+  try {
+    const { email, createdAt } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+        errorType: 'validation'
+      });
+    }
+
+    let query = {
+      email,
+      status: 'Active'
+    };
+
+    // If createdAt is provided, parse it properly
+    if (createdAt) {
+      const date = new Date(createdAt);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({
+          message: 'Invalid createdAt timestamp',
+          errorType: 'validation'
+        });
+      }
+      query.createdAt = date;
+    }
+
+    const account = await Accounts.findOne(query)
+      .sort({ createdAt: -1 });
+
+    if (!account) {
+      return res.status(404).json({
+        message: 'Account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    // Update activity status
+    account.activityStatus = 'Offline';
+    account.lastLogout = new Date();
+    await account.save();
+
+    res.json({
+      message: 'Logout successful',
+      activityStatus: account.activityStatus
+    });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      message: 'Server error during logout',
+      errorType: 'server_error'
+    });
+  }
+});
+
+router.get('/activity/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { createdAt } = req.query;
+    const cleanEmail = email.trim().toLowerCase();
+
+    let query = {
+      email: cleanEmail,
+      status: 'Active'
+    };
+
+    // If createdAt is provided, parse it properly
+    if (createdAt) {
+      const date = new Date(createdAt);
+      if (isNaN(date.getTime())) {
+        return res.status(400).json({
+          message: 'Invalid createdAt timestamp',
+          errorType: 'validation'
+        });
+      }
+      query.createdAt = date;
+    }
+
+    const account = await Accounts.findOne(query)
+      .sort({ createdAt: -1 });
+
+    if (!account) {
+      return res.status(404).json({
+        message: 'Active account not found',
+        errorType: 'account_not_found'
+      });
+    }
+
+    res.json({
+      activityStatus: account.activityStatus,
+      loginAttempts: account.loginAttempts,
+      lastLogin: account.lastLogin,
+      lastLogout: account.lastLogout,
+      accountCreatedAt: account.createdAt
+    });
+
+  } catch (error) {
+    console.error('Activity fetch error:', error);
+    res.status(500).json({
+      message: 'Server error while fetching activity data',
+      errorType: 'server_error'
     });
   }
 });

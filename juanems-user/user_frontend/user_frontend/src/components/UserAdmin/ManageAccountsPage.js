@@ -6,9 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
+import { FaBoxArchive } from "react-icons/fa6";
 import { FaPen, FaPlus, FaSearch, FaUserCheck, FaUserTimes } from 'react-icons/fa';
 import { FiFilter } from 'react-icons/fi';
-import { GrPowerReset } from "react-icons/gr";
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft, MdOutlineManageAccounts } from 'react-icons/md';
 
@@ -282,14 +282,14 @@ const ManageAccountsPage = () => {
             </Button>
           )}
           <Button
-            icon={<GrPowerReset />}
+            icon={<FaBoxArchive/>} 
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => console.log('Reset password clicked for', record.userID)}
+            onClick={() => console.log('Archive clicked for', record.userID)}
           >
-            Reset Password
+            Archive
           </Button>
         </div>
-      )      
+      )
     }
   ];
 

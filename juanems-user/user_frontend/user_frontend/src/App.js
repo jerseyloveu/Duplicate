@@ -36,6 +36,7 @@ import Admin_CreateSection from './components/UserAdmin/CreateSection';
 import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'; 
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
+import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
 
 function App() {
   return (
@@ -94,6 +95,7 @@ function App() {
           <Route path="/admin/manage-subjects/edit/:id" element={<Admin_CreateSubject/>}/>
 
           <Route path='/admin/access-control' element={<Admin_AccessControl/>}/>
+          <Route path='/admin/verify-email' element={<Admin_VerifyEmail/>}/>
 
         </Routes>
       </div>
