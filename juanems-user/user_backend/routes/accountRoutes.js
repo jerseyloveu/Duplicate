@@ -135,8 +135,6 @@ router.post('/create-account', async (req, res) => {
   }
 });
 
-
-// Verify OTP
 // Update the verify-otp endpoint
 // Verify OTP (for admin staff that are in pending verification status)
 router.post('/verify-otp', async (req, res) => {
@@ -749,11 +747,20 @@ router.get('/activity/:email', async (req, res) => {
   }
 });
 
-// GET all accounts
-// GET /api/admin/accounts
+
+// GET /api/admin/accounts?archived=true or false
 router.get('/accounts', async (req, res) => {
   try {
-    const accounts = await Accounts.find().sort({ createdAt: -1 });
+    const { archived } = req.query;
+
+    let filter = {};
+    if (archived === 'true') {
+      filter.isArchived = true;
+    } else if (archived === 'false') {
+      filter.isArchived = false;
+    }
+
+    const accounts = await Accounts.find(filter).sort({ createdAt: -1 });
     res.status(200).json({ data: accounts });
   } catch (error) {
     console.error('Get accounts error:', error);
@@ -931,6 +938,29 @@ router.post('/generate-userid', async (req, res) => {
   } catch (error) {
     console.error('Error generating userID:', error);
     return res.status(500).json({ message: 'Error generating userID', error: error.message });
+  }
+});
+
+// Archive/Unarchive account
+router.patch('/archive/:id', async (req, res) => {
+  try {
+    const { isArchived } = req.body; // Get the desired archive state from request body
+    
+    const account = await Accounts.findByIdAndUpdate(
+      req.params.id,
+      { isArchived },
+      { new: true }
+    );
+    
+    if (!account) return res.status(404).json({ message: 'Account not found' });
+    
+    res.json({ 
+      message: `Account ${isArchived ? 'archived' : 'unarchived'} successfully`, 
+      account 
+    });
+  } catch (err) {
+    console.error(`Error ${req.body.isArchived ? 'archiving' : 'unarchiving'} account:`, err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

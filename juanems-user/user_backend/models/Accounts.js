@@ -62,9 +62,12 @@ const AccountsSchema = new mongoose.Schema({
   },
   lastLogout: {
     type: Date
-  }
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  }  
 }, { timestamps: true });
-// TODO: Extend schema for OTP 
 
 // Hash password before save
 AccountsSchema.pre('save', async function (next) {
