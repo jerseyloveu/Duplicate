@@ -12,6 +12,7 @@ import ScopeDashboard from './components/JuanScope/ScopeDashboard';
 import AboutPage from './components/JuanEMS/AboutPage';
 import TermsOfUsePage from './components/JuanEMS/TermsOfUsePage';
 import PrivacyPolicyPage from './components/JuanEMS/PrivacyPolicyPage';
+import SessionManager from './components/JuanScope/SessionManager';
 
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
@@ -38,6 +39,7 @@ import Admin_CreateSubject from './components/UserAdmin/CreateSubject';
 import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
 import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
 
+
 function App() {
   return (
     <Router>
@@ -58,7 +60,8 @@ function App() {
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
-          <Route path="/scope-dashboard" element={<ScopeDashboard />} /> {/* Add this new route */}
+          <Route path="/scope-dashboard" element={<SessionManager><ScopeDashboard /></SessionManager>}/>
+
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
@@ -75,7 +78,8 @@ function App() {
           <Route path='/admin/manage-queue' element={<Admin_ManageQueuePage/>}/>
           
           <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
-          <Route path='/admin/manage-student-schedule' element={<Admin_ManageStudentSchedule/>}/>          <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
+          <Route path='/admin/manage-student-schedule' element={<Admin_ManageStudentSchedule/>}/>          
+          <Route path='/admin/manage-schedule' element={<Admin_ManageSchedulePage/>}/>
           <Route path='/admin/manage-faculty-schedule' element={<Admin_ManageFacultySchedule/>}/>
 
           <Route path='/admin/manage-student-records' element={<Admin_ManageStudentRecordsPage/>}/>
