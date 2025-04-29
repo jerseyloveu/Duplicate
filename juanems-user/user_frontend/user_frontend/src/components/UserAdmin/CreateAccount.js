@@ -675,7 +675,7 @@ const CreateAccount = () => {
                           headers: {
                             'Content-Type': 'application/json',
                           },
-                          body: JSON.stringify({ email: value }),
+                          body: JSON.stringify({ email: value, excludeId: id }),
                         });
 
                         const data = await res.json();

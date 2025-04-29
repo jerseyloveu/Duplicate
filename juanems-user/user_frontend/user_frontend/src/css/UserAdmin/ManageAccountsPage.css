@@ -40,3 +40,13 @@
   font-size: 14px;
   color: #333;
 }
+
+.archived-tag {
+  width: 100%;
+  background-color: #ff0004;  
+  color: white;
+  font-size: 16px;
+  text-align: center;
+  padding: 5px;
+}
+

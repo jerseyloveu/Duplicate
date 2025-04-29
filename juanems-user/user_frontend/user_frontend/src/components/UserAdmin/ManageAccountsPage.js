@@ -3,14 +3,13 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import utc from 'dayjs/plugin/utc';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-
 import { BiExport } from 'react-icons/bi';
-import { FaBoxArchive } from "react-icons/fa6";
 import { FaPen, FaPlus, FaSearch, FaUserCheck, FaUserTimes } from 'react-icons/fa';
+import { FaBoxArchive, FaBoxOpen } from "react-icons/fa6";
 import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft, MdOutlineManageAccounts } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/ManageAccountsPage.css';
@@ -31,39 +30,36 @@ const ManageAccountsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [tableFilters, setTableFilters] = useState({});
   const [sorter, setSorter] = useState({});
+  const [showArchived, setShowArchived] = useState(false);
 
   // Fetch user accounts
-  const fetchAccounts = async (search = '') => {
+  const fetchAccounts = async (search = '', showArchived = false) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/accounts');
+      const response = await fetch(`/api/admin/accounts?archived=${showArchived}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
       const result = await response.json();
-
 
       // Filter and format data
       const filteredData = result.data.filter(item => {
         const fullName = `${item.firstName} ${item.middleName || ''} ${item.lastName}`.toLowerCase();
-
         const createdAtFormatted = dayjs(item.createdAt).isValid()
           ? dayjs(item.createdAt).format('MMM D, YYYY h:mm A').toLowerCase()
           : '';
         const updatedAtFormatted = dayjs(item.updatedAt).isValid()
           ? dayjs(item.updatedAt).format('MMM D, YYYY h:mm A').toLowerCase()
           : '';
-          
+
         return (
           fullName.includes(search.toLowerCase()) ||
           item.userID.toLowerCase().includes(search.toLowerCase()) ||
           item.email.toLowerCase().includes(search.toLowerCase()) ||
           item.role.toLowerCase().includes(search.toLowerCase()) ||
           item.status.toLowerCase().includes(search.toLowerCase()) ||
-          createdAtFormatted.includes(search.toLowerCase()) || 
+          createdAtFormatted.includes(search.toLowerCase()) ||
           updatedAtFormatted.includes(search.toLowerCase())
         );
       });
-
 
       const formattedData = filteredData.map((item, index) => ({
         ...item,
@@ -81,26 +77,26 @@ const ManageAccountsPage = () => {
   };
 
   useEffect(() => {
-    fetchAccounts(); // Initial fetch on page load
-  }, []);
+    fetchAccounts(searchTerm, showArchived);
+  }, [showArchived]); // Re-fetch on toggle  
 
   const handleSearch = (value) => {
     setSearchTerm(value);
-    fetchAccounts(value);
+    fetchAccounts(value, showArchived);
   };
 
   const handleClearFilters = () => {
     setTableFilters({});
     setSorter({});
     setSearchTerm('');
-    fetchAccounts('');
+    fetchAccounts('', showArchived);
   };
 
   const handleExport = () => {
     // Get the current date in YYYY-MM-DD format
     const currentDate = new Date().toISOString().split('T')[0];
     const fileName = `accounts-report-${currentDate}.pdf`;
-  
+
     fetch('http://localhost:5000/api/admin/export/accounts', {
       method: 'GET',
     })
@@ -125,22 +121,59 @@ const ManageAccountsPage = () => {
 
   const handleStatusToggle = async (record) => {
     const updatedStatus = record.status === 'Active' ? 'Inactive' : 'Active';
-  
+
     try {
       const response = await fetch(`/api/admin/accounts/${record._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: updatedStatus }),
       });
-  
+
       if (!response.ok) throw new Error('Failed to update status');
-  
-      fetchAccounts(searchTerm); // Refresh table
+
+      fetchAccounts(searchTerm, showArchived); // Refresh table
     } catch (error) {
       console.error('Error toggling status:', error);
     }
   };
-  
+
+  const handleArchiveToggle = async (record) => {
+    const { _id, isArchived, status } = record;
+    
+    // Prevent archiving active accounts
+    if (!isArchived && status === 'Active') {
+      alert('Cannot archive an active account. Please deactivate the account first.');
+      return null;
+    }
+    
+    console.log(`Attempting to ${isArchived ? 'unarchive' : 'archive'} account: ${_id}`);
+    try {
+      const response = await fetch(`/api/admin/archive/${_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isArchived: !isArchived }) // Toggle the archive status
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${isArchived ? 'unarchive' : 'archive'} account`);
+      }
+
+      const data = await response.json();
+      alert(`Account ${isArchived ? 'unarchived' : 'archived'} successfully!`);
+
+      // Refresh the accounts list after successful action
+      fetchAccounts(searchTerm, showArchived);
+
+      return data;
+    } catch (error) {
+      console.error(`${isArchived ? 'Unarchive' : 'Archive'} error:`, error);
+      alert(`Error ${isArchived ? 'unarchiving' : 'archiving'} account`);
+      return null;
+    }
+  };
+
   // Table column definitions
   const columns = [
     {
@@ -189,7 +222,7 @@ const ManageAccountsPage = () => {
     {
       title: 'Has Custom Access',
       width: 140,
-      dataIndex: 'hasCustomAccess', 
+      dataIndex: 'hasCustomAccess',
       key: 'hasCustomAccess',
       filters: [
         { text: 'Yes', value: true },
@@ -278,15 +311,22 @@ const ManageAccountsPage = () => {
               style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
               onClick={() => handleStatusToggle(record)}
             >
-              {record.status === 'Active' ? 'Inactive' : 'Active'}
+              {record.status === 'Active' ? 'Deactivate' : 'Activate'}
             </Button>
           )}
           <Button
-            icon={<FaBoxArchive/>} 
-            style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => console.log('Archive clicked for', record.userID)}
+            icon={record.isArchived ? <FaBoxOpen /> : <FaBoxArchive />}
+            style={{
+              width: '150px',
+              margin: '0 auto',
+              display: 'flex',
+              justifyContent: 'flex-start',
+            }}
+            onClick={() => handleArchiveToggle(record)}
+            disabled={!record.isArchived && record.status === 'Active' || record.status === 'Pending Verification'} 
+            title={!record.isArchived && record.status === 'Active' ? 'Cannot archive active accounts' : ''}
           >
-            Archive
+            {record.isArchived ? 'Unarchive' : 'Archive'}
           </Button>
         </div>
       )
@@ -320,20 +360,27 @@ const ManageAccountsPage = () => {
   return (
     <div className="main main-container">
       <Header />
+      {showArchived && (
+        <Tag className="archived-tag" color="orange">
+          Viewing Archived Accounts
+        </Tag>
+      )}
       <div className="main-content">
         {/* Page title */}
         <div className="page-title">
           <div className="arrows" onClick={handleBack}>
             <MdOutlineKeyboardArrowLeft />
           </div>
-          <p className="heading">Manage Accounts</p>
+          <p className="heading">
+            {showArchived ? "Archived Accounts" : "Manage Accounts"}
+          </p>
         </div>
 
         {/* Table controls */}
         <div className="table-functions">
           <div className="left-tools">
             <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>
-            <Button icon={<HiOutlineRefresh />} onClick={() => fetchAccounts(searchTerm)}>Refresh</Button>
+            <Button icon={<HiOutlineRefresh />} onClick={() => fetchAccounts(searchTerm, showArchived)}>Refresh</Button>
             <Button icon={<BiExport />} onClick={handleExport}>Export</Button>
           </div>
           <div className="right-tools">
@@ -345,7 +392,13 @@ const ManageAccountsPage = () => {
               onChange={(e) => handleSearch(e.target.value)}
               suffix={<FaSearch style={{ color: '#aaa' }} />}
             />
-            <Button icon={<MdOutlineManageAccounts/>} onClick={handleAccessControl}>Access Control</Button>
+            <Button 
+              icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />} 
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              {showArchived ? 'Close Archive' : 'Show Archived'}
+            </Button>
+            <Button icon={<MdOutlineManageAccounts />} onClick={handleAccessControl}>Access Control</Button>
             <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
               Create Account
             </Button>
@@ -354,11 +407,11 @@ const ManageAccountsPage = () => {
 
         {/* Accounts table */}
         <Table
-          style={{ width: '100%', flex: 1 }} // You can use any shade you want
+          style={{ width: '100%', flex: 1 }}
           columns={columns}
           dataSource={Array.isArray(dataSource) ? dataSource : []}
           loading={loading}
-          scroll={{ x: true}}
+          scroll={{ x: true }}
           pagination
           bordered
           onChange={(pagination, filters, sorter) => {
