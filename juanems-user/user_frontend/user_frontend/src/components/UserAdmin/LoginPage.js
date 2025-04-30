@@ -129,6 +129,14 @@ const LoginPage = () => {
     }
   };
 
+  const handleGoToHome = () => {
+    navigate('/home');
+  };
+
+  const handleForgotPassword = () => {
+    
+  };
+
   return (
     <div className="splash-screen-container main">
       <div className="login-container">
@@ -162,6 +170,14 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
           />
+          <div className="login-options">
+            <Button type="link" onClick={handleGoToHome} style={{ padding: 0 }}>
+              Go Back to Home
+            </Button>
+            <Button type="link" onClick={handleForgotPassword} style={{ padding: 0 }}>
+              Forgot Password?
+            </Button>
+          </div>
           {loginError && <div className="error-message">{loginError}</div>}
           <Button type='ghost' className="login-btn" onClick={handleSubmit}>Login</Button>
         </div>
