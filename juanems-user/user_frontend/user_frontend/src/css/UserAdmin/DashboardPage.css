@@ -15,55 +15,6 @@
   box-sizing: border-box;
 }
 
-.noticeboard {
-  height: auto;
-  background-color: white;
-  min-height: 200px;
-  padding: 1.5%;
-
-  cursor: pointer;
-  border-radius: 5px;
-  border: 1px solid #989898;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.noticeboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.divider {
-  height: .5px;
-  width: 100%;
-  background-color: #989898;
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-
-.postedby {
-  display: flex;
-  flex-direction: row;
-  margin-top: 10px;
-  align-items: center;
-}
-
-.postedby-pfp {
-  display: flex;
-  align-items: center;
-  margin-right: 15px;
-}
-
-.postedby-descrip {
-  display: flex;
-  flex-direction: column;
-}
-
-.postedby-name {
-  font-weight: 600;
-}
-
 .content-process {
   display: flex;
   flex-direction: row;
@@ -71,6 +22,7 @@
   width: 100%;
   padding-top: .8rem;
 }
+
 
 @media (max-width: 768px) {
   .dashboard-content {

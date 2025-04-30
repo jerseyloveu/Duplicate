@@ -20,6 +20,9 @@
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    border-top: 1px solid #dedede;
+    border-right: 1px solid #dedede;
+    border-bottom: 1px solid #dedede;
 }
 
 .card-modules:before {
@@ -34,19 +37,23 @@
 
 /* Different colored accents for card variety */
 .card-modules:nth-child(4n+1):before {
-    background-color: #3498db; /* Blue */
+    background-color: #3498db;
+    /* Blue */
 }
 
 .card-modules:nth-child(4n+2):before {
-    background-color: #2ecc71; /* Green */
+    background-color: #2ecc71;
+    /* Green */
 }
 
 .card-modules:nth-child(4n+3):before {
-    background-color: #e74c3c; /* Red */
+    background-color: #e74c3c;
+    /* Red */
 }
 
 .card-modules:nth-child(4n+4):before {
-    background-color: #f39c12; /* Orange */
+    background-color: #f39c12;
+    /* Orange */
 }
 
 .card-modules:hover {

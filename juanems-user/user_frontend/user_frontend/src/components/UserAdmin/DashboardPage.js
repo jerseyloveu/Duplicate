@@ -2,16 +2,26 @@ import { AiFillSchedule } from "react-icons/ai";
 import { FaLayerGroup, FaPen, FaStamp, FaUser } from "react-icons/fa";
 import { FaMoneyCheckDollar, FaPersonWalkingDashedLineArrowRight } from "react-icons/fa6";
 import { IoDocuments } from "react-icons/io5";
-import { MdOutlineKeyboardArrowLeft, MdOutlineKeyboardArrowRight, MdOutlineSecurity, MdTableChart } from "react-icons/md";
+import { MdOutlineSecurity, MdTableChart } from "react-icons/md";
 
 import React from 'react';
 import '../../css/UserAdmin/DashboardPage.css';
 import '../../css/UserAdmin/Global.css';
+import '../../css/UserAdmin/NoticeBoardStyles.css';
 import CardModule from './CardModule';
+import NoticeBoard from './NoticeBoard';
 import Footer from './Footer';
 import Header from './Header';
 
 const Dashboard = () => {
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+
   return (
     <div className="main main-container">
       <Header />
@@ -19,30 +29,10 @@ const Dashboard = () => {
         <div className='content-announcement'>
           <div className='announcement-left'>
             <p className='heading'>Dashboard</p>
-            <p className='date'>Friday, February 11, 2025</p>
+            <p className='date'>{formattedDate}</p>
           </div>
           <div className='announcement-right'>
-            <div className='noticeboard'>
-              <div className='noticeboard-header'>
-                <p className='subheading'>Notice Board</p>
-                <div className='arrows'>
-                  <MdOutlineKeyboardArrowLeft />
-                  <MdOutlineKeyboardArrowRight />
-                </div>
-              </div>
-              <div className='divider' />
-              <p className='subheading'>Enrollment Period Extended to March 20, 2025</p>
-              <p className='message'>Ensure all pending applications are thoroughly reviewed before the new deadline. This includes verifying submitted documents, checking for missing requirements, and updating applicant statuses accordingly. Admissions staff should prioritize applications that are nearing completion to avoid delays in processing.</p>
-              <div className='postedby'>
-                <div className='postedby-pfp'>
-                  <img className='pfp' alt="Profile" />
-                </div>
-                <div className='postedby-descrip'>
-                  <p className='postedby-name'>John Doe</p>
-                  <p>January 24, 2025 10:25 am</p>
-                </div>
-              </div>
-            </div>
+            <NoticeBoard />
           </div>
         </div>
 
