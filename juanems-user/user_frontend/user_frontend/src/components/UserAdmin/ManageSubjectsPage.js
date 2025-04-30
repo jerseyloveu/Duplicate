@@ -85,6 +85,11 @@ const ManageSubjectsPage = () => {
         const currentDate = new Date().toISOString().split('T')[0];
         const fileName = `subjects-report-${currentDate}.pdf`;
 
+        // Get values from localStorage without parsing as JSON
+        const fullName = localStorage.getItem('fullName');
+        const role = localStorage.getItem('role');
+        const userID = localStorage.getItem('userID');
+
         fetch('http://localhost:5000/api/admin/export/subjects', {
             method: 'GET',
         })
@@ -97,6 +102,31 @@ const ManageSubjectsPage = () => {
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
+
+                // After successful export, log the action
+                const logData = {
+                    userID: userID,
+                    accountName: fullName,
+                    role: role,
+                    action: 'Export',
+                    detail: `Exported subjects report: ${fileName}`
+                };
+
+                // Make API call to save the system log
+                fetch('http://localhost:5000/api/admin/system-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(logData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('System log recorded:', data);
+                    })
+                    .catch(error => {
+                        console.error('Failed to record system log:', error);
+                    });
             })
             .catch(error => {
                 console.error('Export failed:', error);
@@ -118,13 +148,22 @@ const ManageSubjectsPage = () => {
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-subjects/create');
 
+    
     const handleDelete = async (subjectID) => {
         try {
-            // Confirm deletion
             const confirmDelete = window.confirm('Are you sure you want to delete this subject?');
             if (!confirmDelete) return;
     
-            // API call to delete the subject
+            // Step 1: Fetch subject details for logging
+            const subjectRes = await fetch(`http://localhost:5000/api/admin/subjects/${subjectID}`);
+            if (!subjectRes.ok) {
+                return message.error('Failed to fetch subject details for logging.');
+            }
+    
+            const { data: subject } = await subjectRes.json();
+            const { subjectCode, subjectName } = subject;
+    
+            // Step 2: Proceed with deletion
             const response = await fetch(`http://localhost:5000/api/admin/subjects/${subjectID}`, {
                 method: 'DELETE',
                 headers: {
@@ -135,18 +174,41 @@ const ManageSubjectsPage = () => {
             const data = await response.json();
     
             if (!response.ok) {
-                // Handle error scenarios
                 return message.error(data.message || 'Failed to delete subject');
             }
     
-            fetchSubjects(); 
-            // If the deletion is successful, refresh the data or update the table
+            // Step 3: Log deletion to system logs
+            const adminID = localStorage.getItem('userID');
+            const adminName = localStorage.getItem('fullName');
+            const adminRole = localStorage.getItem('role');
+    
+            const logDetail = `Deleted subject "${subjectName}" (Code: ${subjectCode || 'N/A'})`;
+    
+            const logData = {
+                userID: adminID,
+                accountName: adminName,
+                role: adminRole,
+                action: 'Delete',
+                detail: logDetail,
+            };
+    
+            await fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData),
+            });
+    
+            // Step 4: Refresh table and notify
+            fetchSubjects();
             message.success('Subject deleted successfully!');
         } catch (error) {
             console.error('Error deleting subject:', error);
             message.error(error.message || 'Failed to delete subject. Please try again.');
         }
     };
+    
 
     // Table column definitions
     const columns = [
