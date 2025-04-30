@@ -475,6 +475,8 @@ router.get('/password-reset-status/:email', async (req, res) => {
 });
 
 
+const jwt = require('jsonwebtoken');
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -595,6 +597,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Generate JWT token
+    const JWT_SECRET = process.env.JWT_SECRET || 'sjdefi-admin-secret-key-2024';
+    const token = jwt.sign(
+      {
+        id: account._id,
+        email: account.email,
+        role: account.role
+      },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
     // Successful login
     account.activityStatus = 'Online';
     account.lastLogin = new Date();
@@ -604,8 +618,10 @@ router.post('/login', async (req, res) => {
 
     res.json({
       message: 'Admin login successful',
+      token: token, // Add JWT token
       email: account.email,
       firstName: account.firstName,
+      lastName: account.lastName, // Add lastName
       role: account.role,
       activityStatus: account.activityStatus,
       isAdminStaff: true

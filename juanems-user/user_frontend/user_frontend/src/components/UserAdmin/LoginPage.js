@@ -1,21 +1,34 @@
-import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
+import { FaUser } from "react-icons/fa";
+import { FaLock } from "react-icons/fa";
 import { Button, Input } from 'antd';
-import React, { useState } from 'react';
-import { FaLock, FaUser } from "react-icons/fa";
-import { useNavigate } from 'react-router-dom';
-import '../../css/JuanEMS/SplashScreen.css';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../../css/UserAdmin/Global.css';
+import '../../css/JuanEMS/SplashScreen.css';
 import '../../css/UserAdmin/LoginPage.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import Footer from './Footer';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loginError, setLoginError] = useState('');
+
+  useEffect(() => {
+    if (location.state?.fromPasswordReset) {
+      setLoginError(''); // Clear any errors
+      alert('Password reset successful. Please check your email for the new password.');
+    }
+
+    // Show message if redirected due to inactive account
+    if (location.state?.accountInactive) {
+      setLoginError('Your session was invalidated. Please login again.');
+    }
+  }, [location.state]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -65,7 +78,7 @@ const LoginPage = () => {
               email: data.email,
               firstName: data.firstName,
               fromRegistration: false,
-              fromLogin: true
+              fromLogin: true,
             }
           });
           return;
@@ -77,9 +90,14 @@ const LoginPage = () => {
         throw new Error(data.message || 'Login failed');
       }
 
+      // Store user information in localStorage
+      localStorage.setItem('fullName', `${data.firstName} ${data.lastName || ''}`);
+      localStorage.setItem('department', data.role || 'DEPARTMENT');
       localStorage.setItem('userEmail', data.email);
-      navigate('/admin/dashboard');
+      localStorage.setItem('token', data.token); // Store the JWT token
 
+      console.log("Login userEmail: " + data.email);
+      navigate('/admin/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setLoginError(err.message || 'Login failed. Please try again.');
@@ -106,18 +124,18 @@ const LoginPage = () => {
           <Input 
             className="custom-input" 
             addonBefore={<FaUser/>} 
-            placeholder="Enter Email"
+            placeholder="Enter Email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <label className="input-label">Password</label>
-          <Input.Password
-            className="custom-input"
-            addonBefore={<FaLock />}
-            placeholder="Enter Password"
+          <Input 
+            className="custom-input" 
+            addonBefore={<FaLock/>} 
+            placeholder="Enter Password" 
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
           />
           {loginError && <div className="error-message">{loginError}</div>}
           <Button type='ghost' className="login-btn" onClick={handleSubmit}>Login</Button>

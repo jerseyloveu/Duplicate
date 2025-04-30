@@ -1,51 +1,47 @@
-import React, { useState } from 'react';
-import { IoMdMenu } from "react-icons/io";
-import { IoSettingsOutline, IoLogOutOutline } from "react-icons/io5";
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IoMdMenu } from "react-icons/io";
+import { IoSettingsOutline } from "react-icons/io5";
+import { IoLogOutOutline } from "react-icons/io5";
 import '../../css/UserAdmin/Header.css';
 import '../../css/UserAdmin/Global.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 
 const Header = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [department, setDepartment] = useState('');
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/admin');
+    }
+
+    const fullName = localStorage.getItem('fullName') || '';
+    const userDepartment = localStorage.getItem('department') || 'DEPARTMENT';
+    setUserName(fullName);
+
+    // Remove anything in parentheses from department name
+    const cleanDepartment = userDepartment.replace(/\s*\([^)]*\)\s*/g, '').toUpperCase();
+    setDepartment(cleanDepartment);
+  }, [navigate]);
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
-
-  const handleLogout = async () => {
-    const email = localStorage.getItem('userEmail');
-
-    if (!email) {
-      navigate('/admin/login');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:5000/api/admin/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('Logout failed:', data.message);
-      } else {
-        console.log('Logout successful:', data.message);
-      }
-
-      // Clear user session data
-      localStorage.removeItem('userEmail');
-
-      navigate('/admin');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('department');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('token');
+    
+    // Redirect to login page
+    navigate('/admin');
   };
 
   return (
@@ -53,7 +49,7 @@ const Header = () => {
       <div className='header-blue'>
         <div className='header-section'>
           <IoMdMenu className="menu-icon" />
-          <span className="header-text">DEPARTMENT NAME</span>
+          <span className="header-text">{department}</span>
         </div>
         <img
           src={SJDEFILogo}
@@ -65,7 +61,7 @@ const Header = () => {
             className={`header-section user-profile ${isDropdownOpen ? 'active-profile' : ''}`}
             onClick={toggleDropdown}
           >
-            <span className="header-text">ACCOUNT NAME</span>
+            <span className="header-text">{userName}</span>
             <div className='pfp' />
           </div>
           

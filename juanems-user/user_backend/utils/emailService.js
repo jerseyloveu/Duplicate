@@ -392,7 +392,6 @@ const sendAdminPasswordEmail = async (email, name, password) => {
   }
 };
 
-
 module.exports = {
   generateOTP,
   sendOTP,
