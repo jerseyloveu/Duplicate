@@ -8,7 +8,6 @@ import JuanEMSLogo from '../../images/JuanEMSlogo.png';
 import '../../css/JuanScope/Register.css';
 
 import Footer from './Footer';
-import Header from './Header';
 import '../../css/UserAdmin/Global.css';
 
 function VerifyEmail() {
@@ -246,7 +245,6 @@ useEffect(() => {
           navigate('/admin/dashboard', {
             state: {
               fromVerification: true,
-              studentID: data.data?.studentID || studentID
             }
           });
         }, 2000);

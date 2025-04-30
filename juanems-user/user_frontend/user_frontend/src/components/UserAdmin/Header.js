@@ -22,6 +22,7 @@ const Header = () => {
 
     const fullName = localStorage.getItem('fullName') || '';
     const userRole = localStorage.getItem('role') || 'ROLE';
+    const userID = localStorage.getItem('userID');
     setUserName(fullName);
 
     // Remove anything in parentheses from department name
@@ -33,17 +34,66 @@ const Header = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
   
-  const handleLogout = () => {
-    // Clear user data from localStorage
-    localStorage.removeItem('fullName');
-    localStorage.removeItem('department');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('token');
-    
-    // Redirect to login page
-    navigate('/admin');
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userEmail = localStorage.getItem('userEmail');
+      const userID = localStorage.getItem('userID');
+      const fullName = localStorage.getItem('fullName');
+      const role = localStorage.getItem('role');
+      
+      // Send logout request to update account status
+      await fetch('http://localhost:5000/api/admin/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: userEmail
+        })
+      });
+      
+      // Create system log entry for logout action
+      const logData = {
+        userID: userID,
+        accountName: fullName,
+        role: role || 'ROLE',
+        action: 'Logged Out',
+        detail: `User ${fullName} logged out successfully.`,
+      };
+      
+      // Send the log data to the server
+      await fetch('http://localhost:5000/api/admin/system-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(logData),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Logout system log recorded:', data);
+      })
+      .catch(error => {
+        console.error('Failed to record logout system log:', error);
+      });
+      
+    } catch (err) {
+      console.error('Failed to process logout:', err);
+      // Still proceed with logout even if backend calls fail
+    } finally {
+      // Clear localStorage and redirect
+      localStorage.removeItem('fullName');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userID');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('token');
+      navigate('/admin');
+    }
   };
-
+  
   return (
     <div className='header-container'>
       <div className='header-blue'>
