@@ -170,7 +170,47 @@
 
 .scope-announcement-button.active:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 36avr, 90, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 36, 90, 0.4);
+}
+
+/* Sidebar layout and responsive behavior */
+.scope-sidebar {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background-color: white;
+  z-index: 100;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+/* When sidebar is open on mobile */
+@media (max-width: 768px) {
+  .scope-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .scope-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .scope-main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Toggle main content when sidebar is open */
+  .scope-main-content.sidebar-open {
+    filter: blur(1px);
+    pointer-events: none;
+  }
+  
+  .sidebar-overlay.active {
+    display: block;
+  }
 }
 
 /* Responsive adjustments */
@@ -223,4 +263,20 @@
     font-size: 0.9rem;
     line-height: 1.5;
   }
+}
+
+/* Sidebar overlay styling */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  display: none;
+}
+
+.sidebar-overlay.active {
+  display: block;
 }

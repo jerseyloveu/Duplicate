@@ -219,14 +219,13 @@ function ScopeDashboard() {
           </div>
         </header>
         <div className="scope-dashboard-content">
-          <aside className={`scope-sidebar ${sidebarOpen ? 'open' : ''}`}>
-            <SideNavigation 
-              userData={userData} 
-              onNavigate={closeSidebar}
-              onLogout={() => setShowLogoutModal(true)}
-            />
-          </aside>
-          <main className="scope-main-content">
+          {/* Pass isOpen prop to SideNavigation */}
+          <SideNavigation 
+            userData={userData} 
+            onNavigate={closeSidebar}
+            isOpen={sidebarOpen} 
+          />
+          <main className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
             {loading ? (
               <div className="scope-loading">Loading...</div>
             ) : error ? (
@@ -282,8 +281,9 @@ function ScopeDashboard() {
             )}
           </main>
         </div>
+        {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
-          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+          <div className="sidebar-overlay active" onClick={toggleSidebar}></div>
         )}
         {showLogoutModal && (
           <div className="scope-modal-overlay">

@@ -95,14 +95,14 @@ function ScopeAnnouncement() {
           </div>
         </header>
         <div className="scope-dashboard-content">
-          <aside className={`scope-sidebar ${sidebarOpen ? 'open' : ''}`}>
-            <SideNavigation 
-              userData={userData} 
-              onNavigate={closeSidebar}
-            />
-          </aside>
+          {/* Pass isOpen prop to SideNavigation */}
+          <SideNavigation 
+            userData={userData} 
+            onNavigate={closeSidebar}
+            isOpen={sidebarOpen}
+          />
 
-          <main className="scope-main-content">
+          <main className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
             <div className="announcement-container">
               <div className="announcement-content">
                 <h2 className="announcement-title">Announcements</h2>
@@ -133,8 +133,9 @@ function ScopeAnnouncement() {
             </div>
           </main>
         </div>
+        {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
-          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+          <div className="sidebar-overlay active" onClick={toggleSidebar}></div>
         )}
       </div>
     </SessionManager>

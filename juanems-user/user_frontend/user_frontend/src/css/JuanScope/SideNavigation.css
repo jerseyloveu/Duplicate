@@ -1,3 +1,4 @@
+/* SideNavigation.css */
 
 .side-nav-container {
     width: 280px;
@@ -10,6 +11,7 @@
     z-index: 100;
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s ease;
   }
   
   .side-nav-content {
@@ -240,9 +242,25 @@
       position: fixed;
       transform: translateX(-100%);
       transition: transform 0.3s ease;
+      width: 280px;
     }
     
     .side-nav-container.open {
       transform: translateX(0);
+    }
+  
+    /* Add shadow when sidebar is open for better visibility */
+    .side-nav-container.open {
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Main content shouldn't have margin when sidebar is not visible */
+    .scope-main-content {
+      margin-left: 0;
+      transition: margin-left 0.3s ease;
+    }
+    
+    .sidebar-overlay.active {
+      display: block;
     }
   }

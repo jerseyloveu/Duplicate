@@ -19,7 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import '../../css/JuanScope/SideNavigation.css';
 
-function SideNavigation({ userData, onNavigate }) {
+function SideNavigation({ userData, onNavigate, isOpen }) {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -77,7 +77,7 @@ function SideNavigation({ userData, onNavigate }) {
   };
 
   return (
-    <div className="side-nav-container">
+    <div className={`side-nav-container ${isOpen ? 'open' : ''}`}>
       <div className="side-nav-content">
         <div className="scope-user-profile">
           <div className="scope-user-icon">
