@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -7,12 +7,18 @@ import {
   faTimes, 
   faBullhorn, 
   faGraduationCap,
-  faCalendarCheck
+  faCalendarCheck,
+  faSearch,
+  faArrowUp,
+  faArrowDown,
+  faFilter
 } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeAnnouncement.css';
 import SessionManager from '../JuanScope/SessionManager';
 import SideNavigation from './SideNavigation';
+import axios from 'axios';
+import debounce from 'lodash.debounce';
 
 function ScopeAnnouncement() {
   const navigate = useNavigate();
@@ -25,13 +31,72 @@ function ScopeAnnouncement() {
     applicantID: localStorage.getItem('applicantID') || 'N/A'
   });
 
+  // Announcement state
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({
+    key: 'startDate',
+    direction: 'desc'
+  });
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((searchValue) => {
+      setCurrentPage(1);
+      fetchAnnouncements(1, searchValue);
+    }, 500),
+    [sortConfig] // Add sortConfig as dependency to reflect current sort settings
+  );
+
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     if (!userEmail) {
       navigate('/scope-login');
       return;
     }
-  }, [navigate]);
+    fetchAnnouncements(currentPage);
+  }, [navigate, currentPage, sortConfig]);
+
+  useEffect(() => {
+    if (searchTerm !== '') {
+      debouncedSearch(searchTerm);
+    }
+    return () => debouncedSearch.cancel();
+  }, [searchTerm, debouncedSearch]);
+
+  const fetchAnnouncements = async (page = currentPage, searchValue = searchTerm) => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/announcements', {
+        params: {
+          page: page,
+          limit: 5,
+          search: searchValue,
+          sortBy: sortConfig.key,
+          sortOrder: sortConfig.direction,
+          status: 'Active',
+          audience: 'Applicants' // Ensure we only fetch for Applicants
+        }
+      });
+      
+      // Double-check that announcements are for Applicants only
+      const filteredAnnouncements = response.data.announcements.filter(
+        announcement => announcement.audience === 'Applicants' && announcement.status === 'Active'
+      );
+      
+      setAnnouncements(filteredAnnouncements);
+      setTotalPages(response.data.totalPages);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching announcements:', err);
+      setError('Failed to load announcements. Please try again later.');
+      setLoading(false);
+    }
+  };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -41,34 +106,34 @@ function ScopeAnnouncement() {
     setSidebarOpen(false);
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/scope-dashboard');
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
   };
 
-  // Sample announcement data - in a real application, this would come from an API
-  const announcements = [
-    {
-      id: 1,
-      uploader: "Admin",
-      title: "Online Payment System Now Available",
-      content: "We are excited to introduce our new Online Payment System, allowing students to pay tuition and fees quickly and securely through the student portal. No more waiting in line—simply log in.",
-      date: "April 28, 2025, 10:30 AM"
-    },
-    {
-      id: 2,
-      uploader: "Registrar",
-      title: "Enrollment Period Extended",
-      content: "The enrollment period for the first semester has been extended until June 30, 2023. Please complete your enrollment requirements before the deadline.",
-      date: "April 25, 2025, 2:15 PM"
-    },
-    {
-      id: 3,
-      uploader: "Student Affairs",
-      title: "University Foundation Week Schedule",
-      content: "The annual University Foundation Week will be held from May 10-15, 2025. Various activities have been organized including sports competitions, academic contests, and cultural performances. Check the schedule for more details.",
-      date: "April 22, 2025, 9:45 AM"
+  const clearSearch = () => {
+    setSearchTerm('');
+    setCurrentPage(1);
+    fetchAnnouncements(1, '');
+  };
+
+  const requestSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
     }
-  ];
+    setSortConfig({ key, direction });
+  };
+
+  const formatDate = (dateString) => {
+    const options = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    };
+    return new Date(dateString).toLocaleDateString('en-US', options);
+  };
 
   return (
     <SessionManager>
@@ -95,7 +160,6 @@ function ScopeAnnouncement() {
           </div>
         </header>
         <div className="scope-dashboard-content">
-          {/* Pass isOpen prop to SideNavigation */}
           <SideNavigation 
             userData={userData} 
             onNavigate={closeSidebar}
@@ -111,24 +175,148 @@ function ScopeAnnouncement() {
                 <div className="announcement-banner">
                   Stay updated with important news, reminders, and university updates.
                 </div>
-                
-                <div className="announcement-list">
-                  {announcements.map(announcement => (
-                    <div className="announcement-item" key={announcement.id}>
-                      <div className="announcement-header">
-                        <div className="announcement-uploader">
-                          <FontAwesomeIcon icon={faBullhorn} className="uploader-icon" />
-                          <span className="uploader-name">{announcement.uploader}</span>
-                        </div>
-                        <h3 className="announcement-item-title">{announcement.title}</h3>
-                      </div>
-                      <p className="announcement-item-content">
-                        {announcement.content}
-                      </p>
-                      <p className="announcement-item-date">{announcement.date}</p>
+
+                {/* Enhanced Search and Sort Controls */}
+                <div className="announcement-controls">
+                  <div className="announcement-search">
+                    <div className="search-input-container">
+                      <FontAwesomeIcon icon={faSearch} className="search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search announcements..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        className="search-input"
+                        aria-label="Search announcements"
+                      />
+                      {searchTerm && (
+                        <button 
+                          className="search-clear-button" 
+                          onClick={clearSearch}
+                          aria-label="Clear search"
+                        >
+                          <FontAwesomeIcon icon={faTimes} />
+                        </button>
+                      )}
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="sort-controls">
+                    <span className="sort-label">Sort by: </span>
+                    <button 
+                      onClick={() => requestSort('startDate')}
+                      className={`sort-button ${sortConfig.key === 'startDate' ? 'active' : ''}`}
+                      aria-label="Sort by date"
+                    >
+                      Date
+                      {sortConfig.key === 'startDate' && (
+                        <FontAwesomeIcon 
+                          icon={sortConfig.direction === 'asc' ? faArrowUp : faArrowDown} 
+                          className="sort-icon" 
+                        />
+                      )}
+                    </button>
+                    <button 
+                      onClick={() => requestSort('subject')}
+                      className={`sort-button ${sortConfig.key === 'subject' ? 'active' : ''}`}
+                      aria-label="Sort by title"
+                    >
+                      Title
+                      {sortConfig.key === 'subject' && (
+                        <FontAwesomeIcon 
+                          icon={sortConfig.direction === 'asc' ? faArrowUp : faArrowDown} 
+                          className="sort-icon" 
+                        />
+                      )}
+                    </button>
+                  </div>
                 </div>
+
+                {/* Loading and Error States */}
+                {loading && (
+                  <div className="announcement-loading">
+                    <div className="loading-spinner"></div>
+                    <p>Loading announcements...</p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="announcement-error">
+                    <p>{error}</p>
+                    <button 
+                      onClick={() => fetchAnnouncements()}
+                      className="retry-button"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
+
+                {/* Announcement List */}
+                {!loading && !error && (
+                  <>
+                    <div className="announcement-list">
+                      {announcements.length > 0 ? (
+                        announcements.map(announcement => (
+                          <div className="announcement-item" key={announcement._id}>
+                            <div className="announcement-header">
+                              <div className="announcement-uploader">
+                                <div className="uploader-icon-container">
+                                  <FontAwesomeIcon icon={faBullhorn} className="uploader-icon" />
+                                </div>
+                                <span className="uploader-name">{announcement.announcer}</span>
+                              </div>
+                              <h3 className="announcement-item-title">{announcement.subject}</h3>
+                            </div>
+                            <p className="announcement-item-content">
+                              {announcement.content}
+                            </p>
+                            <div className="announcement-footer">
+                              <span className="announcement-item-date">
+                                Posted: {formatDate(announcement.startDate)}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-announcements">
+                          <FontAwesomeIcon icon={faBell} className="no-data-icon" />
+                          <p>No active announcements found</p>
+                          {searchTerm && (
+                            <button className="clear-search-button" onClick={clearSearch}>
+                              Clear Search
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {announcements.length > 0 && totalPages > 1 && (
+                      <div className="announcement-pagination">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="pagination-button"
+                          aria-label="Previous page"
+                        >
+                          Previous
+                        </button>
+                        <div className="pagination-info">
+                          <span>Page {currentPage} of {totalPages}</span>
+                        </div>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="pagination-button"
+                          aria-label="Next page"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </main>
