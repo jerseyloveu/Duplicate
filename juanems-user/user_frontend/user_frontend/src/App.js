@@ -14,6 +14,8 @@ import TermsOfUsePage from './components/JuanEMS/TermsOfUsePage';
 import PrivacyPolicyPage from './components/JuanEMS/PrivacyPolicyPage';
 import SessionManager from './components/JuanScope/SessionManager';
 import ScopeAnnouncement from './components/JuanScope/ScopeAnnouncement';
+import ScopeRegistration1 from './components/JuanScope/ScopeRegistration1';
+
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -39,7 +41,6 @@ import Admin_CreateSubject from './components/UserAdmin/CreateSubject';
 import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
 import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
 
-
 function App() {
   return (
     <Router>
@@ -62,6 +63,7 @@ function App() {
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
           <Route path="/scope-dashboard" element={<SessionManager><ScopeDashboard /></SessionManager>}/>
           <Route path="/scope-announcements" element={<SessionManager><ScopeAnnouncement /></SessionManager>}/>
+          <Route path="/scope-registration" element={<SessionManager><ScopeRegistration1 /></SessionManager>}/>
 
 
           {/* Admin  */}
