@@ -24,10 +24,10 @@ router.get('/accounts', async (req, res) => {
     const accountColumns = [
       { label: '#', property: '__rowNumber', width: 45 },
       { label: 'User ID', property: 'userID', width: 100 },
-      { label: 'Name', property: 'fullName', width: 140 }, 
+      { label: 'Name', property: 'fullName', width: 120 }, 
       { label: 'Email', property: 'email', width: 190 },
       { label: 'Role', property: 'role', width: 80 },
-      { label: 'Mobile', property: 'mobile', width: 90 },
+      { label: 'Mobile', property: 'mobile', width: 100 },
       { label: 'Status', property: 'status', width: 70 },
     ];    
 
