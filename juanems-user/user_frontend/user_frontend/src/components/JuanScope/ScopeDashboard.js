@@ -14,6 +14,7 @@ import '../../css/JuanScope/ScopeDashboard.css';
 import SessionManager from '../JuanScope/SessionManager';
 import SideNavigation from './SideNavigation';
 import axios from 'axios';
+import EnrollmentProcess from '../JuanScope/EnrollmentProcess';
 
 function ScopeDashboard() {
   const navigate = useNavigate();
@@ -295,6 +296,7 @@ function ScopeDashboard() {
                 </div>
               </div>
             )}
+            <EnrollmentProcess />
           </main>
         </div>
         {sidebarOpen && (
