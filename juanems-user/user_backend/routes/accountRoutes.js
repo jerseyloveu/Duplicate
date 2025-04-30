@@ -621,8 +621,9 @@ router.post('/login', async (req, res) => {
       token: token, // Add JWT token
       email: account.email,
       firstName: account.firstName,
-      lastName: account.lastName, // Add lastName
+      lastName: account.lastName, 
       role: account.role,
+      userID: account.userID,
       activityStatus: account.activityStatus,
       isAdminStaff: true
     });

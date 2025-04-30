@@ -93,8 +93,8 @@ const LoginPage = () => {
 
       // Store user information in localStorage
       localStorage.setItem('fullName', `${data.firstName} ${data.lastName || ''}`);
-      localStorage.setItem('department', data.role || 'DEPARTMENT');
-      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('role', data.role || 'ROLE');
+      localStorage.setItem('userID', data.userID);
       localStorage.setItem('token', data.token); // Store the JWT token
 
       console.log("Login userEmail: " + data.email);

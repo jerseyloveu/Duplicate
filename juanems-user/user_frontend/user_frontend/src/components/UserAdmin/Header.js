@@ -21,12 +21,12 @@ const Header = () => {
     }
 
     const fullName = localStorage.getItem('fullName') || '';
-    const userDepartment = localStorage.getItem('department') || 'DEPARTMENT';
+    const userRole = localStorage.getItem('role') || 'ROLE';
     setUserName(fullName);
 
     // Remove anything in parentheses from department name
-    const cleanDepartment = userDepartment.replace(/\s*\([^)]*\)\s*/g, '').toUpperCase();
-    setDepartment(cleanDepartment);
+    const userDepartment = userRole.replace(/\s*\([^)]*\)\s*/g, '').toUpperCase();
+    setDepartment(userDepartment);
   }, [navigate]);
 
   const toggleDropdown = () => {
