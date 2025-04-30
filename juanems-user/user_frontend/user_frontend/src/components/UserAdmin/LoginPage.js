@@ -97,7 +97,31 @@ const LoginPage = () => {
       localStorage.setItem('userID', data.userID);
       localStorage.setItem('token', data.token); // Store the JWT token
 
-      console.log("Login userEmail: " + data.email);
+      // Log the login action in the system log
+      const logData = {
+        userID: data.userID,
+        accountName: `${data.firstName} ${data.lastName || ''}`,
+        role: data.role || 'ROLE',
+        action: 'Logged In',
+        detail: `User ${data.firstName} ${data.lastName || ''} logged in successfully.`,
+      };
+
+      // Send the log data to the server
+      await fetch('http://localhost:5000/api/admin/system-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(logData),
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Login system log recorded:', data);
+        })
+        .catch(error => {
+          console.error('Failed to record login system log:', error);
+        });
+
       navigate('/admin/dashboard');
     } catch (err) {
       console.error('Login error:', err);
