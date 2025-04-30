@@ -5,7 +5,7 @@ import { faMapMarkerAlt, faPhone, faEnvelope, faClock, faEnvelopeOpen, faSpinner
 import { faFacebookSquare } from '@fortawesome/free-brands-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import JuanEMSLogo from '../../images/JuanEMSlogo.png';
-import '../../css/JuanScope/Register.css';
+import '../../css/JuanScope/VerifyEmail.css';
 
 function VerifyEmail() {
   const location = useLocation();
