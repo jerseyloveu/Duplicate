@@ -17,6 +17,7 @@ import {
   faCalculator,
   faSignOut
 } from '@fortawesome/free-solid-svg-icons';
+import '../../css/JuanScope/SideNavigation.css';
 
 function SideNavigation({ userData, onNavigate }) {
   const navigate = useNavigate();
@@ -76,137 +77,141 @@ function SideNavigation({ userData, onNavigate }) {
   };
 
   return (
-    <div className="scope-sidebar-content">
-      <div className="scope-user-profile">
-        <div className="scope-user-icon">
-          <FontAwesomeIcon icon={faUser} size="2x" />
-        </div>
-        <div className="scope-user-details">
-          <div className="scope-user-email">
-            {formatEmail(userData.email)}
+    <div className="side-nav-container">
+      <div className="side-nav-content">
+        <div className="scope-user-profile">
+          <div className="scope-user-icon">
+            <FontAwesomeIcon icon={faUser} size="2x" />
           </div>
-          <div className="scope-user-role">Applicant</div>
+          <div className="scope-user-details">
+            <div className="scope-user-email">
+              {formatEmail(userData.email)}
+            </div>
+            <div className="scope-user-role">Applicant</div>
+          </div>
+          <div className="scope-divider"></div>
         </div>
-        <div className="scope-divider"></div>
+        <button 
+          className="enrollment-process-button"
+          onClick={() => navigateToPage('/scope-dashboard')}
+        >
+          <FontAwesomeIcon icon={faCompass} className="enrollment-icon" />
+          <span className="enrollment-text">Enrollment Process</span>
+        </button>
+        <div className="scope-nav-section">
+          <div className="scope-nav-title">Admission Process</div>
+          <button 
+            className="scope-nav-button" 
+            onClick={() => navigateToPage('/scope-registration')}
+          >
+            <FontAwesomeIcon icon={faFileAlt} />
+            <span>1. Registration</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faClipboardCheck} />
+            <span>2. Exam & Interview Application</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faBook} />
+            <span>3. Admission Requirements</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faFileSignature} />
+            <span>4. Admission Exam Details</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faMoneyBillWave} />
+            <span>5. Exam Fee Payment</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faChartBar} />
+            <span>6. Exam & Interview Result</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faMoneyBillWave} />
+            <span>7. Reservation Payment</span>
+          </button>
+        </div>
+        <div className="scope-nav-section">
+          <div className="scope-nav-title">Enrollment Process</div>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faCheckCircle} />
+            <span>8. Admission Approval</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faClipboardList} />
+            <span>9. Enrollment Requirements</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faTicketAlt} />
+            <span>10. Voucher Application</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faCheckCircle} />
+            <span>11. Enrollment Approval</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faUserGraduate} />
+            <span>12. Student Assessment</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faMoneyBillWave} />
+            <span>13. Tuition Payment</span>
+          </button>
+          <button 
+            className="scope-nav-button disabled-nav-item"
+            disabled
+          >
+            <FontAwesomeIcon icon={faCalculator} />
+            <span>14. Officially Enrolled</span>
+          </button>
+        </div>
+        <div className="side-nav-footer">
+          <button
+            className="scope-nav-button scope-logout-button"
+            onClick={handleLogoutClick}
+          >
+            <FontAwesomeIcon icon={faSignOut} />
+            <span className="nav-text-bold">Logout</span>
+          </button>
+        </div>
       </div>
-      <button 
-        className="enrollment-process-button"
-        onClick={() => navigateToPage('/scope-dashboard')}
-      >
-        <FontAwesomeIcon icon={faCompass} className="enrollment-icon" />
-        <span className="enrollment-text">Enrollment Process</span>
-      </button>
-      <div className="scope-nav-section">
-        <div className="scope-nav-title">Admission Process</div>
-        <button 
-          className="scope-nav-button" 
-          onClick={() => navigateToPage('/scope-registration')}
-        >
-          <FontAwesomeIcon icon={faFileAlt} />
-          <span>1. Registration</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faClipboardCheck} />
-          <span>2. Exam & Interview Application</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faBook} />
-          <span>3. Admission Requirements</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faFileSignature} />
-          <span>4. Admission Exam Details</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faMoneyBillWave} />
-          <span>5. Exam Fee Payment</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faChartBar} />
-          <span>6. Exam & Interview Result</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faMoneyBillWave} />
-          <span>7. Reservation Payment</span>
-        </button>
-      </div>
-      <div className="scope-nav-section">
-        <div className="scope-nav-title">Enrollment Process</div>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faCheckCircle} />
-          <span>8. Admission Approval</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faClipboardList} />
-          <span>9. Enrollment Requirements</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faTicketAlt} />
-          <span>10. Voucher Application</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faCheckCircle} />
-          <span>11. Enrollment Approval</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faUserGraduate} />
-          <span>12. Student Assessment</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faMoneyBillWave} />
-          <span>13. Tuition Payment</span>
-        </button>
-        <button 
-          className="scope-nav-button disabled-nav-item"
-          disabled
-        >
-          <FontAwesomeIcon icon={faCalculator} />
-          <span>14. Officially Enrolled</span>
-        </button>
-      </div>
-      <button
-        className="scope-nav-button scope-logout-button"
-        onClick={handleLogoutClick}
-      >
-        <FontAwesomeIcon icon={faSignOut} />
-        <span className="nav-text-bold">Logout</span>
-      </button>
 
       {showLogoutModal && (
         <div className="scope-modal-overlay">

@@ -5,7 +5,7 @@ import {
   faBell, 
   faBars, 
   faTimes, 
-  faCircleUser, 
+  faBullhorn, 
   faGraduationCap,
   faCalendarCheck
 } from '@fortawesome/free-solid-svg-icons';
@@ -50,7 +50,6 @@ function ScopeAnnouncement() {
     {
       id: 1,
       uploader: "Admin",
-      icon: faCircleUser,
       title: "Online Payment System Now Available",
       content: "We are excited to introduce our new Online Payment System, allowing students to pay tuition and fees quickly and securely through the student portal. No more waiting in line—simply log in.",
       date: "April 28, 2025, 10:30 AM"
@@ -58,7 +57,6 @@ function ScopeAnnouncement() {
     {
       id: 2,
       uploader: "Registrar",
-      icon: faGraduationCap,
       title: "Enrollment Period Extended",
       content: "The enrollment period for the first semester has been extended until June 30, 2023. Please complete your enrollment requirements before the deadline.",
       date: "April 25, 2025, 2:15 PM"
@@ -66,7 +64,6 @@ function ScopeAnnouncement() {
     {
       id: 3,
       uploader: "Student Affairs",
-      icon: faCalendarCheck,
       title: "University Foundation Week Schedule",
       content: "The annual University Foundation Week will be held from May 10-15, 2025. Various activities have been organized including sports competitions, academic contests, and cultural performances. Check the schedule for more details.",
       date: "April 22, 2025, 9:45 AM"
@@ -107,16 +104,6 @@ function ScopeAnnouncement() {
 
           <main className="scope-main-content">
             <div className="announcement-container">
-              {/* <div className="juan-scope-top-section">
-                <button
-                  className="scope-announcement-button active"
-                  onClick={handleBackToDashboard}
-                  title="Back to Dashboard"
-                >
-                  <FontAwesomeIcon icon={faBell} />
-                </button>
-              </div> */}
-              
               <div className="announcement-content">
                 <h2 className="announcement-title">Announcements</h2>
                 <div className="announcement-divider"></div>
@@ -130,7 +117,7 @@ function ScopeAnnouncement() {
                     <div className="announcement-item" key={announcement.id}>
                       <div className="announcement-header">
                         <div className="announcement-uploader">
-                          <FontAwesomeIcon icon={announcement.icon} className="uploader-icon" />
+                          <FontAwesomeIcon icon={faBullhorn} className="uploader-icon" />
                           <span className="uploader-name">{announcement.uploader}</span>
                         </div>
                         <h3 className="announcement-item-title">{announcement.title}</h3>
