@@ -6,12 +6,9 @@ import {
   faBars, 
   faTimes, 
   faBullhorn, 
-  faGraduationCap,
-  faCalendarCheck,
   faSearch,
   faArrowUp,
-  faArrowDown,
-  faFilter
+  faArrowDown
 } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeAnnouncement.css';
@@ -31,25 +28,24 @@ function ScopeAnnouncement() {
     applicantID: localStorage.getItem('applicantID') || 'N/A'
   });
 
-  // Announcement state
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({
     key: 'startDate',
     direction: 'desc'
   });
 
-  // Debounced search function
   const debouncedSearch = useCallback(
     debounce((searchValue) => {
       setCurrentPage(1);
       fetchAnnouncements(1, searchValue);
     }, 500),
-    [sortConfig] // Add sortConfig as dependency to reflect current sort settings
+    [sortConfig]
   );
 
   useEffect(() => {
@@ -71,25 +67,38 @@ function ScopeAnnouncement() {
   const fetchAnnouncements = async (page = currentPage, searchValue = searchTerm) => {
     try {
       setLoading(true);
+      const userEmail = localStorage.getItem('userEmail');
+      
       const response = await axios.get('/api/announcements', {
         params: {
-          page: page,
+          page,
           limit: 5,
           search: searchValue,
           sortBy: sortConfig.key,
           sortOrder: sortConfig.direction,
           status: 'Active',
-          audience: 'Applicants' // Ensure we only fetch for Applicants
+          audience: 'Applicants',
+          userEmail
         }
       });
       
-      // Double-check that announcements are for Applicants only
-      const filteredAnnouncements = response.data.announcements.filter(
+      const validAnnouncements = response.data.announcements.filter(
         announcement => announcement.audience === 'Applicants' && announcement.status === 'Active'
       );
       
-      setAnnouncements(filteredAnnouncements);
+      setAnnouncements(validAnnouncements);
       setTotalPages(response.data.totalPages);
+      setTotalItems(response.data.totalItems || response.data.announcements.length);
+      
+      // Mark all displayed announcements as viewed
+      const viewPromises = validAnnouncements.map(announcement =>
+        axios.post('/api/announcements/view', {
+          userEmail,
+          announcementId: announcement._id
+        })
+      );
+      await Promise.all(viewPromises);
+      
       setLoading(false);
     } catch (err) {
       console.error('Error fetching announcements:', err);
@@ -176,7 +185,6 @@ function ScopeAnnouncement() {
                   Stay updated with important news, reminders, and university updates.
                 </div>
 
-                {/* Enhanced Search and Sort Controls */}
                 <div className="announcement-controls">
                   <div className="announcement-search">
                     <div className="search-input-container">
@@ -232,7 +240,6 @@ function ScopeAnnouncement() {
                   </div>
                 </div>
 
-                {/* Loading and Error States */}
                 {loading && (
                   <div className="announcement-loading">
                     <div className="loading-spinner"></div>
@@ -252,7 +259,6 @@ function ScopeAnnouncement() {
                   </div>
                 )}
 
-                {/* Announcement List */}
                 {!loading && !error && (
                   <>
                     <div className="announcement-list">
@@ -291,22 +297,29 @@ function ScopeAnnouncement() {
                       )}
                     </div>
 
-                    {/* Pagination Controls */}
                     {announcements.length > 0 && totalPages > 1 && (
                       <div className="announcement-pagination">
                         <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() => {
+                            const newPage = Math.max(currentPage - 1, 1);
+                            setCurrentPage(newPage);
+                          }}
                           disabled={currentPage === 1}
                           className="pagination-button"
                           aria-label="Previous page"
                         >
-                          Previous
+                          Back
                         </button>
+                        
                         <div className="pagination-info">
-                          <span>Page {currentPage} of {totalPages}</span>
+                          <span> {currentPage} of {totalPages} </span>
                         </div>
+                        
                         <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          onClick={() => {
+                            const newPage = Math.min(currentPage + 1, totalPages);
+                            setCurrentPage(newPage);
+                          }}
                           disabled={currentPage === totalPages}
                           className="pagination-button"
                           aria-label="Next page"
@@ -321,7 +334,6 @@ function ScopeAnnouncement() {
             </div>
           </main>
         </div>
-        {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
           <div className="sidebar-overlay active" onClick={toggleSidebar}></div>
         )}

@@ -13,6 +13,7 @@ import dashboardBg from '../../images/dashboard background.png';
 import '../../css/JuanScope/ScopeDashboard.css';
 import SessionManager from '../JuanScope/SessionManager';
 import SideNavigation from './SideNavigation';
+import axios from 'axios';
 
 function ScopeDashboard() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ function ScopeDashboard() {
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unviewedCount, setUnviewedCount] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -101,6 +103,16 @@ function ScopeDashboard() {
           studentID: localStorage.getItem('studentID') || userData.studentID || 'N/A',
           applicantID: localStorage.getItem('applicantID') || userData.applicantID || 'N/A',
         });
+
+        // Fetch unviewed announcements count
+        const announcementsResponse = await axios.get('/api/announcements', {
+          params: {
+            userEmail,
+            status: 'Active',
+            audience: 'Applicants'
+          }
+        });
+        setUnviewedCount(announcementsResponse.data.unviewedCount || 0);
 
         setLoading(false);
       } catch (err) {
@@ -219,7 +231,6 @@ function ScopeDashboard() {
           </div>
         </header>
         <div className="scope-dashboard-content">
-          {/* Pass isOpen prop to SideNavigation */}
           <SideNavigation 
             userData={userData} 
             onNavigate={closeSidebar}
@@ -250,12 +261,17 @@ function ScopeDashboard() {
                         })}
                       </div>
                     </div>
-                    <button
-                      className="scope-announcement-button"
-                      onClick={handleAnnouncements}
-                    >
-                      <FontAwesomeIcon icon={faBell} />
-                    </button>
+                    <div className="announcement-button-container">
+                      <button
+                        className="scope-announcement-button"
+                        onClick={handleAnnouncements}
+                      >
+                        <FontAwesomeIcon icon={faBell} />
+                      </button>
+                      {unviewedCount > 0 && (
+                        <span className="notification-badge">{unviewedCount}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="user-info-row">
                     <div className="scope-welcome-section">
@@ -281,7 +297,6 @@ function ScopeDashboard() {
             )}
           </main>
         </div>
-        {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
           <div className="sidebar-overlay active" onClick={toggleSidebar}></div>
         )}
