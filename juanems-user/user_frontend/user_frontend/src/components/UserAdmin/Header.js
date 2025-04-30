@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoMdMenu } from "react-icons/io";
-import { IoSettingsOutline } from "react-icons/io5";
-import { IoLogOutOutline } from "react-icons/io5";
+import { IoSettingsOutline, IoLogOutOutline, IoPersonCircleOutline } from "react-icons/io5";
 import '../../css/UserAdmin/Header.css';
 import '../../css/UserAdmin/Global.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
@@ -11,6 +10,7 @@ const Header = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [department, setDepartment] = useState('');
+  const [userInitials, setUserInitials] = useState('');
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -22,8 +22,16 @@ const Header = () => {
 
     const fullName = localStorage.getItem('fullName') || '';
     const userRole = localStorage.getItem('role') || 'ROLE';
-    const userID = localStorage.getItem('userID');
+    
     setUserName(fullName);
+    
+    // Generate initials from full name
+    const initialsArray = fullName.split(' ').map(name => name.charAt(0).toUpperCase());
+    // Take first and last initials if available, otherwise just use what we have
+    const initials = initialsArray.length > 1 
+      ? initialsArray[0] + initialsArray[initialsArray.length - 1]
+      : initialsArray.join('');
+    setUserInitials(initials);
 
     // Remove anything in parentheses from department name
     const userDepartment = userRole.replace(/\s*\([^)]*\)\s*/g, '').toUpperCase();
@@ -93,6 +101,27 @@ const Header = () => {
       navigate('/admin');
     }
   };
+
+  // Function to close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const profileElement = document.querySelector('.user-profile');
+      const dropdownElement = document.querySelector('.dropdown-menu');
+      
+      if (isDropdownOpen && 
+          profileElement && 
+          !profileElement.contains(event.target) && 
+          dropdownElement && 
+          !dropdownElement.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
   
   return (
     <div className='header-container'>
@@ -110,18 +139,32 @@ const Header = () => {
           <div 
             className={`header-section user-profile ${isDropdownOpen ? 'active-profile' : ''}`}
             onClick={toggleDropdown}
+            aria-expanded={isDropdownOpen}
+            aria-haspopup="true"
           >
             <span className="header-text">{userName}</span>
-            <div className='pfp' />
+            <div className='profile-avatar'>
+              {userInitials || <IoPersonCircleOutline />}
+            </div>
           </div>
           
           {isDropdownOpen && (
             <div className="dropdown-menu">
+              <div className="dropdown-header">
+                <div className='profile-avatar-large'>
+                  {userInitials || <IoPersonCircleOutline />}
+                </div>
+                <div className="dropdown-user-info">
+                  <span className="dropdown-name">{userName}</span>
+                  <span className="dropdown-role">{department}</span>
+                </div>
+              </div>
+              <div className="dropdown-divider"></div>
               <div className="dropdown-item">
                 <IoSettingsOutline className="dropdown-icon" />
                 <span>Settings</span>
               </div>
-              <div className="dropdown-item" onClick={handleLogout}>
+              <div className="dropdown-item logout-item" onClick={handleLogout}>
                 <IoLogOutOutline className="dropdown-icon" />
                 <span>Logout</span>
               </div>
