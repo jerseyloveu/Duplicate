@@ -85,29 +85,59 @@ const ManageStrandsPage = () => {
         fetchStrands('');
     };
 
-    const handleExport = () => {
-        // Get the current date in YYYY-MM-DD format
-        const currentDate = new Date().toISOString().split('T')[0];
-        const fileName = `strands-report-${currentDate}.pdf`;
 
-        fetch('http://localhost:5000/api/admin/export/strands', {
-            method: 'GET',
+   const handleExport = () => {
+    // Get the current date in YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `strands-report-${currentDate}.pdf`;
+    
+    // Get values from localStorage without parsing as JSON
+    const fullName = localStorage.getItem('fullName');
+    const role = localStorage.getItem('role');
+    const userID = localStorage.getItem('userID');
+    
+    fetch('http://localhost:5000/api/admin/export/strands', {
+        method: 'GET',
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        
+        // After successful export, log the action
+        const logData = {
+            userID: userID,
+            accountName: fullName,
+            role: role,
+            action: 'Export',
+            detail: `Exported strands report: ${fileName}`
+        };
+        
+        // Make API call to save the system log
+        fetch('http://localhost:5000/api/admin/system-logs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(logData)
         })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', fileName);
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-            })
-            .catch(error => {
-                console.error('Export failed:', error);
-            });
-    };
-
+        .then(response => response.json())
+        .then(data => {
+            console.log('System log recorded:', data);
+        })
+        .catch(error => {
+            console.error('Failed to record system log:', error);
+        });
+    })
+    .catch(error => {
+        console.error('Export failed:', error);
+    });
+};
 
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-strands/create');
@@ -119,7 +149,7 @@ const ManageStrandsPage = () => {
             width: 200,
             dataIndex: 'strandCode',
             key: 'strandCode',
-            sorter: (a, b) => a.email.localeCompare(b.email),
+            sorter: (a, b) => a.strandCode.localeCompare(b.strandCode),
             sortDirections: ['ascend', 'descend'],
             sortOrder: sorter.columnKey === 'strandCode' ? sorter.order : null,
         },
@@ -128,7 +158,7 @@ const ManageStrandsPage = () => {
             width: 200,
             dataIndex: 'strandName',
             key: 'strandName',
-            sorter: (a, b) => a.email.localeCompare(b.email),
+            sorter: (a, b) => a.strandName.localeCompare(b.strandName),
             sortDirections: ['ascend', 'descend'],
             sortOrder: sorter.columnKey === 'strandName' ? sorter.order : null,
         },
@@ -258,7 +288,7 @@ const ManageStrandsPage = () => {
                 </div>
 
 
-                {/* Accounts table */}
+                {/* Strands table */}
                 <Table
                     style={{ width: '100%', flex: 1 }} // You can use any shade you want
                     columns={columns}

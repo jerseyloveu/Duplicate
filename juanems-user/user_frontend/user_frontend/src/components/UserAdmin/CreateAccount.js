@@ -539,15 +539,40 @@ const CreateAccount = () => {
       }
 
       message.success(id ? 'Account successfully updated!' : 'Account successfully created!');
-      // navigate('/admin/verify-email', {
-      //   state: {
-      //     email: trimmedValues.email,
-      //     firstName: trimmedValues.firstName,
-      //     fromAdmin: true,
-      //     studentID: data.data.studentID || '',
-      //     expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
-      //   }
-      // });
+
+      // Get values from localStorage without parsing as JSON
+      const fullName = localStorage.getItem('fullName');
+      const role = localStorage.getItem('role');
+      const userID = localStorage.getItem('userID');
+
+      // After successful create/update, log the action
+      const logAction = id ? 'Update' : 'Create';
+      const fullAccountName = `${trimmedValues.firstName} ${trimmedValues.middleName} ${trimmedValues.lastName}`.replace(/\s+/g, ' ').trim();
+      const logDetail = `${logAction === 'Create' ? 'Created' : 'Updated'} account [${trimmedValues.userID}] for ${fullAccountName} (${trimmedValues.role}`;
+
+      const logData = {
+        userID: userID,
+        accountName: fullName,
+        role: role,
+        action: logAction,
+        detail: logDetail,
+      };
+
+      // Make API call to save the system log
+      fetch('http://localhost:5000/api/admin/system-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(logData)
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('System log recorded:', data);
+        })
+        .catch(error => {
+          console.error('Failed to record system log:', error);
+        });
 
       navigate('/admin/manage-accounts');
     } catch (error) {

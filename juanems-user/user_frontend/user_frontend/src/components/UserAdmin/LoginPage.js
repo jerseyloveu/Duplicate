@@ -3,6 +3,7 @@ import { FaLock } from "react-icons/fa";
 import { Button, Input } from 'antd';
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import '../../css/UserAdmin/Global.css';
 import '../../css/JuanEMS/SplashScreen.css';
 import '../../css/UserAdmin/LoginPage.css';
@@ -17,8 +18,6 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loginError, setLoginError] = useState('');
-  const [lastResetRequest, setLastResetRequest] = useState(null);
-  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
 
   useEffect(() => {
     if (location.state?.fromPasswordReset) {
@@ -80,7 +79,7 @@ const LoginPage = () => {
               email: data.email,
               firstName: data.firstName,
               fromRegistration: false,
-              fromLogin: true
+              fromLogin: true,
             }
           });
           return;
@@ -92,19 +91,14 @@ const LoginPage = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // In ScopeLogin.js handleSubmit function
-      localStorage.setItem('userEmail', data.email);
-      localStorage.setItem('firstName', data.firstName);
-      // localStorage.setItem('studentID', data.studentID);
-      // localStorage.setItem('applicantID', data.applicantID); // Add this line
-      localStorage.setItem('lastLogin', data.lastLogin);
-      localStorage.setItem('lastLogout', data.lastLogout);
-      localStorage.setItem('createdAt', data.createdAt);
-      localStorage.setItem('activityStatus', data.activityStatus);
-      localStorage.setItem('loginAttempts', data.loginAttempts.toString());
-      // Successful login - navigate to dashboard
-      navigate('/admin/dashboard');
+      // Store user information in localStorage
+      localStorage.setItem('fullName', `${data.firstName} ${data.lastName || ''}`);
+      localStorage.setItem('role', data.role || 'ROLE');
+      localStorage.setItem('userID', data.userID);
+      localStorage.setItem('token', data.token); // Store the JWT token
 
+      console.log("Login userEmail: " + data.email);
+      navigate('/admin/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setLoginError(err.message || 'Login failed. Please try again.');
@@ -134,16 +128,15 @@ const LoginPage = () => {
             placeholder="Enter Email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            // Removed the onBlur handler that was causing the issue
           />
           <label className="input-label">Password</label>
-          <Input 
-            className="custom-input" 
-            addonBefore={<FaLock/>} 
-            placeholder="Enter Password" 
-            type={showPassword ? "text" : "password"}
+          <Input.Password
+            className="custom-input"
+            addonBefore={<FaLock />}
+            placeholder="Enter Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
           />
           {loginError && <div className="error-message">{loginError}</div>}
           <Button type='ghost' className="login-btn" onClick={handleSubmit}>Login</Button>

@@ -4,6 +4,7 @@ const pdfService = require('../services/pdf-service');
 const Account = require('../models/Accounts');
 const Subject = require('../models/Subjects');
 const Strand = require('../models/Strands');
+const SystemLog = require('../models/SystemLog');
 
 router.get('/accounts', async (req, res) => {
   try {
@@ -130,6 +131,45 @@ router.get('/strands', async (req, res) => {
   } catch (error) {
     console.error('Export failed:', error);
     res.status(500).json({ error: 'Failed to export strands' });
+  }
+});
+
+router.get('/system-logs', async (req, res) => {
+  try {
+    const logs = await SystemLog.find().lean();
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `system-logs-report-${currentDate}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    const modifiedLogs = logs.map((log, index) => ({
+      __rowNumber: (index + 1).toString(),
+      userID: log.userID || 'N/A',
+      accountName: log.accountName || 'N/A',
+      role: log.role || 'N/A',
+      action: log.action || 'N/A',
+      detail: log.detail || 'N/A',
+      createdAt: log.createdAt
+        ? new Date(log.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })
+        : 'N/A',
+    }));
+
+    const logColumns = [
+      { label: '#', property: '__rowNumber', width: 25 },
+      { label: 'User ID', property: 'userID', width: 80 },
+      { label: 'Account Name', property: 'accountName', width: 100 },
+      { label: 'Role', property: 'role', width: 80 },
+      { label: 'Action', property: 'action', width: 60 },
+      { label: 'Detail', property: 'detail', width: 170 },
+      { label: 'Timestamp', property: 'createdAt', width: 130 },
+    ];
+
+    pdfService.buildPDF(modifiedLogs, logColumns, 'System Logs Report', (chunk) => res.write(chunk), () => res.end());
+  } catch (error) {
+    console.error('Export failed:', error);
+    res.status(500).json({ error: 'Failed to export system logs' });
   }
 });
 

@@ -82,6 +82,11 @@ const ManageSectionsPage = () => {
         const currentDate = new Date().toISOString().split('T')[0];
         const fileName = `sections-report-${currentDate}.pdf`;
 
+        // Get values from localStorage without parsing as JSON
+        const fullName = localStorage.getItem('fullName');
+        const role = localStorage.getItem('role');
+        const userID = localStorage.getItem('userID');
+
         fetch('http://localhost:5000/api/admin/export/sections', {
             method: 'GET',
         })
@@ -94,6 +99,31 @@ const ManageSectionsPage = () => {
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
+
+                // After successful export, log the action
+                const logData = {
+                    userID: userID,
+                    accountName: fullName,
+                    role: role,
+                    action: 'Export',
+                    detail: `Exported sections report: ${fileName}`
+                };
+
+                // Make API call to save the system log
+                fetch('http://localhost:5000/api/admin/system-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(logData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('System log recorded:', data);
+                    })
+                    .catch(error => {
+                        console.error('Failed to record system log:', error);
+                    });
             })
             .catch(error => {
                 console.error('Export failed:', error);
@@ -115,14 +145,24 @@ const ManageSectionsPage = () => {
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-sections/create');
 
-    const handleDelete = async (sectionName) => {
+
+    const handleDelete = async (_id) => {
         try {
             // Confirm deletion
             const confirmDelete = window.confirm('Are you sure you want to delete this section?');
             if (!confirmDelete) return;
 
-            // API call to delete the section
-            const response = await fetch(`http://localhost:5000/api/admin/sections/${sectionName}`, {
+            // Fetch section details first for logging
+            const sectionRes = await fetch(`http://localhost:5000/api/admin/sections/${_id}`);
+            if (!sectionRes.ok) {
+                return message.error('Failed to fetch section details for logging.');
+            }
+
+            const { data: section } = await sectionRes.json();
+            const { sectionName, gradeLevel, strand } = section;
+
+            // Proceed with deletion
+            const response = await fetch(`http://localhost:5000/api/admin/sections/${_id}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -132,18 +172,39 @@ const ManageSectionsPage = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                // Handle error scenarios
                 return message.error(data.message || 'Failed to delete section');
             }
 
+            // Log the deletion
+            const adminID = localStorage.getItem('userID');
+            const adminName = localStorage.getItem('fullName');
+            const adminRole = localStorage.getItem('role');
+
+            const logData = {
+                userID: adminID,
+                accountName: adminName,
+                role: adminRole,
+                action: 'Delete',
+                detail: `Deleted section [${sectionName}] of ${gradeLevel} - ${strand}`,
+            };
+
+            await fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            });
+
+            // Refresh and notify
             fetchSections();
-            // If the deletion is successful, refresh the data or update the table
             message.success('Section deleted successfully!');
         } catch (error) {
             console.error('Error deleting section:', error);
             message.error(error.message || 'Failed to delete section. Please try again.');
         }
     };
+
 
     // Table column definitions
     const columns = [

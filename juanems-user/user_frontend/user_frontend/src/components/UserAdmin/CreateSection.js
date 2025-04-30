@@ -90,8 +90,42 @@ const CreateSection = () => {
                 }
                 return message.error('Server error. Please try again later.');
             }
-    
+
             message.success(`Section successfully ${id ? 'updated' : 'created'}!`);
+
+            // Get values from localStorage without parsing as JSON
+            const fullName = localStorage.getItem('fullName');
+            const role = localStorage.getItem('role');
+            const userID = localStorage.getItem('userID');
+
+            // After successful create/update, log the action
+            const logAction = id ? 'Update' : 'Create';
+            const logDetail = `${logAction === 'Create' ? 'Created' : 'Updated'} section [${trimmedValues.sectionName}] for ${trimmedValues.gradeLevel} - ${trimmedValues.strand}`;
+
+            const logData = {
+                userID: userID,
+                accountName: fullName,
+                role: role,
+                action: logAction,
+                detail: logDetail,
+            };
+
+            // Make API call to save the system log
+            fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('System log recorded:', data);
+                })
+                .catch(error => {
+                    console.error('Failed to record system log:', error);
+                });
+
             navigate('/admin/manage-sections');
         } catch (error) {
             console.error('Error submitting section:', error);

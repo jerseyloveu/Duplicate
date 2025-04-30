@@ -7,6 +7,7 @@ const subjectRoutes = require('./routes/subjectRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const strandRoutes = require('./routes/strandRoutes'); 
 const roleRoutes = require('./routes/rolesRoutes'); 
+const systemLogRoutes = require('./routes/systemLogRoutes'); 
 const exportFile = require('./routes/exportFile');
 const announcementRoutes = require('./routes/announcementRoutes');
 const connectDB = require('./config/db');
@@ -86,6 +87,7 @@ app.use('/api/admin/subjects', subjectRoutes);
 app.use('/api/admin/sections', sectionRoutes);
 app.use('/api/admin/strands', strandRoutes);
 app.use('/api/admin/roles', roleRoutes);
+app.use('/api/admin/system-logs', systemLogRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

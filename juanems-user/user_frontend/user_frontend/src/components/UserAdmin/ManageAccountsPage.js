@@ -97,6 +97,11 @@ const ManageAccountsPage = () => {
     const currentDate = new Date().toISOString().split('T')[0];
     const fileName = `accounts-report-${currentDate}.pdf`;
 
+    // Get values from localStorage without parsing as JSON
+    const fullName = localStorage.getItem('fullName');
+    const role = localStorage.getItem('role');
+    const userID = localStorage.getItem('userID');
+
     fetch('http://localhost:5000/api/admin/export/accounts', {
       method: 'GET',
     })
@@ -109,6 +114,31 @@ const ManageAccountsPage = () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
+
+        // After successful export, log the action
+        const logData = {
+          userID: userID,
+          accountName: fullName,
+          role: role,
+          action: 'Export',
+          detail: `Exported accounts report: ${fileName}`
+        };
+
+        // Make API call to save the system log
+        fetch('http://localhost:5000/api/admin/system-logs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(logData)
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log('System log recorded:', data);
+          })
+          .catch(error => {
+            console.error('Failed to record system log:', error);
+          });
       })
       .catch(error => {
         console.error('Export failed:', error);
@@ -118,6 +148,7 @@ const ManageAccountsPage = () => {
   const handleBack = () => navigate('/admin/dashboard');
   const handleCreate = () => navigate('/admin/manage-accounts/create');
   const handleAccessControl = () => navigate('/admin/access-control');
+
 
   const handleStatusToggle = async (record) => {
     const updatedStatus = record.status === 'Active' ? 'Inactive' : 'Active';
@@ -137,42 +168,78 @@ const ManageAccountsPage = () => {
     }
   };
 
+
   const handleArchiveToggle = async (record) => {
     const { _id, isArchived, status } = record;
-    
-    // Prevent archiving active accounts
+
     if (!isArchived && status === 'Active') {
       alert('Cannot archive an active account. Please deactivate the account first.');
       return null;
     }
-    
-    console.log(`Attempting to ${isArchived ? 'unarchive' : 'archive'} account: ${_id}`);
+
+    const actionType = isArchived ? 'Unarchive' : 'Archive';
+    console.log(`Attempting to ${actionType.toLowerCase()} account: ${_id}`);
+
     try {
+      // Fetch latest account info by ID
+      const accountRes = await fetch(`http://localhost:5000/api/admin/accounts/${_id}`);
+      if (!accountRes.ok) throw new Error('Failed to fetch account details');
+
+      const account = await accountRes.json();
+      const { userID, role, firstName, middleName, lastName } = account.data || {};
+
+      // Safely construct full name
+      const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || 'N/A';
+
+      // Proceed with archiving/unarchiving
       const response = await fetch(`/api/admin/archive/${_id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ isArchived: !isArchived }) // Toggle the archive status
+        body: JSON.stringify({ isArchived: !isArchived })
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to ${isArchived ? 'unarchive' : 'archive'} account`);
+        throw new Error(`Failed to ${actionType.toLowerCase()} account`);
       }
 
-      const data = await response.json();
-      alert(`Account ${isArchived ? 'unarchived' : 'archived'} successfully!`);
+      alert(`Account ${actionType.toLowerCase()}d successfully!`);
 
-      // Refresh the accounts list after successful action
+      // Log the action using the current admin's info
+      const adminID = localStorage.getItem('userID');
+      const adminName = localStorage.getItem('fullName');
+      const adminRole = localStorage.getItem('role');
+
+      const logDetail = `${actionType}d account [UserID: ${userID || 'N/A'}] of ${fullName} (Role: ${role || 'N/A'})`;
+
+      const logData = {
+        userID: adminID,
+        accountName: adminName,
+        role: adminRole,
+        action: actionType,
+        detail: logDetail,
+      };
+
+      await fetch('http://localhost:5000/api/admin/system-logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(logData)
+      });
+
+      // Refresh accounts
       fetchAccounts(searchTerm, showArchived);
+      return await response.json();
 
-      return data;
     } catch (error) {
-      console.error(`${isArchived ? 'Unarchive' : 'Archive'} error:`, error);
-      alert(`Error ${isArchived ? 'unarchiving' : 'archiving'} account`);
+      console.error(`${actionType} error:`, error);
+      alert(`Error ${actionType.toLowerCase()}ing account`);
       return null;
     }
   };
+
 
   // Table column definitions
   const columns = [
@@ -326,7 +393,7 @@ const ManageAccountsPage = () => {
               justifyContent: 'flex-start',
             }}
             onClick={() => handleArchiveToggle(record)}
-            disabled={!record.isArchived && record.status === 'Active' || record.status === 'Pending Verification'} 
+            disabled={!record.isArchived && record.status === 'Active' || record.status === 'Pending Verification'}
             title={!record.isArchived && record.status === 'Active' ? 'Cannot archive active accounts' : ''}
           >
             {record.isArchived ? 'Unarchive' : 'Archive'}
@@ -395,8 +462,8 @@ const ManageAccountsPage = () => {
               onChange={(e) => handleSearch(e.target.value)}
               suffix={<FaSearch style={{ color: '#aaa' }} />}
             />
-            <Button 
-              icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />} 
+            <Button
+              icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />}
               onClick={() => setShowArchived(!showArchived)}
             >
               {showArchived ? 'Close Archive' : 'Show Archived'}
