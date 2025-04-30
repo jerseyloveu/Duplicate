@@ -3,6 +3,7 @@ import { FaLock } from "react-icons/fa";
 import { Button, Input } from 'antd';
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import '../../css/UserAdmin/Global.css';
 import '../../css/JuanEMS/SplashScreen.css';
 import '../../css/UserAdmin/LoginPage.css';
@@ -129,13 +130,13 @@ const LoginPage = () => {
             onChange={(e) => setEmail(e.target.value)}
           />
           <label className="input-label">Password</label>
-          <Input 
-            className="custom-input" 
-            addonBefore={<FaLock/>} 
-            placeholder="Enter Password" 
-            type={showPassword ? "text" : "password"}
+          <Input.Password
+            className="custom-input"
+            addonBefore={<FaLock />}
+            placeholder="Enter Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
           />
           {loginError && <div className="error-message">{loginError}</div>}
           <Button type='ghost' className="login-btn" onClick={handleSubmit}>Login</Button>
