@@ -1,27 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/Announcement');
+const ViewedAnnouncement = require('../models/ViewedAnnouncement');
 const mongoose = require('mongoose');
 
-// Get all active announcements with pagination and fuzzy search
+// Get all active announcements with pagination, fuzzy search, and unviewed count
 router.get('/', async (req, res) => {
   try {
-    // Parse query parameters with explicit type conversion
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
     const search = req.query.search || '';
     const sortBy = req.query.sortBy || 'startDate';
     const sortOrder = req.query.sortOrder || 'desc';
+    const userEmail = req.query.userEmail; // Add userEmail to query params
     
-    // Force these specific values regardless of what's in req.query
-    // This is the strict enforcement to resolve the issue
-    const status = 'Active';  // Force 'Active' status
-    const audience = 'Applicants'; // Force 'Applicants' audience
+    const status = 'Active';
+    const audience = 'Applicants';
     
-    console.log('Filtering for status:', status);
-    console.log('Filtering for audience:', audience);
-    
-    // Build query with explicit equality checks
     const query = {
       status: { $eq: status },
       audience: { $eq: audience },
@@ -29,10 +24,6 @@ router.get('/', async (req, res) => {
       endDate: { $gte: new Date() }
     };
 
-    // Log the query to verify it's correct
-    console.log('MongoDB query:', JSON.stringify(query));
-
-    // Add fuzzy search if search term exists
     if (search && search.trim() !== '') {
       query.$or = [
         { subject: { $regex: escapeRegex(search), $options: 'i' } },
@@ -43,27 +34,32 @@ router.get('/', async (req, res) => {
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // First, let's check what announcements exist in the database
-    const allAnnouncements = await Announcement.find({}).lean();
-    console.log('All audiences in database:', allAnnouncements.map(a => a.audience));
-
-    // Execute the filtered query
     const announcements = await Announcement.find(query)
       .sort(sort)
       .limit(limit)
       .skip((page - 1) * limit)
-      .lean() // For better performance
+      .lean()
       .exec();
-    
-    // Log what's being returned
-    console.log('Filtered announcements:', announcements.map(a => ({
-      id: a._id,
-      subject: a.subject,
-      audience: a.audience,
-      status: a.status
-    })));
 
     const count = await Announcement.countDocuments(query);
+
+    // Get unviewed announcements count
+    let unviewedCount = 0;
+    if (userEmail) {
+      const viewedAnnouncements = await ViewedAnnouncement.find({ userEmail })
+        .distinct('announcementId');
+      
+      const allActiveAnnouncements = await Announcement.find({
+        status: 'Active',
+        audience: 'Applicants',
+        startDate: { $lte: new Date() },
+        endDate: { $gte: new Date() }
+      }).select('_id');
+
+      unviewedCount = allActiveAnnouncements.filter(
+        ann => !viewedAnnouncements.includes(ann._id.toString())
+      ).length;
+    }
 
     res.json({
       success: true,
@@ -71,6 +67,7 @@ router.get('/', async (req, res) => {
       totalPages: Math.ceil(count / limit),
       currentPage: page,
       totalItems: count,
+      unviewedCount,
       filterApplied: {
         status: status,
         audience: audience
@@ -86,12 +83,44 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Helper function for fuzzy search
-function escapeRegex(text) {
-  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-}
+// Mark announcement as viewed
+router.post('/view', async (req, res) => {
+  try {
+    const { userEmail, announcementId } = req.body;
+    
+    if (!userEmail || !announcementId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User email and announcement ID are required'
+      });
+    }
 
-// Get announcement by ID
+    const existingView = await ViewedAnnouncement.findOne({
+      userEmail,
+      announcementId
+    });
+
+    if (!existingView) {
+      await ViewedAnnouncement.create({
+        userEmail,
+        announcementId
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Announcement marked as viewed'
+    });
+  } catch (err) {
+    console.error('Error marking announcement as viewed:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while marking announcement as viewed'
+    });
+  }
+});
+
+// Existing routes (unchanged)
 router.get('/:id', async (req, res) => {
   try {
     const announcement = await Announcement.findById(req.params.id);
@@ -114,7 +143,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Basic validation middleware
 const validateAnnouncement = (req, res, next) => {
   const { subject, content, startDate, endDate, audience } = req.body;
   const errors = [];
@@ -137,12 +165,11 @@ const validateAnnouncement = (req, res, next) => {
   next();
 };
 
-// Create new announcement (Admin only)
 router.post('/', validateAnnouncement, async (req, res) => {
   try {
     const newAnnouncement = new Announcement({
       ...req.body,
-      announcer: req.user?.id || 'System' // Fallback to 'System' if no user
+      announcer: req.user?.id || 'System'
     });
 
     await newAnnouncement.save();
@@ -159,7 +186,6 @@ router.post('/', validateAnnouncement, async (req, res) => {
   }
 });
 
-// Update announcement (Admin only)
 router.put('/:id', validateAnnouncement, async (req, res) => {
   try {
     const announcement = await Announcement.findByIdAndUpdate(
@@ -188,7 +214,6 @@ router.put('/:id', validateAnnouncement, async (req, res) => {
   }
 });
 
-// Delete announcement (Admin only)
 router.delete('/:id', async (req, res) => {
   try {
     const announcement = await Announcement.findByIdAndDelete(req.params.id);
@@ -210,5 +235,9 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
+
+function escapeRegex(text) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
 
 module.exports = router;
