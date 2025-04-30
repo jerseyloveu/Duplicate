@@ -37,6 +37,7 @@ function ScopeAnnouncement() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({
     key: 'startDate',
@@ -71,25 +72,48 @@ function ScopeAnnouncement() {
   const fetchAnnouncements = async (page = currentPage, searchValue = searchTerm) => {
     try {
       setLoading(true);
+      console.log('Fetching announcements with params:', {
+        page,
+        limit: 5,
+        search: searchValue,
+        sortBy: sortConfig.key,
+        sortOrder: sortConfig.direction,
+        status: 'Active',
+        audience: 'Applicants'
+      });
+      
       const response = await axios.get('/api/announcements', {
         params: {
-          page: page,
+          page,
           limit: 5,
           search: searchValue,
           sortBy: sortConfig.key,
           sortOrder: sortConfig.direction,
           status: 'Active',
-          audience: 'Applicants' // Ensure we only fetch for Applicants
+          audience: 'Applicants'
         }
       });
       
-      // Double-check that announcements are for Applicants only
-      const filteredAnnouncements = response.data.announcements.filter(
+      console.log('API Response:', response.data);
+      
+      // Verify received announcements match our criteria
+      const validAnnouncements = response.data.announcements.filter(
         announcement => announcement.audience === 'Applicants' && announcement.status === 'Active'
       );
       
-      setAnnouncements(filteredAnnouncements);
+      if (validAnnouncements.length !== response.data.announcements.length) {
+        console.error('Warning: Received announcements with incorrect audience or status');
+        console.log('Expected only Applicants/Active, but got:', 
+          response.data.announcements.map(a => `${a.audience}/${a.status}`).join(', '));
+        
+        // Use only the valid announcements
+        setAnnouncements(validAnnouncements);
+      } else {
+        setAnnouncements(response.data.announcements);
+      }
+      
       setTotalPages(response.data.totalPages);
+      setTotalItems(response.data.totalItems || response.data.announcements.length);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching announcements:', err);
@@ -291,35 +315,43 @@ function ScopeAnnouncement() {
                       )}
                     </div>
 
-                    {/* Pagination Controls */}
-                    {announcements.length > 0 && totalPages > 1 && (
-                      <div className="announcement-pagination">
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          className="pagination-button"
-                          aria-label="Previous page"
-                        >
-                          Previous
-                        </button>
-                        <div className="pagination-info">
-                          <span>Page {currentPage} of {totalPages}</span>
-                        </div>
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          className="pagination-button"
-                          aria-label="Next page"
-                        >
-                          Next
-                        </button>
+                  {/* Enhanced Pagination Controls */}
+                  {announcements.length > 0 && totalPages > 1 && (
+                    <div className="announcement-pagination">
+                      <button
+                        onClick={() => {
+                          const newPage = Math.max(currentPage - 1, 1);
+                          setCurrentPage(newPage);
+                        }}
+                        disabled={currentPage === 1}
+                        className="pagination-button"
+                        aria-label="Previous page"
+                      >
+                        Back
+                      </button>
+                      
+                      <div className="pagination-info">
+                        <span>Page {currentPage} of {totalPages} </span>
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
+                      
+                      <button
+                        onClick={() => {
+                          const newPage = Math.min(currentPage + 1, totalPages);
+                          setCurrentPage(newPage);
+                        }}
+                        disabled={currentPage === totalPages}
+                        className="pagination-button"
+                        aria-label="Next page"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          </main>
+          </div>
+        </main>
         </div>
         {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
