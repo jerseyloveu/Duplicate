@@ -1,36 +1,21 @@
-import { FaUser } from "react-icons/fa";
-import { FaLock } from "react-icons/fa";
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { Button, Input } from 'antd';
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import '../../css/UserAdmin/Global.css';
+import React, { useState } from 'react';
+import { FaLock, FaUser } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
 import '../../css/JuanEMS/SplashScreen.css';
+import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/LoginPage.css';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import Footer from './Footer';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loginError, setLoginError] = useState('');
-  const [lastResetRequest, setLastResetRequest] = useState(null);
-  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
-
-  useEffect(() => {
-    if (location.state?.fromPasswordReset) {
-      setLoginError(''); // Clear any errors
-      alert('Password reset successful. Please check your email for the new password.');
-    }
-
-    // Show message if redirected due to inactive account
-    if (location.state?.accountInactive) {
-      setLoginError('Your session was invalidated. Please login again.');
-    }
-  }, [location.state]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -92,17 +77,7 @@ const LoginPage = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // In ScopeLogin.js handleSubmit function
       localStorage.setItem('userEmail', data.email);
-      localStorage.setItem('firstName', data.firstName);
-      // localStorage.setItem('studentID', data.studentID);
-      // localStorage.setItem('applicantID', data.applicantID); // Add this line
-      localStorage.setItem('lastLogin', data.lastLogin);
-      localStorage.setItem('lastLogout', data.lastLogout);
-      localStorage.setItem('createdAt', data.createdAt);
-      localStorage.setItem('activityStatus', data.activityStatus);
-      localStorage.setItem('loginAttempts', data.loginAttempts.toString());
-      // Successful login - navigate to dashboard
       navigate('/admin/dashboard');
 
     } catch (err) {
@@ -131,19 +106,18 @@ const LoginPage = () => {
           <Input 
             className="custom-input" 
             addonBefore={<FaUser/>} 
-            placeholder="Enter Email" 
+            placeholder="Enter Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            // Removed the onBlur handler that was causing the issue
           />
           <label className="input-label">Password</label>
-          <Input 
-            className="custom-input" 
-            addonBefore={<FaLock/>} 
-            placeholder="Enter Password" 
-            type={showPassword ? "text" : "password"}
+          <Input.Password
+            className="custom-input"
+            addonBefore={<FaLock />}
+            placeholder="Enter Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
           />
           {loginError && <div className="error-message">{loginError}</div>}
           <Button type='ghost' className="login-btn" onClick={handleSubmit}>Login</Button>
