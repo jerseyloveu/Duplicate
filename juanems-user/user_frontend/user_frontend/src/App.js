@@ -13,7 +13,7 @@ import AboutPage from './components/JuanEMS/AboutPage';
 import TermsOfUsePage from './components/JuanEMS/TermsOfUsePage';
 import PrivacyPolicyPage from './components/JuanEMS/PrivacyPolicyPage';
 import SessionManager from './components/JuanScope/SessionManager';
-
+import ScopeAnnouncement from './components/JuanScope/ScopeAnnouncement';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -61,6 +61,7 @@ function App() {
           <Route path="/scope-login" element={<ScopeLogin />} /> 
           <Route path="/register" element={<Register />} /> {/* Add this new route */}
           <Route path="/scope-dashboard" element={<SessionManager><ScopeDashboard /></SessionManager>}/>
+          <Route path="/scope-announcements" element={<SessionManager><ScopeAnnouncement /></SessionManager>}/>
 
 
           {/* Admin  */}

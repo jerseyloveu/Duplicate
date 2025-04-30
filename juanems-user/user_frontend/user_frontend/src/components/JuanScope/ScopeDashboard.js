@@ -4,20 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser,
   faBell,
-  faCompass,
-  faSignOut,
   faCalendarAlt,
-  faFileAlt,
-  faClipboardCheck,
-  faBook,
-  faFileSignature,
-  faMoneyBillWave,
-  faChartBar,
-  faCheckCircle,
-  faClipboardList,
-  faTicketAlt,
-  faUserGraduate,
-  faCalculator,
   faBars,
   faTimes
 } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +12,7 @@ import SJDEFILogo from '../../images/SJDEFILogo.png';
 import dashboardBg from '../../images/dashboard background.png';
 import '../../css/JuanScope/ScopeDashboard.css';
 import SessionManager from '../JuanScope/SessionManager';
+import SideNavigation from './SideNavigation';
 
 function ScopeDashboard() {
   const navigate = useNavigate();
@@ -160,16 +148,6 @@ function ScopeDashboard() {
     return () => clearInterval(interval);
   }, [navigate]);
 
-  const formatEmail = (email) => {
-    if (!email) return '';
-    const [name, domain] = email.split('@');
-    if (!name || !domain) return email;
-    const maskedName = name.length > 2
-      ? `${name.substring(0, 2)}${'*'.repeat(name.length - 2)}`
-      : '***';
-    return `${maskedName}@${domain}`;
-  };
-
   const handleLogout = async () => {
     try {
       const userEmail = localStorage.getItem('userEmail');
@@ -208,15 +186,12 @@ function ScopeDashboard() {
     navigate('/scope-announcements');
   };
 
-  const navigateToPage = (path) => {
-    navigate(path);
-    if (sidebarOpen) {
-      setSidebarOpen(false);
-    }
-  };
-
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
   };
 
   return (
@@ -244,141 +219,13 @@ function ScopeDashboard() {
           </div>
         </header>
         <div className="scope-dashboard-content">
-          <aside className={`scope-sidebar ${sidebarOpen ? 'open' : ''}`}>
-            <div className="scope-sidebar-content">
-              <div className="scope-user-profile">
-                <div className="scope-user-icon">
-                  <FontAwesomeIcon icon={faUser} size="2x" />
-                </div>
-                <div className="scope-user-details">
-                  <div className="scope-user-email">
-                    {formatEmail(userData.email)}
-                  </div>
-                  <div className="scope-user-role">Applicant</div>
-                </div>
-                <div className="scope-divider"></div>
-              </div>
-              <button 
-                className="enrollment-process-button"
-                onClick={() => navigateToPage('/scope-dashboard')}
-              >
-                <FontAwesomeIcon icon={faCompass} className="enrollment-icon" />
-                <span className="enrollment-text">Enrollment Process</span>
-              </button>
-              <div className="scope-nav-section">
-                <div className="scope-nav-title">Admission Process</div>
-                <button 
-                  className="scope-nav-button" 
-                  onClick={() => navigateToPage('/scope-registration')}
-                >
-                  <FontAwesomeIcon icon={faFileAlt} />
-                  <span>1. Registration</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faClipboardCheck} />
-                  <span>2. Exam & Interview Application</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faBook} />
-                  <span>3. Admission Requirements</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faFileSignature} />
-                  <span>4. Admission Exam Details</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faMoneyBillWave} />
-                  <span>5. Exam Fee Payment</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faChartBar} />
-                  <span>6. Exam & Interview Result</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faMoneyBillWave} />
-                  <span>7. Reservation Payment</span>
-                </button>
-              </div>
-              <div className="scope-nav-section">
-                <div className="scope-nav-title">Enrollment Process</div>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>8. Admission Approval</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faClipboardList} />
-                  <span>9. Enrollment Requirements</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faTicketAlt} />
-                  <span>10. Voucher Application</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faCheckCircle} />
-                  <span>11. Enrollment Approval</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faUserGraduate} />
-                  <span>12. Student Assessment</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faMoneyBillWave} />
-                  <span>13. Tuition Payment</span>
-                </button>
-                <button 
-                  className="scope-nav-button disabled-nav-item"
-                  disabled
-                >
-                  <FontAwesomeIcon icon={faCalculator} />
-                  <span>14. Officially Enrolled</span>
-                </button>
-              </div>
-              <button
-                className="scope-nav-button scope-logout-button"
-                onClick={() => setShowLogoutModal(true)}
-              >
-                <FontAwesomeIcon icon={faSignOut} />
-                <span className="nav-text-bold">Logout</span>
-              </button>
-            </div>
-          </aside>
-          <main className="scope-main-content">
+          {/* Pass isOpen prop to SideNavigation */}
+          <SideNavigation 
+            userData={userData} 
+            onNavigate={closeSidebar}
+            isOpen={sidebarOpen} 
+          />
+          <main className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
             {loading ? (
               <div className="scope-loading">Loading...</div>
             ) : error ? (
@@ -434,8 +281,9 @@ function ScopeDashboard() {
             )}
           </main>
         </div>
+        {/* Add overlay to close sidebar when clicking outside */}
         {sidebarOpen && (
-          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+          <div className="sidebar-overlay active" onClick={toggleSidebar}></div>
         )}
         {showLogoutModal && (
           <div className="scope-modal-overlay">

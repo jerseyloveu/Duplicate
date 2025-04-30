@@ -1,3 +1,4 @@
+
 .scope-dashboard-container {
   display: flex;
   flex-direction: column;
@@ -14,6 +15,11 @@
   background-color: #00245A;
   color: white;
   height: 80px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
 }
 
 .juan-header-left {
@@ -48,149 +54,13 @@
 .scope-dashboard-content {
   display: flex;
   flex: 1;
+  margin-top: 80px; /* Add top margin equal to header height */
 }
 
-/* Sidebar Styles */
-.scope-sidebar {
+/* Sidebar placeholder - just for spacing */
+.sidebar-placeholder {
   width: 280px;
-  background-color: #00245A;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 80px);
-  overflow: hidden;
-  transition: transform 0.3s ease;
-  z-index: 100;
-}
-
-.scope-sidebar-content {
-  padding: 1.5rem 1rem;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  max-height: 100%;
-  gap: 0.5rem;
-}
-
-.scope-user-profile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.scope-user-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background-color: #FFD601;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #00245A;
-  margin-bottom: 0.8rem;
-}
-
-.scope-user-details {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.scope-user-email {
-  font-size: 0.8rem;
-  margin-bottom: 0.3rem;
-  word-break: break-all;
-  text-align: center;
-}
-
-.scope-user-role {
-  color: #FFD601;
-  font-weight: 500;
-  margin-bottom: 0.8rem;
-}
-
-.scope-divider {
-  height: 1px;
-  width: 80%;
-  background-color: rgba(255, 255, 255, 0.2);
-  margin: 0.8rem 0;
-}
-
-.scope-nav-section {
-  margin-bottom: 1rem;
-}
-
-.scope-nav-title {
-  color: #FFD601;
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.5rem 0;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 214, 1, 0.3);
-  text-transform: uppercase;
-}
-
-.scope-nav-button {
-  background-color: transparent;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 0.6rem 1rem;
-  margin: 0.2rem 0;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 100%;
-  text-align: left;
-  font-size: 0.85rem;
-}
-
-.scope-nav-button:hover:not(.disabled-nav-item) {
-  background-color: rgba(255, 214, 1, 0.2);
-}
-
-.scope-nav-button svg {
-  width: 16px;
-  color: #FFD601;
-}
-
-.disabled-nav-item {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.disabled-nav-item:hover {
-  background-color: transparent;
-}
-
-.nav-text-bold {
-  font-weight: 700;
-}
-
-.scope-logout-button {
-  margin-top: auto;
-  margin-bottom: 0.8rem;
-  background-color: rgba(255, 214, 1, 0.1) !important;
-}
-
-.scope-logout-button:hover {
-  background-color: rgba(255, 214, 1, 0.3) !important;
-}
-
-/* Sidebar Overlay */
-.sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 90;
-  display: none;
+  flex-shrink: 0;
 }
 
 /* Main Content Styles */
@@ -199,6 +69,7 @@
   padding: 1.5rem;
   background-color: #f5f5f5;
   overflow-y: auto;
+  margin-left: 280px; /* Match sidebar width */
 }
 
 .dashboard-background-container {
@@ -293,36 +164,6 @@
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Enrollment Process Button */
-.enrollment-process-button {
-  background-color: #FFD601;
-  color: #00245A;
-  font-weight: bold;
-  border: none;
-  border-radius: 6px;
-  padding: 0.8rem 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.enrollment-process-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.enrollment-icon {
-  font-size: 1.2rem;
-}
-
-.enrollment-text {
-  font-weight: bold;
-}
-
 /* Applicant Info */
 .scope-applicant-info {
   display: flex;
@@ -375,60 +216,21 @@
   color: #d32f2f;
 }
 
-/* Modal Styles */
-.scope-modal-overlay {
+/* Sidebar Overlay */
+.sidebar-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  z-index: 90;
+  display: none;
 }
 
-.scope-confirm-modal {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  box-sizing: border-box;
-}
-
-.scope-confirm-modal h3 {
-  margin-top: 0;
-  color: #00245A;
-}
-
-.scope-confirm-modal p {
-  margin-bottom: 20px;
-}
-
-.scope-modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.scope-modal-cancel {
-  background-color: #f5f5f5;
-  color: #333;
-  border: 1px solid #ccc;
-  padding: 8px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.scope-modal-confirm {
-  background-color: #880D0C;
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 4px;
-  cursor: pointer;
+/* When overlay is active */
+.sidebar-overlay.active {
+  display: block;
 }
 
 /* Responsive Design */
@@ -450,28 +252,22 @@
     display: block;
   }
   
-  /* Sidebar becomes hidden by default */
-  .scope-sidebar {
-    position: fixed;
-    top: 80px;
-    left: 0;
-    height: calc(100vh - 80px);
-    transform: translateX(-100%);
-    width: 280px;
-  }
-  
-  /* When open class is added, show the sidebar */
-  .scope-sidebar.open {
-    transform: translateX(0);
-  }
-  
-  /* Show overlay when sidebar is open */
-  .sidebar-overlay {
-    display: block;
-  }
-  
+  /* Main content takes full width on mobile */
   .scope-main-content {
+    margin-left: 0;
     width: 100%;
+  }
+  
+  /* Display sidebar overlay when sidebar is open */
+  .sidebar-overlay.active {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+    display: block;
   }
   
   .dashboard-background-container {
@@ -516,11 +312,6 @@
   .welcome-heading {
     font-size: 1.3rem;
   }
-
-  .enrollment-process-button {
-    width: 100%;
-    justify-content: center;
-  }
   
   .dashboard-background-container {
     min-height: 300px;
@@ -538,4 +329,87 @@
   .juan-logo-register {
     height: 50px;
   }
+}
+
+/* Dashboard Panels */
+.dashboard-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-panel {
+  background-color: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.dashboard-panel h3 {
+  color: #00245A;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.status-indicator {
+  margin-bottom: 1rem;
+}
+
+.status-bar {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.status-progress {
+  height: 100%;
+  background-color: #FFD601;
+  border-radius: 4px;
+}
+
+.status-text {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.next-steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.next-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.step-number {
+  background-color: #00245A;
+  color: #FFD601;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #00245A;
+  font-size: 1rem;
+}
+
+.step-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
 }
