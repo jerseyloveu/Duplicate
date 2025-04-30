@@ -182,6 +182,9 @@ const ManageAccountsPage = () => {
       dataIndex: 'userID',
       key: 'userID',
       fixed: 'left',
+      sorter: (a, b) => a.userID.localeCompare(b.userID),
+      sortDirections: ['ascend', 'descend'],
+      sortOrder: sorter.columnKey === 'userID' ? sorter.order : null,
     },
     {
       title: 'Full Name',

@@ -43,26 +43,6 @@ router.post('/create-account', async (req, res) => {
       customModules
     } = req.body;
 
-    // Check for existing active or pending records with this email
-    const existingActiveEmail = await Accounts.findOne({
-      email,
-      status: { $in: ['Pending Verification', 'Active'] }
-    });
-
-    if (existingActiveEmail) {
-      return res.status(400).json({ error: 'Email is already registered with an active or pending application' });
-    }
-
-    // Check for existing active or pending records with this mobile number
-    const existingActiveMobile = await Accounts.findOne({
-      mobile,
-      status: { $in: ['Pending Verification', 'Active'] }
-    });
-
-    if (existingActiveMobile) {
-      return res.status(400).json({ error: 'Mobile number is already registered with an active or pending application' });
-    }
-
     const plainPassword = generateRandomPassword();
     
     // Generate or use provided userID
