@@ -331,7 +331,7 @@ function ScopeAnnouncement() {
                       </button>
                       
                       <div className="pagination-info">
-                        <span>Page {currentPage} of {totalPages} </span>
+                        <span>{currentPage} of {totalPages}</span>
                       </div>
                       
                       <button
