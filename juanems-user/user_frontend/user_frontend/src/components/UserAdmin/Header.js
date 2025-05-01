@@ -50,17 +50,28 @@ const Header = () => {
       const fullName = localStorage.getItem('fullName');
       const role = localStorage.getItem('role');
       
-      // Send logout request to update account status
-      await fetch('http://localhost:5000/api/admin/logout', {
+      // Get the MongoDB _id from localStorage - this is the key change
+      const mongoId = localStorage.getItem('id');
+      
+      if (!mongoId) {
+        console.error('MongoDB ID not found in localStorage');
+        throw new Error('MongoDB ID not found');
+      }
+  
+      // Send logout request using MongoDB _id instead of email
+      const logoutResponse = await fetch('http://localhost:5000/api/admin/logout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          email: userEmail
+          id: mongoId // Use MongoDB _id directly
         })
       });
+      
+      const logoutData = await logoutResponse.json();
+      console.log('Logout response:', logoutData);
       
       // Create system log entry for logout action
       const logData = {
@@ -87,17 +98,12 @@ const Header = () => {
       .catch(error => {
         console.error('Failed to record logout system log:', error);
       });
-      
     } catch (err) {
       console.error('Failed to process logout:', err);
       // Still proceed with logout even if backend calls fail
     } finally {
       // Clear localStorage and redirect
-      localStorage.removeItem('fullName');
-      localStorage.removeItem('role');
-      localStorage.removeItem('userID');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('token');
+      localStorage.clear(); // Clear all localStorage items
       navigate('/admin');
     }
   };

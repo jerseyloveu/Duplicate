@@ -640,52 +640,34 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', async (req, res) => {
   try {
-    const { email, createdAt } = req.body;
-
-    if (!email) {
+    const { id } = req.body;
+    
+    if (!id) {
       return res.status(400).json({
-        message: 'Email is required',
+        message: 'MongoDB ID is required',
         errorType: 'validation'
       });
     }
-
-    let query = {
-      email,
-      status: 'Active'
-    };
-
-    // If createdAt is provided, parse it properly
-    if (createdAt) {
-      const date = new Date(createdAt);
-      if (isNaN(date.getTime())) {
-        return res.status(400).json({
-          message: 'Invalid createdAt timestamp',
-          errorType: 'validation'
-        });
-      }
-      query.createdAt = date;
-    }
-
-    const account = await Accounts.findOne(query)
-      .sort({ createdAt: -1 });
-
+    
+    // Find account by MongoDB _id directly
+    const account = await Accounts.findById(id);
+    
     if (!account) {
       return res.status(404).json({
         message: 'Account not found',
         errorType: 'account_not_found'
       });
     }
-
+    
     // Update activity status
     account.activityStatus = 'Offline';
     account.lastLogout = new Date();
     await account.save();
-
+    
     res.json({
       message: 'Logout successful',
       activityStatus: account.activityStatus
     });
-
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({
@@ -694,6 +676,7 @@ router.post('/logout', async (req, res) => {
     });
   }
 });
+
 
 router.get('/activity/:email', async (req, res) => {
   try {
