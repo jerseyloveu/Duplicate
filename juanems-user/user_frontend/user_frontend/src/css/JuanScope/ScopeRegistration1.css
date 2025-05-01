@@ -141,6 +141,10 @@
     min-width: 20px;
 }
 
+.step-line.completed {
+    background-color: #34A853;
+}
+
 .step-text {
     margin-left: 10px;
     font-size: 16px;
@@ -288,21 +292,113 @@
 /* Collapsible Container */
 .collapsible-container {
     margin-bottom: 1rem;
+    border: 1px solid #2A67D5;
+    background-color: #CFE0FF;
 }
 
 .collapsible-header {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.collapsible-header:hover {
-    background-color: #b8cfff;
+.collapsible-header h4 {
+    color: #2A67D5;
+    font-weight: bold;
+    margin: 0;
+    font-size: 14px;
 }
 
 .collapsible-content {
-    padding: 0.8rem 0;
+    padding: 0.8rem;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+    background-color: white;
+}
+
+/* Contact Details */
+.contact-details {
+    display: flex;
+    align-items: flex-start;
     gap: 0.8rem;
+    flex: 1;
+}
+
+.contact-details svg {
+    font-size: 24px;
+    color: #2A67D5;
+}
+
+.contact-details p {
+    margin: 0;
+    font-size: 12px;
+    color: #333;
+}
+
+.contact-details p strong {
+    color: #212121;
+}
+
+.emergency-contact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.emergency-contact svg {
+    color: #34A853;
+}
+
+.emergency-contact span {
+    color: #34A853;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Contact Actions */
+.contact-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.contact-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 16px;
+    color: #666;
+}
+
+.contact-actions button:hover {
+    color: #2A67D5;
+}
+
+/* Add Contact Button */
+.add-contact-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: #2A67D5;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.add-contact-button:hover {
+    background-color: #1e4ca1;
 }
 
 /* Form Group */
@@ -317,10 +413,12 @@
     flex-direction: row;
     align-items: flex-start;
     gap: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
 }
 
 .form-group.horizontal label {
-    flex: 0 0 180px;
+    flex: 0 0 200px;
     font-weight: bold;
     font-size: 12px;
     white-space: nowrap;
@@ -334,6 +432,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
 .form-group label {
@@ -409,12 +508,69 @@
     color: #666;
 }
 
+/* Checkbox Container */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.checkbox-container input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.checkbox-container label {
+    font-size: 12px;
+    font-weight: normal;
+}
+
+/* Radio Group */
+.radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.radio-group input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
 /* Form Buttons */
 .form-buttons {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     margin-top: 1rem;
     gap: 10px;
+}
+
+.back-button {
+    background-color: #666;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.back-button:hover {
+    background-color: #555;
 }
 
 .save-button {
@@ -509,7 +665,8 @@
 .scope-modal-buttons {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .scope-modal-cancel,
@@ -563,7 +720,8 @@
 
     .form-group.horizontal {
         flex-direction: column;
-        gap: 0.2rem;
+        gap: 0.5rem;
+        width: 100%;
     }
 
     .form-group.horizontal label {
@@ -606,10 +764,21 @@
         align-items: stretch;
     }
 
+    .back-button,
     .save-button,
     .next-button {
         width: 100%;
         justify-content: center;
+    }
+
+    .collapsible-content {
+        padding: 0.5rem;
+    }
+
+    .contact-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+        width: 100%;
     }
 
     .requirements-container {

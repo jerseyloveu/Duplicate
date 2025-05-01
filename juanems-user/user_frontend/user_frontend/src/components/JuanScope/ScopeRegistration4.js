@@ -360,16 +360,6 @@ function ScopeRegistration4() {
                       <div
                         className="section-title collapsible-header"
                         onClick={toggleElementary}
-                        style={{
-                          backgroundColor: '#CFE0FF',
-                          border: '1px solid #2A67D5',
-                          borderRadius: '5px',
-                          padding: '10px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
                       >
                         <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
                           Elementary Education
@@ -507,16 +497,6 @@ function ScopeRegistration4() {
                       <div
                         className="section-title collapsible-header"
                         onClick={toggleJuniorHigh}
-                        style={{
-                          backgroundColor: '#CFE0FF',
-                          border: '1px solid #2A67D5',
-                          borderRadius: '5px',
-                          padding: '10px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
                       >
                         <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
                           Junior High Education
