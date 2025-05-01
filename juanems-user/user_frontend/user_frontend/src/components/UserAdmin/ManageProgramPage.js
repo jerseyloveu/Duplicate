@@ -24,17 +24,17 @@ const ManageProgramPage = () => {
   const allModules = {
     "Manage Strands": {
       description: "Create and update academic strands",
-      path: "",
+      path: "/admin/manage-strands",
       icon: MdStars
     },
     "Manage Subjects": {
       description: "Assign and manage offered subjects",
-      path: "",
+      path: "/admin/manage-subjects",
       icon: MdBook
     },
     "Manage Sections": {
       description: "Set up and organize class sections",
-      path: "",
+      path: "/admin/manage-sections",
       icon: FaUserGroup
     },
   };
