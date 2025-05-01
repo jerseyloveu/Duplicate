@@ -35,7 +35,7 @@ const Dashboard = () => {
       icon: IoDocuments
     },
     "Manage Accounts": {
-      description: "Manage JuanIS Student Accounts",
+      description: "Manage student, teacher, and staff accounts",
       path: "/admin/manage-accounts",
       icon: FaUser
     },
