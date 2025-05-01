@@ -24,9 +24,7 @@ const Dashboard = () => {
     day: 'numeric',
   });
 
-  const fullName = localStorage.getItem('fullName') || '';
   const userRole = localStorage.getItem('role') || 'ROLE';
-  const userID = localStorage.getItem('userID') || '';
   const id = localStorage.getItem('id') || '';
 
   // Module definitions with their icons and paths
