@@ -156,7 +156,7 @@ const countries = [
   { value: 'qatar', label: 'Qatar' },
   { value: 'romania', label: 'Romania' },
   { value: 'russia', label: 'Russia' },
-  { value: 'rwanda', label: ' Rwanda' },
+  { value: 'rwanda', label: 'Rwanda' },
   { value: 'saint-kitts-and-nevis', label: 'Saint Kitts and Nevis' },
   { value: 'saint-lucia', label: 'Saint Lucia' },
   { value: 'saint-vincent-and-the-grenadines', label: 'Saint Vincent and the Grenadines' },
@@ -388,9 +388,9 @@ function ScopeRegistration1() {
 
         const userData = await userResponse.json();
 
-        // Fetch additional user details
+        // Fetch additional user details for ScopeRegistration1
         const applicantResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/details/${userEmail}`
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
         if (!applicantResponse.ok) {
           throw new Error('Failed to fetch applicant details');
@@ -398,7 +398,7 @@ function ScopeRegistration1() {
         const applicantData = await applicantResponse.json();
 
         // Update local storage
-        localStorage.setItem(' AblapplicantID', applicantData.applicantID || userData.applicantID);
+        localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
         localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
         localStorage.setItem('middleName', applicantData.middleName || '');
         localStorage.setItem('lastName', applicantData.lastName || userData.lastName);
@@ -705,7 +705,7 @@ function ScopeRegistration1() {
     if (validateForm()) {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/details/${userData.email}`,
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userData.email}`,
           {
             method: 'PUT',
             headers: {
@@ -731,7 +731,8 @@ function ScopeRegistration1() {
           alert('Personal information saved successfully!');
           setIsFormDirty(false); // Reset dirty state after saving
         } else {
-          setError('Failed to save information. Please try again.');
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to save information. Please try again.');
         }
       } catch (err) {
         setError('Error saving information');
@@ -1222,7 +1223,7 @@ function ScopeRegistration1() {
             <div className="scope-confirm-modal">
               <h3>Unsaved Changes</h3>
               <p>You have unsaved changes. Do you want to leave without saving?</p>
-              <div className="scopeiciones-modal-buttons">
+              <div className="scope-modal-buttons">
                 <button
                   className="scope-modal-cancel"
                   onClick={handleModalCancel}
