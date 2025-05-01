@@ -200,6 +200,45 @@
     color: #880D0C;
 }
 
+/* Requirements Box */
+.requirements-box {
+    background-color: #E0E0E0;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 1rem;
+}
+
+.requirements-container {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #333;
+}
+
+.requirements-container p {
+    font-size: 12px;
+    font-weight: bold;
+    color: #880D0C;
+    margin-bottom: 10px;
+}
+
+.requirements-container h4 {
+    font-size: 13px;
+    font-weight: bold;
+    color: #212121;
+    margin: 10px 0 5px;
+}
+
+.requirements-container ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    margin: 0 0 10px;
+}
+
+.requirements-container li {
+    font-size: 11px;
+    margin-bottom: 5px;
+}
+
 /* Form Note */
 .juan-form-note {
     display: flex;
@@ -223,6 +262,17 @@
     color: #333;
 }
 
+/* Form Address Container */
+.form-address-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.form-group.full-width {
+    width: 100%;
+}
+
 /* Form Grid */
 .form-grid {
     display: grid;
@@ -231,12 +281,59 @@
     width: 100%;
 }
 
+.form-grid.address-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* Collapsible Container */
+.collapsible-container {
+    margin-bottom: 1rem;
+}
+
+.collapsible-header {
+    transition: background-color 0.2s;
+}
+
+.collapsible-header:hover {
+    background-color: #b8cfff;
+}
+
+.collapsible-content {
+    padding: 0.8rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
 /* Form Group */
 .form-group {
     display: flex;
     flex-direction: column;
     margin-bottom: 0.75rem;
     width: 100%;
+}
+
+.form-group.horizontal {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.form-group.horizontal label {
+    flex: 0 0 180px;
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-top: 0.4rem;
+}
+
+.form-group.horizontal .input-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .form-group label {
@@ -250,18 +347,29 @@
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
     width: 100%;
     padding: 0.4rem 0.6rem;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 12px;
-    height: 34px;
     box-sizing: border-box;
 }
 
+.form-group input,
+.form-group select {
+    height: 34px;
+}
+
+.form-group textarea {
+    height: 100px;
+    resize: none;
+}
+
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
     outline: none;
     border-color: #00245A;
 }
@@ -365,10 +473,73 @@
     display: block;
 }
 
+/* Modal Styles */
+.scope-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.scope-confirm-modal {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+.scope-confirm-modal h3 {
+    margin: 0 0 15px;
+    font-size: 18px;
+}
+
+.scope-confirm-modal p {
+    margin: 0 0 20px;
+    font-size: 14px;
+}
+
+.scope-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.scope-modal-cancel,
+.scope-modal-confirm {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 5px;
+}
+
+.scope-modal-cancel {
+    background-color: #ccc;
+    color: #333;
+}
+
+.scope-modal-confirm {
+    background-color: #00245A;
+    color: white;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .form-grid {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .form-grid.address-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -384,6 +555,24 @@
 
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .form-grid.address-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group.horizontal {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .form-group.horizontal label {
+        flex: none;
+        width: auto;
+    }
+
+    .form-group.horizontal .input-container {
+        width: 100%;
     }
 
     .step-circles {
@@ -421,6 +610,22 @@
     .next-button {
         width: 100%;
         justify-content: center;
+    }
+
+    .requirements-container {
+        font-size: 11px;
+    }
+
+    .requirements-container p {
+        font-size: 11px;
+    }
+
+    .requirements-container h4 {
+        font-size: 12px;
+    }
+
+    .requirements-container li {
+        font-size: 10px;
     }
 }
 
@@ -461,7 +666,8 @@
     }
 
     .form-group input,
-    .form-group select {
+    .form-group select,
+    .form-group textarea {
         font-size: 11px;
     }
 
@@ -477,63 +683,20 @@
     .optional-text {
         font-size: 9px;
     }
+
+    .requirements-container {
+        font-size: 10px;
+    }
+
+    .requirements-container p {
+        font-size: 10px;
+    }
+
+    .requirements-container h4 {
+        font-size: 11px;
+    }
+
+    .requirements-container li {
+        font-size: 9px;
+    }
 }
-
-
-.scope-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .scope-confirm-modal {
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    max-width: 400px;
-    width: 90%;
-    text-align: center;
-  }
-  
-  .scope-confirm-modal h3 {
-    margin: 0 0 15px;
-    font-size: 18px;
-  }
-  
-  .scope-confirm-modal p {
-    margin: 0 0 20px;
-    font-size: 14px;
-  }
-  
-  .scope-modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-  }
-  
-  .scope-modal-cancel,
-  .scope-modal-confirm {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    margin: 5px;
-  }
-  
-  .scope-modal-cancel {
-    background-color: #ccc;
-    color: #333;
-  }
-  
-  .scope-modal-confirm {
-    background-color: #00245A;
-    color: white;
-  }

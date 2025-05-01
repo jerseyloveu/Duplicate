@@ -16,7 +16,8 @@ import SessionManager from './components/JuanScope/SessionManager';
 import ScopeAnnouncement from './components/JuanScope/ScopeAnnouncement';
 import ScopeRegistration1 from './components/JuanScope/ScopeRegistration1';
 import ScopeRegistration2 from './components/JuanScope/ScopeRegistration2';
-
+import ScopeRegistration3 from './components/JuanScope/ScopeRegistration3';
+import ScopeRegistration4 from './components/JuanScope/ScopeRegistration4';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -43,7 +44,6 @@ import Admin_AccessControl from './components/UserAdmin/AccessControl';
 import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
 
 
-
 function App() {
   return (
     <Router>
@@ -68,6 +68,8 @@ function App() {
           <Route path="/scope-announcements" element={<SessionManager><ScopeAnnouncement /></SessionManager>}/>
           <Route path="/scope-registration" element={<SessionManager><ScopeRegistration1 /></SessionManager>}/>
           <Route path="/scope-registration-2" element={<SessionManager><ScopeRegistration2 /></SessionManager>}/>
+          <Route path="/scope-registration-3" element={<SessionManager><ScopeRegistration3 /></SessionManager>}/>
+          <Route path="/scope-registration-4" element={<SessionManager><ScopeRegistration4 /></SessionManager>}/>
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
