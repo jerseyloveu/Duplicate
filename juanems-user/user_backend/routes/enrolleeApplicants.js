@@ -773,6 +773,43 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
+// New route to fetch applicant details
+router.get('/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const cleanEmail = email.trim().toLowerCase();
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email: cleanEmail,
+      status: 'Active',
+    }).sort({ createdAt: -1 });
+
+    if (!applicant) {
+      return res.status(404).json({
+        message: 'Active account not found',
+        errorType: 'account_not_found',
+      });
+    }
+
+    res.json({
+      firstName: applicant.firstName,
+      middleName: applicant.middleName || '',
+      lastName: applicant.lastName,
+      dob: applicant.dob,
+      nationality: applicant.nationality,
+      studentID: applicant.studentID,
+      applicantID: applicant.applicantID,
+    });
+  } catch (error) {
+    console.error('Error fetching applicant details:', error);
+    res.status(500).json({
+      message: 'Server error while fetching applicant details',
+      errorType: 'server_error',
+    });
+  }
+});
+
 router.post('/logout', async (req, res) => {
   try {
     const { email, createdAt } = req.body;
