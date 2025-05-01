@@ -24,9 +24,7 @@ const Dashboard = () => {
     day: 'numeric',
   });
 
-  const fullName = localStorage.getItem('fullName') || '';
   const userRole = localStorage.getItem('role') || 'ROLE';
-  const userID = localStorage.getItem('userID') || '';
   const id = localStorage.getItem('id') || '';
 
   // Module definitions with their icons and paths
@@ -37,7 +35,7 @@ const Dashboard = () => {
       icon: IoDocuments
     },
     "Manage Accounts": {
-      description: "Manage JuanIS Student Accounts",
+      description: "Manage student, teacher, and staff accounts",
       path: "/admin/manage-accounts",
       icon: FaUser
     },
