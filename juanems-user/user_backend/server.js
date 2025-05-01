@@ -10,6 +10,7 @@ const roleRoutes = require('./routes/rolesRoutes');
 const systemLogRoutes = require('./routes/systemLogRoutes'); 
 const exportFile = require('./routes/exportFile');
 const announcementRoutes = require('./routes/announcementRoutes');
+const enrolleeApplicantDetails = require('./routes/enrolleeApplicantDetails');
 const connectDB = require('./config/db');
 require('dotenv').config();
 
@@ -79,6 +80,7 @@ const verifyCaptcha = async (token) => {
 app.use('/api/dropdown', require('./routes/dropdownRoutes'));
 app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/enrollee-applicants', enrolleeApplicantDetails);
 
 // Routes (Admin)
 app.use('/api/admin', accountRoutes);
