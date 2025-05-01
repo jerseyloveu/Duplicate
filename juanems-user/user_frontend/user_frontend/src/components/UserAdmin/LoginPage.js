@@ -95,6 +95,7 @@ const LoginPage = () => {
       localStorage.setItem('fullName', `${data.firstName} ${data.lastName || ''}`);
       localStorage.setItem('role', data.role || 'ROLE');
       localStorage.setItem('userID', data.userID);
+      localStorage.setItem('id', data._id);
       localStorage.setItem('token', data.token); // Store the JWT token
 
       // Log the login action in the system log

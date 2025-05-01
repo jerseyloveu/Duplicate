@@ -47,14 +47,14 @@
     width: 20px;
     height: 20px;
     border-radius: 5px;
-    color: #3498db;
+    color: #C68A00;
     cursor: pointer;
     margin-left: 10px;
     transition: all 0.2s ease;
   }
   
   .arrow-btn:hover {
-    background-color: #3498db;
+    background-color: #C68A00;
     color: white;
   }
   

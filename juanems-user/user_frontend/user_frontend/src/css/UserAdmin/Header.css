@@ -15,7 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 30px;
   font-size: 1rem;
   flex-wrap: wrap;
   height: 50px;
@@ -36,7 +36,7 @@
 
 .user-profile {
   cursor: pointer;
-  padding: 6px 12px;
+  padding: 6px 20px;
   border-radius: 5px;
   transition: all 0.2s ease;
   display: flex;

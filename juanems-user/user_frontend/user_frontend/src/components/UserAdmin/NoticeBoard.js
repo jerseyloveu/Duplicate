@@ -7,7 +7,7 @@ import {
   MdCircle
 } from "react-icons/md";
 import { FaUser } from "react-icons/fa";
-import '../../css/UserAdmin/NoticeBoardStyles.css';
+import '../../css/UserAdmin/NoticeBoard.css';
 
 const NoticeBoard = () => {
   const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
