@@ -625,7 +625,8 @@ router.post('/login', async (req, res) => {
       role: account.role,
       userID: account.userID,
       activityStatus: account.activityStatus,
-      isAdminStaff: true
+      isAdminStaff: true,
+      _id: account._id
     });
   } catch (error) {
     console.error('Admin login error:', error);
