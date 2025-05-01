@@ -478,3 +478,62 @@
         font-size: 9px;
     }
 }
+
+
+.scope-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .scope-confirm-modal {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+  }
+  
+  .scope-confirm-modal h3 {
+    margin: 0 0 15px;
+    font-size: 18px;
+  }
+  
+  .scope-confirm-modal p {
+    margin: 0 0 20px;
+    font-size: 14px;
+  }
+  
+  .scope-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .scope-modal-cancel,
+  .scope-modal-confirm {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 5px;
+  }
+  
+  .scope-modal-cancel {
+    background-color: #ccc;
+    color: #333;
+  }
+  
+  .scope-modal-confirm {
+    background-color: #00245A;
+    color: white;
+  }

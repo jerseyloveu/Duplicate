@@ -11,7 +11,7 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   mobile: { type: String, required: true },
   nationality: { type: String, required: true },
   academicYear: { type: String, required: true },
-  academicTerm: { type: String, required: true },
+  academicTerm: { type: String, fotografiarequired: true },
   academicStrand: { type: String, required: true },
   academicLevel: { type: String, required: true },
   studentID: { type: String, required: true, unique: true },
@@ -51,7 +51,17 @@ const enrolleeApplicantSchema = new mongoose.Schema({
     default: 'Offline'
   },
   lastLogin: { type: Date },
-  lastLogout: { type: Date }
+  lastLogout: { type: Date },
+  // New fields for additional personal information
+  prefix: { type: String, trim: true, default: '' },
+  suffix: { type: String, trim: true, default: '' },
+  religion: { type: String, trim: true, required: true },
+  gender: { type: String, trim: true, required: true },
+  lrnNo: { type: String, trim: true, required: true },
+  countryOfBirth: { type: String, trim: true, required: true },
+  civilStatus: { type: String, trim: true, required: true },
+  birthPlaceCity: { type: String, trim: true, required: true },
+  birthPlaceProvince: { type: String, trim: true, required: true }
 });
 
 // Password hashing pre-save hook

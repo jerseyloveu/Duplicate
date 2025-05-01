@@ -135,7 +135,7 @@ const countries = [
   { value: 'myanmar', label: 'Myanmar' },
   { value: 'namibia', label: 'Namibia' },
   { value: 'nauru', label: 'Nauru' },
-  { value: 'nepal存档', label: 'Nepal' },
+  { value: 'nepal', label: 'Nepal' },
   { value: 'netherlands', label: 'Netherlands' },
   { value: 'new-zealand', label: 'New Zealand' },
   { value: 'nicaragua', label: 'Nicaragua' },
@@ -156,7 +156,7 @@ const countries = [
   { value: 'qatar', label: 'Qatar' },
   { value: 'romania', label: 'Romania' },
   { value: 'russia', label: 'Russia' },
-  { value: 'rwanda', label: 'Rwanda' },
+  { value: 'rwanda', label: ' Rwanda' },
   { value: 'saint-kitts-and-nevis', label: 'Saint Kitts and Nevis' },
   { value: 'saint-lucia', label: 'Saint Lucia' },
   { value: 'saint-vincent-and-the-grenadines', label: 'Saint Vincent and the Grenadines' },
@@ -317,6 +317,9 @@ function ScopeRegistration1() {
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [countryOptions, setCountryOptions] = useState(countries);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [nextLocation, setNextLocation] = useState(null);
 
   // Initialize Fuse.js
   const fuse = useMemo(() => new Fuse(countries, fuseOptions), []);
@@ -387,7 +390,7 @@ function ScopeRegistration1() {
 
         // Fetch additional user details
         const applicantResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/${userEmail}`
+          `http://localhost:5000/api/enrollee-applicants/details/${userEmail}`
         );
         if (!applicantResponse.ok) {
           throw new Error('Failed to fetch applicant details');
@@ -395,7 +398,7 @@ function ScopeRegistration1() {
         const applicantData = await applicantResponse.json();
 
         // Update local storage
-        localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
+        localStorage.setItem(' AblapplicantID', applicantData.applicantID || userData.applicantID);
         localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
         localStorage.setItem('middleName', applicantData.middleName || '');
         localStorage.setItem('lastName', applicantData.lastName || userData.lastName);
@@ -415,11 +418,19 @@ function ScopeRegistration1() {
 
         // Initialize form data with fetched values
         setFormData({
-          ...formData,
+          prefix: applicantData.prefix || '',
+          lastName: applicantData.lastName || userData.lastName || '',
           firstName: applicantData.firstName || userData.firstName || '',
           middleName: applicantData.middleName || '',
-          lastName: applicantData.lastName || userData.lastName || '',
+          suffix: applicantData.suffix || '',
+          gender: applicantData.gender || '',
+          lrnNo: applicantData.lrnNo || '',
+          civilStatus: applicantData.civilStatus || '',
+          religion: applicantData.religion || '',
           birthDate: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
+          countryOfBirth: applicantData.countryOfBirth || '',
+          birthPlaceCity: applicantData.birthPlaceCity || '',
+          birthPlaceProvince: applicantData.birthPlaceProvince || '',
           nationality: applicantData.nationality || '',
         });
 
@@ -482,6 +493,19 @@ function ScopeRegistration1() {
     return () => clearInterval(interval);
   }, [navigate]);
 
+  // Handle unsaved changes warning
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isFormDirty) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty]);
+
   const handleLogout = async () => {
     try {
       const userEmail = localStorage.getItem('userEmail');
@@ -520,11 +544,21 @@ function ScopeRegistration1() {
   };
 
   const handleAnnouncements = () => {
-    navigate('/scope-announcements');
+    if (isFormDirty) {
+      setNextLocation('/scope-announcements');
+      setShowUnsavedModal(true);
+    } else {
+      navigate('/scope-announcements');
+    }
   };
 
   const handleNext = () => {
-    navigate('/scope-registration-2');
+    if (isFormDirty) {
+      setNextLocation('/scope-registration-2');
+      setShowUnsavedModal(true);
+    } else {
+      navigate('/scope-registration-2');
+    }
   };
 
   const toggleSidebar = () => {
@@ -559,6 +593,8 @@ function ScopeRegistration1() {
       ...touchedFields,
       [name]: true,
     });
+
+    setIsFormDirty(true);
   };
 
   const handleSelectChange = (selectedOption, { name }) => {
@@ -571,6 +607,8 @@ function ScopeRegistration1() {
       ...touchedFields,
       [name]: true,
     });
+
+    setIsFormDirty(true);
   };
 
   const handleCountryInputChange = (inputValue) => {
@@ -667,16 +705,22 @@ function ScopeRegistration1() {
     if (validateForm()) {
       try {
         const response = await fetch(
-          'http://localhost:5000/api/enrollee-applicants/register',
+          `http://localhost:5000/api/enrollee-applicants/details/${userData.email}`,
           {
-            method: 'POST',
+            method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              ...formData,
-              email: userData.email,
-              applicantID: userData.applicantID,
+              prefix: formData.prefix,
+              suffix: formData.suffix,
+              religion: formData.religion,
+              gender: formData.gender,
+              lrnNo: formData.lrnNo,
+              countryOfBirth: formData.countryOfBirth,
+              civilStatus: formData.civilStatus,
+              birthPlaceCity: formData.birthPlaceCity,
+              birthPlaceProvince: formData.birthPlaceProvince,
             }),
           }
         );
@@ -685,6 +729,7 @@ function ScopeRegistration1() {
           // Update local storage with form data
           localStorage.setItem('middleName', formData.middleName || '');
           alert('Personal information saved successfully!');
+          setIsFormDirty(false); // Reset dirty state after saving
         } else {
           setError('Failed to save information. Please try again.');
         }
@@ -692,6 +737,18 @@ function ScopeRegistration1() {
         setError('Error saving information');
       }
     }
+  };
+
+  const handleModalConfirm = () => {
+    setShowUnsavedModal(false);
+    if (nextLocation) {
+      navigate(nextLocation);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setShowUnsavedModal(false);
+    setNextLocation(null);
   };
 
   // Get selected values for dropdowns
@@ -823,14 +880,6 @@ function ScopeRegistration1() {
                         required.
                       </p>
                     </div>
-                    <div className="juan-form-note">
-                      <FontAwesomeIcon icon={faExclamationCircle} className="juan-note-icon" />
-                      <p>
-                        Note: Please write your names based on your PSA/NSO-copy of birth certificate.
-                        For married females who wanted to use their married name, write your names based
-                        on your marriage certificate.
-                      </p>
-                    </div>
                     <form onSubmit={handleSave}>
                       <div className="form-grid">
                         <div className="form-group">
@@ -922,7 +971,6 @@ function ScopeRegistration1() {
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
-                            <option value="Other">Other</option>
                           </select>
                           {errors.gender && (
                             <span className="error-message">
@@ -1164,6 +1212,28 @@ function ScopeRegistration1() {
                   onClick={handleLogout}
                 >
                   Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showUnsavedModal && (
+          <div className="scope-modal-overlay">
+            <div className="scope-confirm-modal">
+              <h3>Unsaved Changes</h3>
+              <p>You have unsaved changes. Do you want to leave without saving?</p>
+              <div className="scopeiciones-modal-buttons">
+                <button
+                  className="scope-modal-cancel"
+                  onClick={handleModalCancel}
+                >
+                  Stay
+                </button>
+                <button
+                  className="scope-modal-confirm"
+                  onClick={handleModalConfirm}
+                >
+                  Leave
                 </button>
               </div>
             </div>
