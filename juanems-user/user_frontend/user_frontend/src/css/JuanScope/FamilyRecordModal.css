@@ -57,6 +57,10 @@
     color: #2A67D5;
 }
 
+.section-title .phone-icon {
+    transform: rotate(90deg);
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
@@ -159,18 +163,31 @@
     margin-top: 1rem;
 }
 
+.button-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .scope-modal-cancel,
 .scope-modal-reset,
 .scope-modal-confirm {
-    padding: 10px 20px;
+    padding: 8px 16px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
     transition: background-color 0.2s;
+    height: 36px;
+    box-sizing: border-box;
+    align-self: center;
+    margin: 0;
+    flex: 1;
+    max-width: 120px;
 }
 
 .scope-modal-cancel {
@@ -302,13 +319,25 @@
     .scope-modal-buttons {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
+    }
+
+    .button-group {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
     }
 
     .scope-modal-cancel,
     .scope-modal-reset,
     .scope-modal-confirm {
-        width: 100%;
-        justify-content: center;
+        max-width: none;
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 13px;
+        height: 34px;
+        margin: 0;
     }
 }
 
@@ -351,6 +380,14 @@
     .scope-modal-reset,
     .scope-modal-confirm {
         font-size: 12px;
-        padding: 6px 12px;
+        padding: 6px 10px;
+        height: 32px;
+        margin: 0;
+    }
+
+    .button-group {
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
     }
 }

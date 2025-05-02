@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationCircle, faTimes, faUndo, faSave } from '@fortawesome/free-solid-svg-icons';
 import { FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 import Select from 'react-select';
 import '../../css/JuanScope/FamilyRecordModal.css';
-import { faTimes,faUndo, faSave } from '@fortawesome/free-solid-svg-icons';
 
 // List of countries (same as ScopeRegistration1.js)
 const countries = [
@@ -449,7 +448,7 @@ const FamilyRecordModal = ({
                     <div className="modal-section">
                         <div className="form-section">
                             <div className="section-title">
-                                <FaPhone />
+                                <FaPhone className="phone-icon" />
                                 <h4>Contacts</h4>
                             </div>
                             <div className="personal-info-divider"></div>
@@ -546,7 +545,7 @@ const FamilyRecordModal = ({
                     <button className="scope-modal-cancel" onClick={onClose}>
                         <FontAwesomeIcon icon={faTimes} /> Cancel
                     </button>
-                    <div>
+                    <div className="button-group">
                         <button className="scope-modal-reset" onClick={onReset}>
                             <FontAwesomeIcon icon={faUndo} /> Reset
                         </button>

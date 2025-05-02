@@ -700,45 +700,45 @@ function ScopeRegistration1() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/personal-details/${userData.email}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prefix: formData.prefix,
-              suffix: formData.suffix,
-              religion: formData.religion,
-              gender: formData.gender,
-              lrnNo: formData.lrnNo,
-              countryOfBirth: formData.countryOfBirth,
-              civilStatus: formData.civilStatus,
-              birthPlaceCity: formData.birthPlaceCity,
-              birthPlaceProvince: formData.birthPlaceProvince,
-            }),
-          }
-        );
+  // const handleSave = async (e) => {
+  //   e.preventDefault();
+  //   if (validateForm()) {
+  //     try {
+  //       const response = await fetch(
+  //         `http://localhost:5000/api/enrollee-applicants/personal-details/${userData.email}`,
+  //         {
+  //           method: 'PUT',
+  //           headers: {
+  //             'Content-Type': 'application/json',
+  //           },
+  //           body: JSON.stringify({
+  //             prefix: formData.prefix,
+  //             suffix: formData.suffix,
+  //             religion: formData.religion,
+  //             gender: formData.gender,
+  //             lrnNo: formData.lrnNo,
+  //             countryOfBirth: formData.countryOfBirth,
+  //             civilStatus: formData.civilStatus,
+  //             birthPlaceCity: formData.birthPlaceCity,
+  //             birthPlaceProvince: formData.birthPlaceProvince,
+  //           }),
+  //         }
+  //       );
 
-        if (response.ok) {
-          // Update local storage with form data
-          localStorage.setItem('middleName', formData.middleName || '');
-          alert('Personal information saved successfully!');
-          setIsFormDirty(false); // Reset dirty state after saving
-        } else {
-          const errorData = await response.json();
-          setError(errorData.message || 'Failed to save information. Please try again.');
-        }
-      } catch (err) {
-        setError('Error saving information');
-      }
-    }
-  };
+  //       if (response.ok) {
+  //         // Update local storage with form data
+  //         localStorage.setItem('middleName', formData.middleName || '');
+  //         alert('Personal information saved successfully!');
+  //         setIsFormDirty(false); // Reset dirty state after saving
+  //       } else {
+  //         const errorData = await response.json();
+  //         setError(errorData.message || 'Failed to save information. Please try again.');
+  //       }
+  //     } catch (err) {
+  //       setError('Error saving information');
+  //     }
+  //   }
+  // };
 
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
@@ -881,7 +881,7 @@ function ScopeRegistration1() {
                         required.
                       </p>
                     </div>
-                    <form onSubmit={handleSave}>
+                    <form>
                       <div className="form-grid">
                         <div className="form-group">
                           <label htmlFor="prefix">
@@ -1176,7 +1176,7 @@ function ScopeRegistration1() {
                         </div>
                       </div>
                       <div className="form-buttons">
-                        <button type="submit" className="save-button">
+                        <button className="save-button">
                           Save
                         </button>
                         <button type="button" className="next-button" onClick={handleNext}>

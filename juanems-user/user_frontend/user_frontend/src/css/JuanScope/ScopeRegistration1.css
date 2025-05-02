@@ -318,6 +318,7 @@
     flex-direction: column;
     gap: 1rem;
     background-color: white;
+    position: relative;
 }
 
 /* Contact Details */
@@ -351,6 +352,7 @@
 }
 
 .emergency-contact svg {
+    font-size: 16px;
     color: #34A853;
 }
 
@@ -362,11 +364,13 @@
 
 /* Contact Actions */
 .contact-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
     display: flex;
     flex-direction: row;
     gap: 0.5rem;
     align-items: center;
-    justify-content: flex-end;
 }
 
 .contact-actions button {
@@ -776,9 +780,8 @@
     }
 
     .contact-actions {
-        flex-direction: row;
-        justify-content: flex-end;
-        width: 100%;
+        top: 5px;
+        right: 5px;
     }
 
     .requirements-container {
