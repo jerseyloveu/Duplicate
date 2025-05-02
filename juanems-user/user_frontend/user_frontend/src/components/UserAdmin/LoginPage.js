@@ -135,7 +135,7 @@ const LoginPage = () => {
   };
 
   const handleForgotPassword = () => {
-    
+    navigate('/admin/forgot-password');
   };
 
   return (

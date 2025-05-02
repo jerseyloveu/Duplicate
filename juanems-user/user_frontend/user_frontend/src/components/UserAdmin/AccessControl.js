@@ -14,7 +14,6 @@ const admissionsModules = {
       'Manage Exam and Interview Results',
       'Manage Enrollment Period',
     ],
-    'Manage Accounts': [],
     'Create Announcements': [],
   };
   

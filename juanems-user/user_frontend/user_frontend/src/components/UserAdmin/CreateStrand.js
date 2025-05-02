@@ -3,7 +3,7 @@ import Header from './Header';
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/CreateStrand.css';
 
-import { Button, Form, Input, Select, Table, Modal, message} from 'antd';
+import { Button, Form, Input, Select, Table, Modal, message } from 'antd';
 import React, { useState, useEffect } from 'react';
 import { BsXDiamondFill } from "react-icons/bs";
 import { IoMdInformationCircle } from "react-icons/io";
@@ -34,37 +34,37 @@ const CreateStrand = () => {
 
     useEffect(() => {
         const fetchStrand = async () => {
-          if (!id) return; // Only fetch if editing
-      
-          try {
-            const res = await fetch(`http://localhost:5000/api/admin/strands/${id}`);
-            const result = await res.json();
-      
-            if (!res.ok) {
-              return message.error(result.message || 'Failed to load strand data.');
+            if (!id) return; // Only fetch if editing
+
+            try {
+                const res = await fetch(`http://localhost:5000/api/admin/strands/${id}`);
+                const result = await res.json();
+
+                if (!res.ok) {
+                    return message.error(result.message || 'Failed to load strand data.');
+                }
+
+                // Log the fetched data to the console
+                console.log('Fetched strand data:', result);
+
+                const data = result.data;
+
+                // Set form fields with fetched data
+                form.setFieldsValue({
+                    strandCode: data.strandCode,
+                    strandName: data.strandName,
+                    status: data.status,
+                });
+
+            } catch (error) {
+                console.error('Error fetching strand:', error);
+                message.error('Error fetching strand data.');
             }
-      
-            // Log the fetched data to the console
-            console.log('Fetched strand data:', result);
-      
-            const data = result.data;
-      
-            // Set form fields with fetched data
-            form.setFieldsValue({
-              strandCode: data.strandCode,
-              strandName: data.strandName,
-              status: data.status,
-            });
-      
-          } catch (error) {
-            console.error('Error fetching strand:', error);
-            message.error('Error fetching strand data.');
-          }
         };
-      
+
         fetchStrand();
-      }, [id, form]); // Depend on 'id' and 'form' for reloading
-      
+    }, [id, form]); // Depend on 'id' and 'form' for reloading
+
 
     const fetchSubjects = async () => {
         try {
@@ -79,7 +79,7 @@ const CreateStrand = () => {
         const { grade, semester, rowIndex } = currentCell;
         const key = `${grade}-${semester}-${rowIndex}`;
         setSelectedSubjects(prev => ({ ...prev, [key]: subject }));
-        
+
         // Update row count if we're adding to the last row
         const gradeKey = `grade${grade}`;
         if (rowIndex === rowCounts[gradeKey] - 1) {
@@ -88,7 +88,7 @@ const CreateStrand = () => {
                 [gradeKey]: prev[gradeKey] + 1
             }));
         }
-        
+
         setIsModalVisible(false);
     };
 
@@ -99,14 +99,14 @@ const CreateStrand = () => {
             delete updated[key];
             return updated;
         });
-        
+
         // Check if we can reduce row count
         const gradeKey = `grade${grade}`;
         const hasSubjectsInLastRow = Object.keys(selectedSubjects).some(k => {
             const [g, , r] = k.split('-');
             return g === grade.toString() && parseInt(r) === rowCounts[gradeKey] - 2;
         });
-        
+
         if (!hasSubjectsInLastRow && rowCounts[gradeKey] > 1) {
             setRowCounts(prev => ({
                 ...prev,
@@ -117,54 +117,85 @@ const CreateStrand = () => {
 
     const handleSubmit = async (values) => {
         try {
-          // Trim and sanitize input
-          const trimmedValues = {
-            strandCode: values.strandCode.trim(),
-            strandName: values.strandName.trim(),
-            status: values.status.trim(),
-          };
-      
-          // Determine if it's a create or update operation
-          const url = id
-            ? `http://localhost:5000/api/admin/strands/${id}`
-            : 'http://localhost:5000/api/admin/strands/create-strand';
-      
-          const method = id ? 'PUT' : 'POST';
-      
-          // API call to create or update the strand
-          const response = await fetch(url, {
-            method,
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(trimmedValues)
-          });
-      
-          const data = await response.json();
-      
-          if (!response.ok) {
-            // Conflict (duplicate strandCode/strandName)
-            if (response.status === 409) {
-              return message.error(data.message);
+            // Trim and sanitize input
+            const trimmedValues = {
+                strandCode: values.strandCode.trim(),
+                strandName: values.strandName.trim(),
+                status: values.status.trim(),
+            };
+
+            // Determine if it's a create or update operation
+            const url = id
+                ? `http://localhost:5000/api/admin/strands/${id}`
+                : 'http://localhost:5000/api/admin/strands/create-strand';
+
+            const method = id ? 'PUT' : 'POST';
+
+            // API call to create or update the strand
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(trimmedValues)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    return message.error(data.message);
+                }
+                if (response.status >= 400 && response.status < 500) {
+                    return message.warning(data.message || 'Invalid input.');
+                }
+                return message.error('Server error. Please try again later.');
             }
-      
-            // Validation or client-side errors
-            if (response.status >= 400 && response.status < 500) {
-              return message.warning(data.message || 'Invalid input.');
-            }
-      
-            // Server errors
-            return message.error('Server error. Please try again later.');
-          }
-      
-          message.success(id ? 'Strand updated successfully!' : 'Strand created successfully!');
-          navigate('/admin/manage-strands');
+
+            message.success(id ? 'Strand updated successfully!' : 'Strand created successfully!');
+
+            // Get values from localStorage without parsing as JSON
+            const fullName = localStorage.getItem('fullName');
+            const role = localStorage.getItem('role');
+            const userID = localStorage.getItem('userID');
+
+            // Log the action
+            const logAction = id ? 'Update' : 'Create';
+            const logDetail = `${logAction === 'Create' ? 'Created' : 'Updated'} strand [${trimmedValues.strandName}] with code ${trimmedValues.strandCode}`;
+
+            const logData = {
+                userID: userID,
+                accountName: fullName,
+                role: role,
+                action: logAction,
+                detail: logDetail,
+            };
+
+            // Make API call to save the system log
+            fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('System log recorded:', data);
+                })
+                .catch(error => {
+                    console.error('Failed to record system log:', error);
+                });
+
+            navigate('/admin/manage-strands');
+
         } catch (error) {
-          console.error('Error saving strand:', error);
-          message.error(error.message || 'Failed to save strand. Please try again.');
+            console.error('Error saving strand:', error);
+            message.error(error.message || 'Failed to save strand. Please try again.');
         }
-      };
-      
+    };
+
+
     const handleBack = () => navigate('/admin/manage-strands');
 
     const handleAddSubject = (grade, semester, rowIndex) => {
@@ -180,11 +211,11 @@ const CreateStrand = () => {
     const generateTableData = (grade) => {
         const count = rowCounts[`grade${grade}`];
         const data = [];
-        
+
         for (let i = 0; i < count; i++) {
             data.push({ key: `row-${grade}-${i}` });
         }
-        
+
         return data;
     };
 
@@ -299,9 +330,6 @@ const CreateStrand = () => {
                                     <Select.Option value="Inactive">Inactive</Select.Option>
                                 </Select>
                             </Form.Item>
-                        </div>
-
-                        <div className="column">
                             <Form.Item
                                 label="Strand Name"
                                 name="strandName"
@@ -309,17 +337,31 @@ const CreateStrand = () => {
                             >
                                 <Input placeholder="Please enter strand name" />
                             </Form.Item>
+                            <div className="buttons" style={{ marginTop: '20px' }}>
+                                <Button type="default" htmlType="button" onClick={handleBack}>
+                                    Cancel
+                                </Button>
+                                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
+                                    {id ? 'Update' : 'Save'}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="column">
+                        </div>
+
+                        <div className="column">
                         </div>
                     </div>
-                    <div className="container-columns">
+                    {/* <div className="container-columns">
                         <div className="column">
                             <div className="group-title">
                                 <BsXDiamondFill className="section-icon" />
                                 <p className="section-title">FLOWCHART</p>
                             </div>
                         </div>
-                    </div>
-                    <div className="container-columns">
+                    </div> */}
+                    {/* <div className="container-columns">
                         <div className="column">
                             <Table
                                 dataSource={generateTableData(11)}
@@ -365,17 +407,8 @@ const CreateStrand = () => {
                                     />
                                 </ColumnGroup>
                             </Table>
-                            <div className="buttons" style={{ marginTop: '20px' }}>
-                                <Button type="default" htmlType="button" onClick={handleBack}>
-                                    Cancel
-                                </Button>
-                                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
-                                    {id ? 'Update' : 'Save'}
-                                </Button>
-                            </div>
                         </div>
-                    </div>
-
+                    </div> */}
                 </Form>
             </div>
 

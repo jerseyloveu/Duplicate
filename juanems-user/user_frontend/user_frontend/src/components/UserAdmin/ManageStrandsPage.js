@@ -1,4 +1,4 @@
-import { Button, DatePicker, Input, Table, Tag } from 'antd';
+import { Button, DatePicker, Input, Table, Tag, message } from 'antd';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import utc from 'dayjs/plugin/utc';
@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
-import { FaPen, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaPen, FaPlus, FaSearch, FaTrashAlt } from 'react-icons/fa';
 import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft } from 'react-icons/md';
@@ -86,58 +86,117 @@ const ManageStrandsPage = () => {
     };
 
 
-   const handleExport = () => {
-    // Get the current date in YYYY-MM-DD format
-    const currentDate = new Date().toISOString().split('T')[0];
-    const fileName = `strands-report-${currentDate}.pdf`;
-    
-    // Get values from localStorage without parsing as JSON
-    const fullName = localStorage.getItem('fullName');
-    const role = localStorage.getItem('role');
-    const userID = localStorage.getItem('userID');
-    
-    fetch('http://localhost:5000/api/admin/export/strands', {
-        method: 'GET',
-    })
-    .then(response => response.blob())
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        
-        // After successful export, log the action
-        const logData = {
-            userID: userID,
-            accountName: fullName,
-            role: role,
-            action: 'Export',
-            detail: `Exported strands report: ${fileName}`
-        };
-        
-        // Make API call to save the system log
-        fetch('http://localhost:5000/api/admin/system-logs', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(logData)
+    const handleExport = () => {
+        // Get the current date in YYYY-MM-DD format
+        const currentDate = new Date().toISOString().split('T')[0];
+        const fileName = `strands-report-${currentDate}.pdf`;
+
+        // Get values from localStorage without parsing as JSON
+        const fullName = localStorage.getItem('fullName');
+        const role = localStorage.getItem('role');
+        const userID = localStorage.getItem('userID');
+
+        fetch('http://localhost:5000/api/admin/export/strands', {
+            method: 'GET',
         })
-        .then(response => response.json())
-        .then(data => {
-            console.log('System log recorded:', data);
-        })
-        .catch(error => {
-            console.error('Failed to record system log:', error);
-        });
-    })
-    .catch(error => {
-        console.error('Export failed:', error);
-    });
-};
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                // After successful export, log the action
+                const logData = {
+                    userID: userID,
+                    accountName: fullName,
+                    role: role,
+                    action: 'Export',
+                    detail: `Exported strands report: ${fileName}`
+                };
+
+                // Make API call to save the system log
+                fetch('http://localhost:5000/api/admin/system-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(logData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('System log recorded:', data);
+                    })
+                    .catch(error => {
+                        console.error('Failed to record system log:', error);
+                    });
+            })
+            .catch(error => {
+                console.error('Export failed:', error);
+            });
+    };
+
+    const handleDelete = async (_id) => {
+        try {
+            // Confirm deletion
+            const confirmDelete = window.confirm('Are you sure you want to delete this strand?');
+            if (!confirmDelete) return;
+
+            // Fetch strand details first for logging
+            const strandRes = await fetch(`http://localhost:5000/api/admin/strands/${_id}`);
+            if (!strandRes.ok) {
+                return message.error('Failed to fetch strand details for logging.');
+            }
+
+            const { data: strand } = await strandRes.json();
+            const { strandCode, strandName } = strand;
+
+            // Proceed with deletion
+            const response = await fetch(`http://localhost:5000/api/admin/strands/${_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return message.error(data.message || 'Failed to delete strand');
+            }
+
+            // Log the deletion
+            const adminID = localStorage.getItem('userID');
+            const adminName = localStorage.getItem('fullName');
+            const adminRole = localStorage.getItem('role');
+
+            const logData = {
+                userID: adminID,
+                accountName: adminName,
+                role: adminRole,
+                action: 'Delete',
+                detail: `Deleted strand [${strandCode}] - ${strandName}`,
+            };
+
+            await fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            });
+
+            // Refresh and notify
+            fetchStrands();
+            message.success('Strand deleted successfully!');
+        } catch (error) {
+            console.error('Error deleting strand:', error);
+            message.error(error.message || 'Failed to delete strand. Please try again.');
+        }
+    };
 
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-strands/create');
@@ -224,6 +283,19 @@ const ManageStrandsPage = () => {
                         onClick={() => navigate(`/admin/manage-strands/edit/${record.key}`)}
                     >
                         Edit
+                    </Button>
+                    <Button
+                        icon={<FaTrashAlt />}
+                        danger
+                        style={{
+                            width: '150px',
+                            margin: '0 auto',
+                            display: 'flex',
+                            justifyContent: 'flex-start'
+                        }}
+                        onClick={() => handleDelete(record.key)}
+                    >
+                        Delete
                     </Button>
                 </div>
             )
