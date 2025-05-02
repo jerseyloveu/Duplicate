@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// models/EnrolleeApplicant.js
 const enrolleeApplicantSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
   middleName: { type: String, trim: true },
   lastName: { type: String, required: true, trim: true },
   dob: { type: Date, required: true },
-  email: { type: String, required: true, trim: true, unique: true },
+  email: { type: String, required: true, trim: true }, // Removed unique: true
   mobile: { type: String, required: true },
   nationality: { type: String, required: true },
   academicYear: { type: String, required: true },

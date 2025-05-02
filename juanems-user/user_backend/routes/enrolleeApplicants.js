@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const EnrolleeApplicant = require('../models/EnrolleeApplicant');
-const AdditionalApplicantDetails = require('../models/AdditionalApplicantDetails');
 const emailService = require('../utils/emailService');
 const { generateOTP, sendOTP } = require('../utils/emailService');
 const otpGenerator = require('otp-generator');
@@ -97,12 +96,6 @@ router.post('/', async (req, res) => {
 
     await newApplicant.save();
 
-    // Initialize additional details
-    const additionalDetails = new AdditionalApplicantDetails({
-      email,
-    });
-    await additionalDetails.save();
-
     try {
       await sendOTP(email, firstName, otp);
     } catch (emailError) {
@@ -157,7 +150,7 @@ router.get('/check-email/:email', async (req, res) => {
   }
 });
 
-// New route to fetch personal details
+// Route to fetch personal details
 router.get('/personal-details/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -175,10 +168,6 @@ router.get('/personal-details/:email', async (req, res) => {
       });
     }
 
-    const additionalDetails = await AdditionalApplicantDetails.findOne({
-      email: cleanEmail,
-    });
-
     res.json({
       firstName: applicant.firstName,
       middleName: applicant.middleName || '',
@@ -187,15 +176,6 @@ router.get('/personal-details/:email', async (req, res) => {
       nationality: applicant.nationality,
       studentID: applicant.studentID,
       applicantID: applicant.applicantID,
-      prefix: additionalDetails?.prefix || '',
-      suffix: additionalDetails?.suffix || '',
-      gender: additionalDetails?.gender || '',
-      lrnNo: additionalDetails?.lrnNo || '',
-      civilStatus: additionalDetails?.civilStatus || '',
-      religion: additionalDetails?.religion || '',
-      countryOfBirth: additionalDetails?.countryOfBirth || '',
-      birthPlaceCity: additionalDetails?.birthPlaceCity || '',
-      birthPlaceProvince: additionalDetails?.birthPlaceProvince || '',
     });
   } catch (error) {
     console.error('Error fetching personal details:', error);
@@ -206,139 +186,6 @@ router.get('/personal-details/:email', async (req, res) => {
   }
 });
 
-// New route to update personal details
-router.put('/personal-details/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    const cleanEmail = email.trim().toLowerCase();
-    const {
-      prefix,
-      suffix,
-      gender,
-      lrnNo,
-      civilStatus,
-      religion,
-      countryOfBirth,
-      birthPlaceCity,
-      birthPlaceProvince,
-    } = req.body;
-
-    const applicant = await EnrolleeApplicant.findOne({
-      email: cleanEmail,
-      status: 'Active',
-    });
-
-    if (!applicant) {
-      return res.status(404).json({
-        message: 'Active account not found',
-        errorType: 'account_not_found',
-      });
-    }
-
-    const updateData = {
-      prefix: prefix || '',
-      suffix: suffix || '',
-      gender,
-      lrnNo,
-      civilStatus,
-      religion,
-      countryOfBirth,
-      birthPlaceCity,
-      birthPlaceProvince,
-    };
-
-    const updatedDetails = await AdditionalApplicantDetails.findOneAndUpdate(
-      { email: cleanEmail },
-      { $set: updateData },
-      { new: true, upsert: true }
-    );
-
-    res.json({
-      message: 'Personal details updated successfully',
-      data: updatedDetails,
-    });
-  } catch (error) {
-    console.error('Error updating personal details:', error);
-    res.status(500).json({
-      message: 'Server error while updating personal details',
-      errorType: 'server_error',
-    });
-  }
-});
-
-// New route to fetch entry level
-router.get('/entry-level/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    const cleanEmail = email.trim().toLowerCase();
-
-    const applicant = await EnrolleeApplicant.findOne({
-      email: cleanEmail,
-      status: 'Active',
-    }).sort({ createdAt: -1 });
-
-    if (!applicant) {
-      return res.status(404).json({
-        message: 'Active account not found',
-        errorType: 'account_not_found',
-      });
-    }
-
-    const additionalDetails = await AdditionalApplicantDetails.findOne({
-      email: cleanEmail,
-    });
-
-    res.json({
-      entryLevel: additionalDetails?.entryLevel || '',
-    });
-  } catch (error) {
-    console.error('Error fetching entry level:', error);
-    res.status(500).json({
-      message: 'Server error while fetching entry level',
-      errorType: 'server_error',
-    });
-  }
-});
-
-// New route to update entry level
-router.put('/entry-level/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    const cleanEmail = email.trim().toLowerCase();
-    const { entryLevel } = req.body;
-
-    const applicant = await EnrolleeApplicant.findOne({
-      email: cleanEmail,
-      status: 'Active',
-    });
-
-    if (!applicant) {
-      return res.status(404).json({
-        message: 'Active account not found',
-        errorType: 'account_not_found',
-      });
-    }
-
-    const updatedDetails = await AdditionalApplicantDetails.findOneAndUpdate(
-      { email: cleanEmail },
-      { $set: { entryLevel } },
-      { new: true, upsert: true }
-    );
-
-    res.json({
-      message: 'Entry level updated successfully',
-      data: updatedDetails,
-    });
-  } catch (error) {
-    console.error('Error updating entry level:', error);
-    res.status(500).json({
-      message: 'Server error while updating entry level',
-      errorType: 'server_error',
-    });
-  }
-});
-
-// Existing routes (unchanged)
 router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;

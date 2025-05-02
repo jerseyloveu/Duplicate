@@ -308,7 +308,7 @@ function Register() {
   // Validation function - extracted for reuse
   const validateField = (name, value) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^09\d{2}-\d{3}-\d{4}$/;
+    const phoneRegex = /^\+63\s\(\d{3}\)\s\d{3}\s\d{4}$/;
 
     switch (name) {
       case 'firstName':
@@ -333,7 +333,7 @@ function Register() {
 
       case 'mobile':
         if (!value) return 'Mobile number is required';
-        if (!phoneRegex.test(value)) return 'Please enter a valid Philippine mobile number (09XX-XXX-XXXX)';
+        if (!phoneRegex.test(value)) return 'Please enter a valid Philippine mobile number (+63 (XXX) YYY ZZZZ)';
         return null;
 
       case 'nationality':
@@ -469,12 +469,18 @@ function Register() {
 
   const formatPhilippinePhone = (value) => {
     const digits = value.replace(/\D/g, '');
-    if (digits.length <= 4) {
-      return digits.startsWith('0') ? digits : '0' + digits;
-    } else if (digits.length <= 7) {
-      return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    // Ensure the number starts with 9 for Philippine mobile numbers
+    let cleanedDigits = digits.startsWith('0') ? digits.slice(1) : digits;
+    cleanedDigits = cleanedDigits.startsWith('9') ? cleanedDigits : '9' + cleanedDigits;
+
+    if (cleanedDigits.length <= 3) {
+      return `+63 (${cleanedDigits})`;
+    } else if (cleanedDigits.length <= 6) {
+      return `+63 (${cleanedDigits.slice(0, 3)}) ${cleanedDigits.slice(3)}`;
+    } else if (cleanedDigits.length <= 10) {
+      return `+63 (${cleanedDigits.slice(0, 3)}) ${cleanedDigits.slice(3, 6)} ${cleanedDigits.slice(6)}`;
     } else {
-      return `${digits.slice(0, 4)}-${digits.slice(4, 7)}-${digits.slice(7, 11)}`;
+      return `+63 (${cleanedDigits.slice(0, 3)}) ${cleanedDigits.slice(3, 6)} ${cleanedDigits.slice(6, 10)}`;
     }
   };
 
@@ -821,7 +827,7 @@ function Register() {
                       onChange={handleInputChange}
                       onBlur={handleBlur}
                       className={errors.mobile ? 'juan-input-error' : ''}
-                      placeholder="09XX-XXX-XXXX"
+                      placeholder="+63 (XXX) YYY ZZZZ"
                     />
                     {errors.mobile && (
                       <span className="juan-error-message">

@@ -20,6 +20,19 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+mongoose.connection.on('connected', async () => {
+  try {
+    await mongoose.connection.db.collection('enrolleeapplicants').dropIndex('email_1');
+    console.log('Dropped email_1 index');
+  } catch (err) {
+    if (err.codeName === 'IndexNotFound') {
+      console.log('email_1 index does not exist, no need to drop');
+    } else {
+      console.error('Error dropping email_1 index:', err);
+    }
+  }
+});
+
 
 // Test database connection
 app.get("/api/test-db", async (req, res) => {
