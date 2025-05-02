@@ -5,12 +5,14 @@ import { faHome, faArrowLeft, faTimes, faBars, faChevronDown, faChevronUp, faEdi
 import { FaPlus } from 'react-icons/fa';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
-import SessionManager from '../JuanScope/SessionManager';
 import SideNavigation from './SideNavigation';
 import FamilyRecordModal from './FamilyRecordModal';
 
 function ScopeRegistration5() {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,15 +61,6 @@ function ScopeRegistration5() {
   const [modalErrors, setModalErrors] = useState({});
   const [modalTouchedFields, setModalTouchedFields] = useState({});
 
-  // Mock user data for SideNavigation
-  const userData = {
-    firstName: 'Juan',
-    lastName: 'Dela Cruz',
-    email: 'user@example.com',
-    studentID: 'N/A',
-    applicantID: 'N/A',
-  };
-
   // Update current date and time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -75,6 +68,130 @@ function ScopeRegistration5() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Fetch user data and verify session
+  useEffect(() => {
+    const userEmail = localStorage.getItem('userEmail');
+    const createdAt = localStorage.getItem('createdAt');
+
+    if (!userEmail) {
+      navigate('/scope-login');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+
+        const createdAtDate = new Date(createdAt);
+        if (isNaN(createdAtDate.getTime())) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const verificationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!verificationResponse.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const verificationData = await verificationResponse.json();
+
+        if (
+          verificationData.status !== 'Active' ||
+          (createdAt &&
+            Math.abs(
+              new Date(verificationData.createdAt).getTime() -
+                new Date(createdAt).getTime()
+            ) > 1000)
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const userResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
+            createdAt
+          )}`
+        );
+
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await userResponse.json();
+
+        // Update local storage
+        localStorage.setItem('applicantID', userData.applicantID);
+        localStorage.setItem('firstName', userData.firstName);
+        localStorage.setItem('middleName', '');
+        localStorage.setItem('lastName', userData.lastName);
+        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', userData.nationality || '');
+
+        setUserData({
+          email: userEmail,
+          firstName: userData.firstName || 'User',
+          middleName: '',
+          lastName: userData.lastName || '',
+          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
+          nationality: userData.nationality || '',
+          studentID: userData.studentID || 'N/A',
+          applicantID: userData.applicantID || 'N/A',
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading registration data:', err);
+        setError('Failed to load user data. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, [navigate]);
+
+  // Periodic account status check
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const createdAt = localStorage.getItem('createdAt');
+
+        if (!userEmail || !createdAt) return;
+
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const data = await response.json();
+
+        if (
+          data.status !== 'Active' ||
+          new Date(data.createdAt).getTime() !== new Date(createdAt).getTime()
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+        }
+      } catch (err) {
+        console.error('Error checking account status:', err);
+      }
+    };
+
+    const interval = setInterval(checkAccountStatus, 60 * 1000);
+    checkAccountStatus();
+    return () => clearInterval(interval);
+  }, [navigate]);
 
   // Handle unsaved changes warning
   useEffect(() => {
@@ -89,9 +206,41 @@ function ScopeRegistration5() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isFormDirty]);
 
-  const handleLogout = () => {
-    setShowLogoutModal(false);
-    navigate('/scope-login');
+  const handleLogout = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+      const createdAt = localStorage.getItem('createdAt');
+
+      if (!userEmail) {
+        navigate('/scope-login');
+        return;
+      }
+
+      const response = await fetch(
+        'http://localhost:5000/api/enrollee-applicants/logout',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            createdAt: createdAt,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        localStorage.clear();
+        navigate('/scope-login');
+      } else {
+        setError('Failed to logout. Please try again.');
+      }
+    } catch (err) {
+      setError('Error during logout process');
+    } finally {
+      setShowLogoutModal(false);
+    }
   };
 
   const handleAnnouncements = () => {
@@ -240,41 +389,45 @@ function ScopeRegistration5() {
   };
 
   return (
-    <SessionManager>
-      <div className="scope-registration-container">
-        <header className="juan-register-header">
-          <div className="juan-header-left">
-            <img
-              src={SJDEFILogo}
-              alt="SJDEFI Logo"
-              className="juan-logo-register"
-            />
-            <div className="juan-header-text">
-              <h1>JUAN SCOPE</h1>
-            </div>
-          </div>
-          <div className="hamburger-menu">
-            <button
-              className="hamburger-button"
-              onClick={toggleSidebar}
-              aria-label="Toggle navigation menu"
-            >
-              <FontAwesomeIcon
-                icon={sidebarOpen ? faTimes : faBars}
-                size="lg"
-              />
-            </button>
-          </div>
-        </header>
-        <div className="scope-registration-content">
-          <SideNavigation
-            userData={userData}
-            onNavigate={closeSidebar}
-            isOpen={sidebarOpen}
+    <div className="scope-registration-container">
+      <header className="juan-register-header">
+        <div className="juan-header-left">
+          <img
+            src={SJDEFILogo}
+            alt="SJDEFI Logo"
+            className="juan-logo-register"
           />
-          <main
-            className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}
+          <div className="juan-header-text">
+            <h1>JUAN SCOPE</h1>
+          </div>
+        </div>
+        <div className="hamburger-menu">
+          <button
+            className="hamburger-button"
+            onClick={toggleSidebar}
+            aria-label="Toggle navigation menu"
           >
+            <FontAwesomeIcon
+              icon={sidebarOpen ? faTimes : faBars}
+              size="lg"
+            />
+          </button>
+        </div>
+      </header>
+      <div className="scope-registration-content">
+        <SideNavigation
+          userData={userData}
+          onNavigate={closeSidebar}
+          isOpen={sidebarOpen}
+        />
+        <main
+          className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}
+        >
+          {loading ? (
+            <div className="scope-loading">Loading...</div>
+          ) : error ? (
+            <div className="scope-error">{error}</div>
+          ) : (
             <div className="registration-content">
               <h2 className="registration-title">Registration</h2>
               <div className="registration-divider"></div>
@@ -379,76 +532,76 @@ function ScopeRegistration5() {
                 </div>
               </div>
             </div>
-          </main>
-        </div>
-        {sidebarOpen && (
-          <div
-            className="sidebar-overlay active"
-            onClick={toggleSidebar}
-          ></div>
-        )}
-        {showLogoutModal && (
-          <div className="scope-modal-overlay">
-            <div className="scope-confirm-modal">
-              <h3>Confirm Logout</h3>
-              <p>Are you sure you want to logout?</p>
-              <div className="scope-modal-buttons">
-                <button
-                  className="scope-modal-cancel"
-                  onClick={() => setShowLogoutModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="scope-modal-confirm"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {showUnsavedModal && (
-          <div className="scope-modal-overlay">
-            <div className="scope-confirm-modal">
-              <h3>Unsaved Changes</h3>
-              <p>You have unsaved changes. Do you want to leave without saving?</p>
-              <div className="scope-modal-buttons">
-                <button
-                  className="scope-modal-cancel"
-                  onClick={handleModalCancelNavigation}
-                >
-                  Stay
-                </button>
-                <button
-                  className="scope-modal-confirm"
-                  onClick={handleModalConfirm}
-                >
-                  Leave
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {showModal && (
-          <FamilyRecordModal
-            isOpen={showModal}
-            onClose={() => setShowModal(false)}
-            onSave={handleModalSave}
-            onReset={handleModalReset}
-            formData={modalFormData}
-            setFormData={setModalFormData}
-            errors={modalErrors}
-            setErrors={setModalErrors}
-            touchedFields={modalTouchedFields}
-            setTouchedFields={setModalTouchedFields}
-            editingContact={editingContact}
-            setIsFormDirty={setIsFormDirty}
-          />
-        )}
+          )}
+        </main>
       </div>
-    </SessionManager>
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay active"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+      {showLogoutModal && (
+        <div className="scope-modal-overlay">
+          <div className="scope-confirm-modal">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to logout?</p>
+            <div className="scope-modal-buttons">
+              <button
+                className="scope-modal-cancel"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="scope-modal-confirm"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showUnsavedModal && (
+        <div className="scope-modal-overlay">
+          <div className="scope-confirm-modal">
+            <h3>Unsaved Changes</h3>
+            <p>You have unsaved changes. Do you want to leave without saving?</p>
+            <div className="scope-modal-buttons">
+              <button
+                className="scope-modal-cancel"
+                onClick={handleModalCancelNavigation}
+              >
+                Stay
+              </button>
+              <button
+                className="scope-modal-confirm"
+                onClick={handleModalConfirm}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showModal && (
+        <FamilyRecordModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSave={handleModalSave}
+          onReset={handleModalReset}
+          formData={modalFormData}
+          setFormData={setModalFormData}
+          errors={modalErrors}
+          setErrors={setModalErrors}
+          touchedFields={modalTouchedFields}
+          setTouchedFields={setModalTouchedFields}
+          editingContact={editingContact}
+          setIsFormDirty={setIsFormDirty}
+        />
+      )}
+    </div>
   );
 }
 

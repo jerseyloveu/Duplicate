@@ -61,6 +61,11 @@
     transform: rotate(90deg);
 }
 
+.section-title .phone-icon1 {
+    transform: rotate(90deg);
+    color: #333;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;

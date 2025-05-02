@@ -8,6 +8,9 @@ import SideNavigation from './SideNavigation';
 
 function ScopeRegistration4() {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,6 +40,130 @@ function ScopeRegistration4() {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch user data and verify session
+  useEffect(() => {
+    const userEmail = localStorage.getItem('userEmail');
+    const createdAt = localStorage.getItem('createdAt');
+
+    if (!userEmail) {
+      navigate('/scope-login');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+
+        const createdAtDate = new Date(createdAt);
+        if (isNaN(createdAtDate.getTime())) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const verificationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!verificationResponse.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const verificationData = await verificationResponse.json();
+
+        if (
+          verificationData.status !== 'Active' ||
+          (createdAt &&
+            Math.abs(
+              new Date(verificationData.createdAt).getTime() -
+                new Date(createdAt).getTime()
+            ) > 1000)
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const userResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
+            createdAt
+          )}`
+        );
+
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await userResponse.json();
+
+        // Update local storage
+        localStorage.setItem('applicantID', userData.applicantID);
+        localStorage.setItem('firstName', userData.firstName);
+        localStorage.setItem('middleName', '');
+        localStorage.setItem('lastName', userData.lastName);
+        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', userData.nationality || '');
+
+        setUserData({
+          email: userEmail,
+          firstName: userData.firstName || 'User',
+          middleName: '',
+          lastName: userData.lastName || '',
+          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
+          nationality: userData.nationality || '',
+          studentID: userData.studentID || 'N/A',
+          applicantID: userData.applicantID || 'N/A',
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading registration data:', err);
+        setError('Failed to load user data. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, [navigate]);
+
+  // Periodic account status check
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const createdAt = localStorage.getItem('createdAt');
+
+        if (!userEmail || !createdAt) return;
+
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const data = await response.json();
+
+        if (
+          data.status !== 'Active' ||
+          new Date(data.createdAt).getTime() !== new Date(createdAt).getTime()
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+        }
+      } catch (err) {
+        console.error('Error checking account status:', err);
+      }
+    };
+
+    const interval = setInterval(checkAccountStatus, 60 * 1000);
+    checkAccountStatus();
+    return () => clearInterval(interval);
+  }, [navigate]);
+
   // Handle unsaved changes warning
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -50,9 +177,41 @@ function ScopeRegistration4() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isFormDirty]);
 
-  const handleLogout = () => {
-    setShowLogoutModal(false);
-    navigate('/scope-login');
+  const handleLogout = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+      const createdAt = localStorage.getItem('createdAt');
+
+      if (!userEmail) {
+        navigate('/scope-login');
+        return;
+      }
+
+      const response = await fetch(
+        'http://localhost:5000/api/enrollee-applicants/logout',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            createdAt: createdAt,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        localStorage.clear();
+        navigate('/scope-login');
+      } else {
+        setError('Failed to logout. Please try again.');
+      }
+    } catch (err) {
+      setError('Error during logout process');
+    } finally {
+      setShowLogoutModal(false);
+    }
   };
 
   const handleAnnouncements = () => {
@@ -229,15 +388,6 @@ function ScopeRegistration4() {
     setNextLocation(null);
   };
 
-  // Mock user data for SideNavigation
-  const userData = {
-    firstName: 'Juan',
-    lastName: 'Dela Cruz',
-    email: 'user@example.com',
-    studentID: 'N/A',
-    applicantID: 'N/A',
-  };
-
   return (
     <div className="scope-registration-container">
       <header className="juan-register-header">
@@ -273,393 +423,399 @@ function ScopeRegistration4() {
         <main
           className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}
         >
-          <div className="registration-content">
-            <h2 className="registration-title">Registration</h2>
-            <div className="registration-divider"></div>
-            <div className="registration-container">
-              <div className="step-indicator">
-                <div className="step-circles">
-                  <div
-                    className="step-circle completed"
-                    style={{ backgroundColor: '#34A853' }}
-                  >
-                    1
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#34A853' }}
-                  ></div>
-                  <div
-                    className="step-circle completed"
-                    style={{ backgroundColor: '#34A853' }}
-                  >
-                    2
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#34A853' }}
-                  ></div>
-                  <div
-                    className="step-circle completed"
-                    style={{ backgroundColor: '#34A853' }}
-                  >
-                    3
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#34A853' }}
-                  ></div>
-                  <div
-                    className="step-circle active"
-                    style={{ backgroundColor: '#64676C' }}
-                  >
-                    4
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  ></div>
-                  <div
-                    className="step-circle"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  >
-                    5
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  ></div>
-                  <div
-                    className="step-circle"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  >
-                    6
-                  </div>
-                </div>
-                <div className="step-text">Step 4 of 6</div>
-              </div>
-              <div className="personal-info-section">
-                <div className="personal-info-header">
-                  <FontAwesomeIcon
-                    icon={faGraduationCap}
-                    style={{ color: '#212121' }}
-                  />
-                  <h3>Educational Background</h3>
-                </div>
-                <div className="personal-info-divider"></div>
-                <div className="reminder-box">
-                  <p>
-                    <strong>Reminder:</strong> Fields marked with asterisk
-                    (<span className="required-asterisk">*</span>) are
-                    required.
-                  </p>
-                </div>
-                <form onSubmit={handleSave}>
-                  <div className="form-section">
-                    <div className="collapsible-container">
-                      <div
-                        className="section-title collapsible-header"
-                        onClick={toggleElementary}
-                      >
-                        <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
-                          Elementary Education
-                        </h4>
-                        <FontAwesomeIcon
-                          icon={isElementaryOpen ? faChevronUp : faChevronDown}
-                          style={{ color: '#2A67D5' }}
-                        />
-                      </div>
-                      {isElementaryOpen && (
-                        <div className="collapsible-content">
-                          <div className="form-group horizontal">
-                            <label htmlFor="elementarySchoolName">
-                              School Name:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="elementarySchoolName"
-                                name="elementarySchoolName"
-                                value={formData.elementarySchoolName}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    elementarySchoolName: true,
-                                  })
-                                }
-                                className={errors.elementarySchoolName ? 'input-error' : ''}
-                                placeholder="Enter School Name"
-                                maxLength={100}
-                              />
-                              <div className={`character-count ${formData.elementarySchoolName.length > 95 ? 'warning' : ''}`}>
-                                {formData.elementarySchoolName.length}/100
-                              </div>
-                              {errors.elementarySchoolName && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementarySchoolName}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="elementaryLastYearAttended">
-                              Last Year Attended:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="elementaryLastYearAttended"
-                                name="elementaryLastYearAttended"
-                                value={formData.elementaryLastYearAttended}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    elementaryLastYearAttended: true,
-                                  })
-                                }
-                                className={errors.elementaryLastYearAttended ? 'input-error' : ''}
-                                placeholder="YYYY-YYYY"
-                                maxLength={9}
-                              />
-                              {errors.elementaryLastYearAttended && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryLastYearAttended}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="elementaryGeneralAverage">
-                              General Average:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="elementaryGeneralAverage"
-                                name="elementaryGeneralAverage"
-                                value={formData.elementaryGeneralAverage}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    elementaryGeneralAverage: true,
-                                  })
-                                }
-                                className={errors.elementaryGeneralAverage ? 'input-error' : ''}
-                                placeholder="Enter General Average"
-                                maxLength={5}
-                              />
-                              {errors.elementaryGeneralAverage && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryGeneralAverage}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="elementaryRemarks">
-                              Remarks:
-                            </label>
-                            <div className="input-container">
-                              <textarea
-                                id="elementaryRemarks"
-                                name="elementaryRemarks"
-                                value={formData.elementaryRemarks}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    elementaryRemarks: true,
-                                  })
-                                }
-                                className={errors.elementaryRemarks ? 'input-error' : ''}
-                                placeholder="Enter Remarks (Optional)"
-                                maxLength={250}
-                              />
-                              <div className={`character-count ${formData.elementaryRemarks.length > 245 ? 'warning' : ''}`}>
-                                {formData.elementaryRemarks.length}/250
-                              </div>
-                              {errors.elementaryRemarks && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryRemarks}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <div className="collapsible-container">
-                      <div
-                        className="section-title collapsible-header"
-                        onClick={toggleJuniorHigh}
-                      >
-                        <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
-                          Junior High Education
-                        </h4>
-                        <FontAwesomeIcon
-                          icon={isJuniorHighOpen ? faChevronUp : faChevronDown}
-                          style={{ color: '#2A67D5' }}
-                        />
-                      </div>
-                      {isJuniorHighOpen && (
-                        <div className="collapsible-content">
-                          <div className="form-group horizontal">
-                            <label htmlFor="juniorHighSchoolName">
-                              School Name:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="juniorHighSchoolName"
-                                name="juniorHighSchoolName"
-                                value={formData.juniorHighSchoolName}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    juniorHighSchoolName: true,
-                                  })
-                                }
-                                className={errors.juniorHighSchoolName ? 'input-error' : ''}
-                                placeholder="Enter School Name"
-                                maxLength={100}
-                              />
-                              <div className={`character-count ${formData.juniorHighSchoolName.length > 95 ? 'warning' : ''}`}>
-                                {formData.juniorHighSchoolName.length}/100
-                              </div>
-                              {errors.juniorHighSchoolName && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighSchoolName}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="juniorHighLastYearAttended">
-                              Last Year Attended:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="juniorHighLastYearAttended"
-                                name="juniorHighLastYearAttended"
-                                value={formData.juniorHighLastYearAttended}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    juniorHighLastYearAttended: true,
-                                  })
-                                }
-                                className={errors.juniorHighLastYearAttended ? 'input-error' : ''}
-                                placeholder="A.Y. YYYY-YYYY"
-                                maxLength={9}
-                              />
-                              {errors.juniorHighLastYearAttended && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighLastYearAttended}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="juniorHighGeneralAverage">
-                              General Average:<span className="required-asterisk">*</span>
-                            </label>
-                            <div className="input-container">
-                              <input
-                                type="text"
-                                id="juniorHighGeneralAverage"
-                                name="juniorHighGeneralAverage"
-                                value={formData.juniorHighGeneralAverage}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    juniorHighGeneralAverage: true,
-                                  })
-                                }
-                                className={errors.juniorHighGeneralAverage ? 'input-error' : ''}
-                                placeholder="Enter General Average"
-                                maxLength={5}
-                              />
-                              {errors.juniorHighGeneralAverage && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighGeneralAverage}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="form-group horizontal">
-                            <label htmlFor="juniorHighRemarks">
-                              Remarks:
-                            </label>
-                            <div className="input-container">
-                              <textarea
-                                id="juniorHighRemarks"
-                                name="juniorHighRemarks"
-                                value={formData.juniorHighRemarks}
-                                onChange={handleInputChange}
-                                onBlur={() =>
-                                  setTouchedFields({
-                                    ...touchedFields,
-                                    juniorHighRemarks: true,
-                                  })
-                                }
-                                className={errors.juniorHighRemarks ? 'input-error' : ''}
-                                placeholder="Enter Remarks (Optional)"
-                                maxLength={250}
-                              />
-                              <div className={`character-count ${formData.juniorHighRemarks.length > 245 ? 'warning' : ''}`}>
-                                {formData.juniorHighRemarks.length}/250
-                              </div>
-                              {errors.juniorHighRemarks && (
-                                <span className="error-message">
-                                  <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighRemarks}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="form-buttons" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button
-                      type="button"
-                      className="back-button"
-                      onClick={handleBack}
-                      style={{
-                        backgroundColor: '#666',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                      }}
+          {loading ? (
+            <div className="scope-loading">Loading...</div>
+          ) : error ? (
+            <div className="scope-error">{error}</div>
+          ) : (
+            <div className="registration-content">
+              <h2 className="registration-title">Registration</h2>
+              <div className="registration-divider"></div>
+              <div className="registration-container">
+                <div className="step-indicator">
+                  <div className="step-circles">
+                    <div
+                      className="step-circle completed"
+                      style={{ backgroundColor: '#34A853' }}
                     >
-                      <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: '5px' }} />
-                      Back
-                    </button>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button type="submit" className="save-button">
-                        Save
-                      </button>
-                      <button type="button" className="next-button" onClick={handleNext}>
-                        Next
-                      </button>
+                      1
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#34A853' }}
+                    ></div>
+                    <div
+                      className="step-circle completed"
+                      style={{ backgroundColor: '#34A853' }}
+                    >
+                      2
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#34A853' }}
+                    ></div>
+                    <div
+                      className="step-circle completed"
+                      style={{ backgroundColor: '#34A853' }}
+                    >
+                      3
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#34A853' }}
+                    ></div>
+                    <div
+                      className="step-circle active"
+                      style={{ backgroundColor: '#64676C' }}
+                    >
+                      4
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    ></div>
+                    <div
+                      className="step-circle"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    >
+                      5
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    ></div>
+                    <div
+                      className="step-circle"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    >
+                      6
                     </div>
                   </div>
-                </form>
+                  <div className="step-text">Step 4 of 6</div>
+                </div>
+                <div className="personal-info-section">
+                  <div className="personal-info-header">
+                    <FontAwesomeIcon
+                      icon={faGraduationCap}
+                      style={{ color: '#212121' }}
+                    />
+                    <h3>Educational Background</h3>
+                  </div>
+                  <div className="personal-info-divider"></div>
+                  <div className="reminder-box">
+                    <p>
+                      <strong>Reminder:</strong> Fields marked with asterisk
+                      (<span className="required-asterisk">*</span>) are
+                      required.
+                    </p>
+                  </div>
+                  <form onSubmit={handleSave}>
+                    <div className="form-section">
+                      <div className="collapsible-container">
+                        <div
+                          className="section-title collapsible-header"
+                          onClick={toggleElementary}
+                        >
+                          <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
+                            Elementary Education
+                          </h4>
+                          <FontAwesomeIcon
+                            icon={isElementaryOpen ? faChevronUp : faChevronDown}
+                            style={{ color: '#2A67D5' }}
+                          />
+                        </div>
+                        {isElementaryOpen && (
+                          <div className="collapsible-content">
+                            <div className="form-group horizontal">
+                              <label htmlFor="elementarySchoolName">
+                                School Name:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="elementarySchoolName"
+                                  name="elementarySchoolName"
+                                  value={formData.elementarySchoolName}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      elementarySchoolName: true,
+                                    })
+                                  }
+                                  className={errors.elementarySchoolName ? 'input-error' : ''}
+                                  placeholder="Enter School Name"
+                                  maxLength={100}
+                                />
+                                <div className={`character-count ${formData.elementarySchoolName.length > 95 ? 'warning' : ''}`}>
+                                  {formData.elementarySchoolName.length}/100
+                                </div>
+                                {errors.elementarySchoolName && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementarySchoolName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="elementaryLastYearAttended">
+                                Last Year Attended:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="elementaryLastYearAttended"
+                                  name="elementaryLastYearAttended"
+                                  value={formData.elementaryLastYearAttended}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      elementaryLastYearAttended: true,
+                                    })
+                                  }
+                                  className={errors.elementaryLastYearAttended ? 'input-error' : ''}
+                                  placeholder="YYYY-YYYY"
+                                  maxLength={9}
+                                />
+                                {errors.elementaryLastYearAttended && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryLastYearAttended}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="elementaryGeneralAverage">
+                                General Average:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="elementaryGeneralAverage"
+                                  name="elementaryGeneralAverage"
+                                  value={formData.elementaryGeneralAverage}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      elementaryGeneralAverage: true,
+                                    })
+                                  }
+                                  className={errors.elementaryGeneralAverage ? 'input-error' : ''}
+                                  placeholder="Enter General Average"
+                                  maxLength={5}
+                                />
+                                {errors.elementaryGeneralAverage && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryGeneralAverage}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="elementaryRemarks">
+                                Remarks:
+                              </label>
+                              <div className="input-container">
+                                <textarea
+                                  id="elementaryRemarks"
+                                  name="elementaryRemarks"
+                                  value={formData.elementaryRemarks}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      elementaryRemarks: true,
+                                    })
+                                  }
+                                  className={errors.elementaryRemarks ? 'input-error' : ''}
+                                  placeholder="Enter Remarks (Optional)"
+                                  maxLength={250}
+                                />
+                                <div className={`character-count ${formData.elementaryRemarks.length > 245 ? 'warning' : ''}`}>
+                                  {formData.elementaryRemarks.length}/250
+                                </div>
+                                {errors.elementaryRemarks && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.elementaryRemarks}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="collapsible-container">
+                        <div
+                          className="section-title collapsible-header"
+                          onClick={toggleJuniorHigh}
+                        >
+                          <h4 style={{ color: '#2A67D5', fontWeight: 'bold', margin: 0 }}>
+                            Junior High Education
+                          </h4>
+                          <FontAwesomeIcon
+                            icon={isJuniorHighOpen ? faChevronUp : faChevronDown}
+                            style={{ color: '#2A67D5' }}
+                          />
+                        </div>
+                        {isJuniorHighOpen && (
+                          <div className="collapsible-content">
+                            <div className="form-group horizontal">
+                              <label htmlFor="juniorHighSchoolName">
+                                School Name:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="juniorHighSchoolName"
+                                  name="juniorHighSchoolName"
+                                  value={formData.juniorHighSchoolName}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      juniorHighSchoolName: true,
+                                    })
+                                  }
+                                  className={errors.juniorHighSchoolName ? 'input-error' : ''}
+                                  placeholder="Enter School Name"
+                                  maxLength={100}
+                                />
+                                <div className={`character-count ${formData.juniorHighSchoolName.length > 95 ? 'warning' : ''}`}>
+                                  {formData.juniorHighSchoolName.length}/100
+                                </div>
+                                {errors.juniorHighSchoolName && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighSchoolName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="juniorHighLastYearAttended">
+                                Last Year Attended:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="juniorHighLastYearAttended"
+                                  name="juniorHighLastYearAttended"
+                                  value={formData.juniorHighLastYearAttended}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      juniorHighLastYearAttended: true,
+                                    })
+                                  }
+                                  className={errors.juniorHighLastYearAttended ? 'input-error' : ''}
+                                  placeholder="A.Y. YYYY-YYYY"
+                                  maxLength={9}
+                                />
+                                {errors.juniorHighLastYearAttended && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighLastYearAttended}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="juniorHighGeneralAverage">
+                                General Average:<span className="required-asterisk">*</span>
+                              </label>
+                              <div className="input-container">
+                                <input
+                                  type="text"
+                                  id="juniorHighGeneralAverage"
+                                  name="juniorHighGeneralAverage"
+                                  value={formData.juniorHighGeneralAverage}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      juniorHighGeneralAverage: true,
+                                    })
+                                  }
+                                  className={errors.juniorHighGeneralAverage ? 'input-error' : ''}
+                                  placeholder="Enter General Average"
+                                  maxLength={5}
+                                />
+                                {errors.juniorHighGeneralAverage && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighGeneralAverage}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="form-group horizontal">
+                              <label htmlFor="juniorHighRemarks">
+                                Remarks:
+                              </label>
+                              <div className="input-container">
+                                <textarea
+                                  id="juniorHighRemarks"
+                                  name="juniorHighRemarks"
+                                  value={formData.juniorHighRemarks}
+                                  onChange={handleInputChange}
+                                  onBlur={() =>
+                                    setTouchedFields({
+                                      ...touchedFields,
+                                      juniorHighRemarks: true,
+                                    })
+                                  }
+                                  className={errors.juniorHighRemarks ? 'input-error' : ''}
+                                  placeholder="Enter Remarks (Optional)"
+                                  maxLength={250}
+                                />
+                                <div className={`character-count ${formData.juniorHighRemarks.length > 245 ? 'warning' : ''}`}>
+                                  {formData.juniorHighRemarks.length}/250
+                                </div>
+                                {errors.juniorHighRemarks && (
+                                  <span className="error-message">
+                                    <FontAwesomeIcon icon={faExclamationCircle} /> {errors.juniorHighRemarks}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="form-buttons" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                      <button
+                        type="button"
+                        className="back-button"
+                        onClick={handleBack}
+                        style={{
+                          backgroundColor: '#666',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 20px',
+                          borderRadius: '10px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: '5px' }} />
+                        Back
+                      </button>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button type="submit" className="save-button">
+                          Save
+                        </button>
+                        <button type="button" className="next-button" onClick={handleNext}>
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
       {sidebarOpen && (

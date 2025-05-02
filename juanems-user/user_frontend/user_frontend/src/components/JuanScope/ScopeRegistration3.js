@@ -9,6 +9,9 @@ import SideNavigation from './SideNavigation';
 
 function ScopeRegistration3() {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,6 +45,136 @@ function ScopeRegistration3() {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch user data and verify session
+  useEffect(() => {
+    const userEmail = localStorage.getItem('userEmail');
+    const createdAt = localStorage.getItem('createdAt');
+
+    if (!userEmail) {
+      navigate('/scope-login');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+
+        const createdAtDate = new Date(createdAt);
+        if (isNaN(createdAtDate.getTime())) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const verificationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!verificationResponse.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const verificationData = await verificationResponse.json();
+
+        if (
+          verificationData.status !== 'Active' ||
+          (createdAt &&
+            Math.abs(
+              new Date(verificationData.createdAt).getTime() -
+                new Date(createdAt).getTime()
+            ) > 1000)
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+          return;
+        }
+
+        const userResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
+            createdAt
+          )}`
+        );
+
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await userResponse.json();
+
+        // Update local storage
+        localStorage.setItem('applicantID', userData.applicantID);
+        localStorage.setItem('firstName', userData.firstName);
+        localStorage.setItem('middleName', '');
+        localStorage.setItem('lastName', userData.lastName);
+        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', userData.nationality || '');
+
+        setUserData({
+          email: userEmail,
+          firstName: userData.firstName || 'User',
+          middleName: '',
+          lastName: userData.lastName || '',
+          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
+          nationality: userData.nationality || '',
+          studentID: userData.studentID || 'N/A',
+          applicantID: userData.applicantID || 'N/A',
+        });
+
+        // Update formData with fetched email
+        setFormData((prev) => ({
+          ...prev,
+          emailAddress: userEmail,
+        }));
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading registration data:', err);
+        setError('Failed to load user data. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, [navigate]);
+
+  // Periodic account status check
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        const createdAt = localStorage.getItem('createdAt');
+
+        if (!userEmail || !createdAt) return;
+
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to verify account status');
+        }
+
+        const data = await response.json();
+
+        if (
+          data.status !== 'Active' ||
+          new Date(data.createdAt).getTime() !== new Date(createdAt).getTime()
+        ) {
+          handleLogout();
+          navigate('/scope-login', { state: { accountInactive: true } });
+        }
+      } catch (err) {
+        console.error('Error checking account status:', err);
+      }
+    };
+
+    const interval = setInterval(checkAccountStatus, 60 * 1000);
+    checkAccountStatus();
+    return () => clearInterval(interval);
+  }, [navigate]);
+
   // Handle unsaved changes warning
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -55,9 +188,41 @@ function ScopeRegistration3() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isFormDirty]);
 
-  const handleLogout = () => {
-    setShowLogoutModal(false);
-    navigate('/scope-login');
+  const handleLogout = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+      const createdAt = localStorage.getItem('createdAt');
+
+      if (!userEmail) {
+        navigate('/scope-login');
+        return;
+      }
+
+      const response = await fetch(
+        'http://localhost:5000/api/enrollee-applicants/logout',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            createdAt: createdAt,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        localStorage.clear();
+        navigate('/scope-login');
+      } else {
+        setError('Failed to logout. Please try again.');
+      }
+    } catch (err) {
+      setError('Error during logout process');
+    } finally {
+      setShowLogoutModal(false);
+    }
   };
 
   const handleAnnouncements = () => {
@@ -247,15 +412,6 @@ function ScopeRegistration3() {
     setNextLocation(null);
   };
 
-  // Mock user data for SideNavigation
-  const userData = {
-    firstName: 'Juan',
-    lastName: 'Dela Cruz',
-    email: 'user@example.com',
-    studentID: 'N/A',
-    applicantID: 'N/A',
-  };
-
   return (
     <div className="scope-registration-container">
       <header className="juan-register-header">
@@ -291,509 +447,515 @@ function ScopeRegistration3() {
         <main
           className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}
         >
-          <div className="registration-content">
-            <h2 className="registration-title">Registration</h2>
-            <div className="registration-divider"></div>
-            <div className="registration-container">
-              <div className="step-indicator">
-                <div className="step-circles">
-                  <div
-                    className="step-circle completed"
-                    style={{ backgroundColor: '#34A853' }}
-                  >
-                    1
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#34A853' }}
-                  ></div>
-                  <div
-                    className="step-circle completed"
-                    style={{ backgroundColor: '#34A853' }}
-                  >
-                    2
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#34A853' }}
-                  ></div>
-                  <div
-                    className="step-circle active"
-                    style={{ backgroundColor: '#64676C' }}
-                  >
-                    3
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  ></div>
-                  <div
-                    className="step-circle"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  >
-                    4
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  ></div>
-                  <div
-                    className="step-circle"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  >
-                    5
-                  </div>
-                  <div
-                    className="step-line"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  ></div>
-                  <div
-                    className="step-circle"
-                    style={{ backgroundColor: '#D8D8D8' }}
-                  >
-                    6
-                  </div>
-                </div>
-                <div className="step-text">Step 3 of 6</div>
-              </div>
-              <div className="personal-info-section">
-                <div className="personal-info-header">
-                  <FontAwesomeIcon
-                    icon={faAddressCard}
-                    style={{ color: '#212121' }}
-                  />
-                  <h3>Contact Details</h3>
-                </div>
-                <div className="personal-info-divider"></div>
-                <div className="reminder-box">
-                  <p>
-                    <strong>Reminder:</strong> Fields marked with asterisk
-                    (<span className="required-asterisk">*</span>) are
-                    required.
-                  </p>
-                </div>
-                <form onSubmit={handleSave}>
-                  <div className="form-section">
-                    <div className="section-title" style={{ display: 'flex', alignItems: 'center' }}>
-                      <FaMapMarkerAlt style={{ marginRight: '8px', color: '#212121' }} />
-                      <h4>Present Address</h4>
-                    </div>
-                    <div className="personal-info-divider"></div>
-                    <div className="form-address-container">
-                      <div className="form-group full-width">
-                        <label htmlFor="presentHouseNo">
-                          House No. & Street:<span className="required-asterisk">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="presentHouseNo"
-                          name="presentHouseNo"
-                          value={formData.presentHouseNo}
-                          onChange={handleInputChange}
-                          onBlur={() =>
-                            setTouchedFields({
-                              ...touchedFields,
-                              presentHouseNo: true,
-                            })
-                          }
-                          className={errors.presentHouseNo ? 'input-error' : ''}
-                          placeholder="Enter House No. & Street"
-                          maxLength={100}
-                        />
-                        <div className={`character-count ${formData.presentHouseNo.length > 95 ? 'warning' : ''}`}>
-                          {formData.presentHouseNo.length}/100
-                        </div>
-                        {errors.presentHouseNo && (
-                          <span className="error-message">
-                            <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentHouseNo}
-                          </span>
-                        )}
-                      </div>
-                      <div className="form-grid address-grid">
-                        <div className="form-group">
-                          <label htmlFor="presentProvince">
-                            Province:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="presentProvince"
-                            name="presentProvince"
-                            value={formData.presentProvince}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                presentProvince: true,
-                              })
-                            }
-                            className={errors.presentProvince ? 'input-error' : ''}
-                            placeholder="Enter Province"
-                            maxLength={50}
-                          />
-                          <div className={`character-count ${formData.presentProvince.length > 45 ? 'warning' : ''}`}>
-                            {formData.presentProvince.length}/50
-                          </div>
-                          {errors.presentProvince && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentProvince}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="presentCity">
-                            City/Municipality:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="presentCity"
-                            name="presentCity"
-                            value={formData.presentCity}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                presentCity: true,
-                              })
-                            }
-                            className={errors.presentCity ? 'input-error' : ''}
-                            placeholder="Enter City/Municipality"
-                            maxLength={50}
-                          />
-                          <div className={`character-count ${formData.presentCity.length > 45 ? 'warning' : ''}`}>
-                            {formData.presentCity.length}/50
-                          </div>
-                          {errors.presentCity && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentCity}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="presentBarangay">
-                            Barangay:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="presentBarangay"
-                            name="presentBarangay"
-                            value={formData.presentBarangay}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                presentBarangay: true,
-                              })
-                            }
-                            className={errors.presentBarangay ? 'input-error' : ''}
-                            placeholder="Enter Barangay"
-                            maxLength={50}
-                          />
-                          <div className={`character-count ${formData.presentBarangay.length > 45 ? 'warning' : ''}`}>
-                            {formData.presentBarangay.length}/50
-                          </div>
-                          {errors.presentBarangay && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentBarangay}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="presentPostalCode">
-                            Postal Code:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="presentPostalCode"
-                            name="presentPostalCode"
-                            value={formData.presentPostalCode}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                presentPostalCode: true,
-                              })
-                            }
-                            className={errors.presentPostalCode ? 'input-error' : ''}
-                            placeholder="Enter 4-digit Postal Code"
-                            maxLength={4}
-                          />
-                          <div className={`character-count ${formData.presentPostalCode.length > 3 ? 'warning' : ''}`}>
-                            {formData.presentPostalCode.length}/4
-                          </div>
-                          {errors.presentPostalCode && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentPostalCode}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <FaMapMarkerAlt style={{ marginRight: '8px', color: '#212121' }} />
-                        <h4>Permanent Address</h4>
-                      </div>
-                      <div className="checkbox-container">
-                        <input
-                          type="checkbox"
-                          id="sameAsPresent"
-                          checked={sameAsPresent}
-                          onChange={handleCheckboxChange}
-                        />
-                        <label htmlFor="sameAsPresent">Same with present address</label>
-                      </div>
-                    </div>
-                    <div className="personal-info-divider"></div>
-                    <div className="form-address-container">
-                      <div className="form-group full-width">
-                        <label htmlFor="permanentHouseNo">
-                          House No. & Street:<span className="required-asterisk">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="permanentHouseNo"
-                          name="permanentHouseNo"
-                          value={formData.permanentHouseNo}
-                          onChange={handleInputChange}
-                          onBlur={() =>
-                            setTouchedFields({
-                              ...touchedFields,
-                              permanentHouseNo: true,
-                            })
-                          }
-                          className={errors.permanentHouseNo ? 'input-error' : ''}
-                          placeholder="Enter House No. & Street"
-                          maxLength={100}
-                          disabled={sameAsPresent}
-                        />
-                        <div className={`character-count ${formData.permanentHouseNo.length > 95 ? 'warning' : ''}`}>
-                          {formData.permanentHouseNo.length}/100
-                        </div>
-                        {errors.permanentHouseNo && (
-                          <span className="error-message">
-                            <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentHouseNo}
-                          </span>
-                        )}
-                      </div>
-                      <div className="form-grid address-grid">
-                        <div className="form-group">
-                          <label htmlFor="permanentProvince">
-                            Province:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="permanentProvince"
-                            name="permanentProvince"
-                            value={formData.permanentProvince}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                permanentProvince: true,
-                              })
-                            }
-                            className={errors.permanentProvince ? 'input-error' : ''}
-                            placeholder="Enter Province"
-                            maxLength={50}
-                            disabled={sameAsPresent}
-                          />
-                          <div className={`character-count ${formData.permanentProvince.length > 45 ? 'warning' : ''}`}>
-                            {formData.permanentProvince.length}/50
-                          </div>
-                          {errors.permanentProvince && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentProvince}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="permanentCity">
-                            City/Municipality:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="permanentCity"
-                            name="permanentCity"
-                            value={formData.permanentCity}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                permanentCity: true,
-                              })
-                            }
-                            className={errors.permanentCity ? 'input-error' : ''}
-                            placeholder="Enter City/Municipality"
-                            maxLength={50}
-                            disabled={sameAsPresent}
-                          />
-                          <div className={`character-count ${formData.permanentCity.length > 45 ? 'warning' : ''}`}>
-                            {formData.permanentCity.length}/50
-                          </div>
-                          {errors.permanentCity && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentCity}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="permanentBarangay">
-                            Barangay:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="permanentBarangay"
-                            name="permanentBarangay"
-                            value={formData.permanentBarangay}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                permanentBarangay: true,
-                              })
-                            }
-                            className={errors.permanentBarangay ? 'input-error' : ''}
-                            placeholder="Enter Barangay"
-                            maxLength={50}
-                            disabled={sameAsPresent}
-                          />
-                          <div className={`character-count ${formData.permanentBarangay.length > 45 ? 'warning' : ''}`}>
-                            {formData.permanentBarangay.length}/50
-                          </div>
-                          {errors.permanentBarangay && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentBarangay}
-                            </span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label htmlFor="permanentPostalCode">
-                            Postal Code:<span className="required-asterisk">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            id="permanentPostalCode"
-                            name="permanentPostalCode"
-                            value={formData.permanentPostalCode}
-                            onChange={handleInputChange}
-                            onBlur={() =>
-                              setTouchedFields({
-                                ...touchedFields,
-                                permanentPostalCode: true,
-                              })
-                            }
-                            className={errors.permanentPostalCode ? 'input-error' : ''}
-                            placeholder="Enter 4-digit Postal Code"
-                            maxLength={4}
-                            disabled={sameAsPresent}
-                          />
-                          <div className={`character-count ${formData.permanentPostalCode.length > 3 ? 'warning' : ''}`}>
-                            {formData.permanentPostalCode.length}/4
-                          </div>
-                          {errors.permanentPostalCode && (
-                            <span className="error-message">
-                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentPostalCode}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <div className="section-title" style={{ display: 'flex', alignItems: 'center' }}>
-                      <FaPhone style={{ marginRight: '8px', color: '#212121' }} />
-                      <h4>Contacts</h4>
-                    </div>
-                    <div className="personal-info-divider"></div>
-                    <div className="section-divider"></div>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label htmlFor="mobileNo">
-                          Mobile No.:<span className="required-asterisk">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="mobileNo"
-                          name="mobileNo"
-                          value={formData.mobileNo}
-                          disabled
-                          className="disabled-input"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="telephoneNo">
-                          Telephone No.:
-                        </label>
-                        <input
-                          type="text"
-                          id="telephoneNo"
-                          name="telephoneNo"
-                          value={formData.telephoneNo}
-                          onChange={handleInputChange}
-                          onBlur={() =>
-                            setTouchedFields({
-                              ...touchedFields,
-                              telephoneNo: true,
-                            })
-                          }
-                          className={errors.telephoneNo ? 'input-error' : ''}
-                          placeholder="Enter Telephone No."
-                          maxLength={12}
-                        />
-                        {errors.telephoneNo && (
-                          <span className="error-message">
-                            <FontAwesomeIcon icon={faExclamationCircle} /> {errors.telephoneNo}
-                          </span>
-                        )}
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="emailAddress">
-                          Email Address:<span className="required-asterisk">*</span>
-                        </label>
-                        <input
-                          type="email"
-                          id="emailAddress"
-                          name="emailAddress"
-                          value={formData.emailAddress}
-                          disabled
-                          className="disabled-input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-buttons" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <button
-                      type="button"
-                      className="back-button"
-                      onClick={handleBack}
-                      style={{
-                        backgroundColor: '#666',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                      }}
+          {loading ? (
+            <div className="scope-loading">Loading...</div>
+          ) : error ? (
+            <div className="scope-error">{error}</div>
+          ) : (
+            <div className="registration-content">
+              <h2 className="registration-title">Registration</h2>
+              <div className="registration-divider"></div>
+              <div className="registration-container">
+                <div className="step-indicator">
+                  <div className="step-circles">
+                    <div
+                      className="step-circle completed"
+                      style={{ backgroundColor: '#34A853' }}
                     >
-                      <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: '5px' }} />
-                      Back
-                    </button>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button type="submit" className="save-button">
-                        Save
-                      </button>
-                      <button type="button" className="next-button" onClick={handleNext}>
-                        Next
-                      </button>
+                      1
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#34A853' }}
+                    ></div>
+                    <div
+                      className="step-circle completed"
+                      style={{ backgroundColor: '#34A853' }}
+                    >
+                      2
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#34A853' }}
+                    ></div>
+                    <div
+                      className="step-circle active"
+                      style={{ backgroundColor: '#64676C' }}
+                    >
+                      3
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    ></div>
+                    <div
+                      className="step-circle"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    >
+                      4
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    ></div>
+                    <div
+                      className="step-circle"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    >
+                      5
+                    </div>
+                    <div
+                      className="step-line"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    ></div>
+                    <div
+                      className="step-circle"
+                      style={{ backgroundColor: '#D8D8D8' }}
+                    >
+                      6
                     </div>
                   </div>
-                </form>
+                  <div className="step-text">Step 3 of 6</div>
+                </div>
+                <div className="personal-info-section">
+                  <div className="personal-info-header">
+                    <FontAwesomeIcon
+                      icon={faAddressCard}
+                      style={{ color: '#212121' }}
+                    />
+                    <h3>Contact Details</h3>
+                  </div>
+                  <div className="personal-info-divider"></div>
+                  <div className="reminder-box">
+                    <p>
+                      <strong>Reminder:</strong> Fields marked with asterisk
+                      (<span className="required-asterisk">*</span>) are
+                      required.
+                    </p>
+                  </div>
+                  <form onSubmit={handleSave}>
+                    <div className="form-section">
+                      <div className="section-title" style={{ display: 'flex', alignItems: 'center' }}>
+                        <FaMapMarkerAlt style={{ marginRight: '8px', color: '#212121' }} />
+                        <h4>Present Address</h4>
+                      </div>
+                      <div className="personal-info-divider"></div>
+                      <div className="form-address-container">
+                        <div className="form-group full-width">
+                          <label htmlFor="presentHouseNo">
+                            House No. & Street:<span className="required-asterisk">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="presentHouseNo"
+                            name="presentHouseNo"
+                            value={formData.presentHouseNo}
+                            onChange={handleInputChange}
+                            onBlur={() =>
+                              setTouchedFields({
+                                ...touchedFields,
+                                presentHouseNo: true,
+                              })
+                            }
+                            className={errors.presentHouseNo ? 'input-error' : ''}
+                            placeholder="Enter House No. & Street"
+                            maxLength={100}
+                          />
+                          <div className={`character-count ${formData.presentHouseNo.length > 95 ? 'warning' : ''}`}>
+                            {formData.presentHouseNo.length}/100
+                          </div>
+                          {errors.presentHouseNo && (
+                            <span className="error-message">
+                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentHouseNo}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-grid address-grid">
+                          <div className="form-group">
+                            <label htmlFor="presentProvince">
+                              Province:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="presentProvince"
+                              name="presentProvince"
+                              value={formData.presentProvince}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  presentProvince: true,
+                                })
+                              }
+                              className={errors.presentProvince ? 'input-error' : ''}
+                              placeholder="Enter Province"
+                              maxLength={50}
+                            />
+                            <div className={`character-count ${formData.presentProvince.length > 45 ? 'warning' : ''}`}>
+                              {formData.presentProvince.length}/50
+                            </div>
+                            {errors.presentProvince && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentProvince}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="presentCity">
+                              City/Municipality:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="presentCity"
+                              name="presentCity"
+                              value={formData.presentCity}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  presentCity: true,
+                                })
+                              }
+                              className={errors.presentCity ? 'input-error' : ''}
+                              placeholder="Enter City/Municipality"
+                              maxLength={50}
+                            />
+                            <div className={`character-count ${formData.presentCity.length > 45 ? 'warning' : ''}`}>
+                              {formData.presentCity.length}/50
+                            </div>
+                            {errors.presentCity && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentCity}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="presentBarangay">
+                              Barangay:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="presentBarangay"
+                              name="presentBarangay"
+                              value={formData.presentBarangay}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  presentBarangay: true,
+                                })
+                              }
+                              className={errors.presentBarangay ? 'input-error' : ''}
+                              placeholder="Enter Barangay"
+                              maxLength={50}
+                            />
+                            <div className={`character-count ${formData.presentBarangay.length > 45 ? 'warning' : ''}`}>
+                              {formData.presentBarangay.length}/50
+                            </div>
+                            {errors.presentBarangay && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentBarangay}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="presentPostalCode">
+                              Postal Code:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="presentPostalCode"
+                              name="presentPostalCode"
+                              value={formData.presentPostalCode}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  presentPostalCode: true,
+                                })
+                              }
+                              className={errors.permanentPostalCode ? 'input-error' : ''}
+                              placeholder="Enter 4-digit Postal Code"
+                              maxLength={4}
+                            />
+                            <div className={`character-count ${formData.presentPostalCode.length > 3 ? 'warning' : ''}`}>
+                              {formData.presentPostalCode.length}/4
+                            </div>
+                            {errors.presentPostalCode && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.presentPostalCode}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <FaMapMarkerAlt style={{ marginRight: '8px', color: '#212121' }} />
+                          <h4>Permanent Address</h4>
+                        </div>
+                        <div className="checkbox-container">
+                          <input
+                            type="checkbox"
+                            id="sameAsPresent"
+                            checked={sameAsPresent}
+                            onChange={handleCheckboxChange}
+                          />
+                          <label htmlFor="sameAsPresent">Same with present address</label>
+                        </div>
+                      </div>
+                      <div className="personal-info-divider"></div>
+                      <div className="form-address-container">
+                        <div className="form-group full-width">
+                          <label htmlFor="permanentHouseNo">
+                            House No. & Street:<span className="required-asterisk">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="permanentHouseNo"
+                            name="permanentHouseNo"
+                            value={formData.permanentHouseNo}
+                            onChange={handleInputChange}
+                            onBlur={() =>
+                              setTouchedFields({
+                                ...touchedFields,
+                                permanentHouseNo: true,
+                              })
+                            }
+                            className={errors.permanentHouseNo ? 'input-error' : ''}
+                            placeholder="Enter House No. & Street"
+                            maxLength={100}
+                            disabled={sameAsPresent}
+                          />
+                          <div className={`character-count ${formData.permanentHouseNo.length > 95 ? 'warning' : ''}`}>
+                            {formData.permanentHouseNo.length}/100
+                          </div>
+                          {errors.permanentHouseNo && (
+                            <span className="error-message">
+                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentHouseNo}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-grid address-grid">
+                          <div className="form-group">
+                            <label htmlFor="permanentProvince">
+                              Province:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="permanentProvince"
+                              name="permanentProvince"
+                              value={formData.permanentProvince}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  permanentProvince: true,
+                                })
+                              }
+                              className={errors.permanentProvince ? 'input-error' : ''}
+                              placeholder="Enter Province"
+                              maxLength={50}
+                              disabled={sameAsPresent}
+                            />
+                            <div className={`character-count ${formData.permanentProvince.length > 45 ? 'warning' : ''}`}>
+                              {formData.permanentProvince.length}/50
+                            </div>
+                            {errors.permanentProvince && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentProvince}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="permanentCity">
+                              City/Municipality:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="permanentCity"
+                              name="permanentCity"
+                              value={formData.permanentCity}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  permanentCity: true,
+                                })
+                              }
+                              className={errors.permanentCity ? 'input-error' : ''}
+                              placeholder="Enter City/Municipality"
+                              maxLength={50}
+                              disabled={sameAsPresent}
+                            />
+                            <div className={`character-count ${formData.permanentCity.length > 45 ? 'warning' : ''}`}>
+                              {formData.permanentCity.length}/50
+                            </div>
+                            {errors.permanentCity && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentCity}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="permanentBarangay">
+                              Barangay:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="permanentBarangay"
+                              name="permanentBarangay"
+                              value={formData.permanentBarangay}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  permanentBarangay: true,
+                                })
+                              }
+                              className={errors.permanentBarangay ? 'input-error' : ''}
+                              placeholder="Enter Barangay"
+                              maxLength={50}
+                              disabled={sameAsPresent}
+                            />
+                            <div className={`character-count ${formData.permanentBarangay.length > 45 ? 'warning' : ''}`}>
+                              {formData.permanentBarangay.length}/50
+                            </div>
+                            {errors.permanentBarangay && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentBarangay}
+                              </span>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label htmlFor="permanentPostalCode">
+                              Postal Code:<span className="required-asterisk">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="permanentPostalCode"
+                              name="permanentPostalCode"
+                              value={formData.permanentPostalCode}
+                              onChange={handleInputChange}
+                              onBlur={() =>
+                                setTouchedFields({
+                                  ...touchedFields,
+                                  permanentPostalCode: true,
+                                })
+                              }
+                              className={errors.permanentPostalCode ? 'input-error' : ''}
+                              placeholder="Enter 4-digit Postal Code"
+                              maxLength={4}
+                              disabled={sameAsPresent}
+                            />
+                            <div className={`character-count ${formData.permanentPostalCode.length > 3 ? 'warning' : ''}`}>
+                              {formData.permanentPostalCode.length}/4
+                            </div>
+                            {errors.permanentPostalCode && (
+                              <span className="error-message">
+                                <FontAwesomeIcon icon={faExclamationCircle} /> {errors.permanentPostalCode}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="section-title" style={{ display: 'flex', alignItems: 'center' }}>
+                      <FaPhone className="phone-icon1" />
+                        <h4>Contacts</h4>
+                      </div>
+                      <div className="personal-info-divider"></div>
+                      <div className="section-divider"></div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label htmlFor="mobileNo">
+                            Mobile No.:<span className="required-asterisk">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="mobileNo"
+                            name="mobileNo"
+                            value={formData.mobileNo}
+                            disabled
+                            className="disabled-input"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="telephoneNo">
+                            Telephone No.:
+                          </label>
+                          <input
+                            type="text"
+                            id="telephoneNo"
+                            name="telephoneNo"
+                            value={formData.telephoneNo}
+                            onChange={handleInputChange}
+                            onBlur={() =>
+                              setTouchedFields({
+                                ...touchedFields,
+                                telephoneNo: true,
+                              })
+                            }
+                            className={errors.telephoneNo ? 'input-error' : ''}
+                            placeholder="Enter Telephone No."
+                            maxLength={12}
+                          />
+                          {errors.telephoneNo && (
+                            <span className="error-message">
+                              <FontAwesomeIcon icon={faExclamationCircle} /> {errors.telephoneNo}
+                            </span>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="emailAddress">
+                            Email Address:<span className="required-asterisk">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            id="emailAddress"
+                            name="emailAddress"
+                            value={formData.emailAddress}
+                            disabled
+                            className="disabled-input"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-buttons" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                      <button
+                        type="button"
+                        className="back-button"
+                        onClick={handleBack}
+                        style={{
+                          backgroundColor: '#666',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 20px',
+                          borderRadius: '10px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: '5px' }} />
+                        Back
+                      </button>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button type="submit" className="save-button">
+                          Save
+                        </button>
+                        <button type="button" className="next-button" onClick={handleNext}>
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
       {sidebarOpen && (
