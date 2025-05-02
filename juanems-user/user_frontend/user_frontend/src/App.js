@@ -43,7 +43,7 @@ import Admin_ManageSubjectsPage from './components/UserAdmin/ManageSubjectsPage'
 import Admin_CreateSubject from './components/UserAdmin/CreateSubject'; 
 import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
 import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
-
+import Admin_ForgotPassword from './components/UserAdmin/ForgotPassword';
 
 function App() {
   return (
@@ -75,6 +75,7 @@ function App() {
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
+          <Route path='/admin/forgot-password' element={<Admin_ForgotPassword/>}/>
           <Route path='/admin/dashboard' element={<Admin_DashboardPage/>}/>
 
           <Route path='/admin/manage-accounts' element={<Admin_ManageAccountsPage/>}/>
