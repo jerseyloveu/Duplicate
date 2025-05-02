@@ -21,7 +21,6 @@ const admissionsModules = {
     'Manage Exam and Interview Results',
     'Manage Enrollment Period',
   ],
-  'Manage Accounts': [],
   'Create Announcements': [],
 };
 
@@ -363,6 +362,7 @@ const CreateAccount = () => {
   const [hasCustomAccess, setHasCustomAccess] = useState(false);
   const [selectedModules, setSelectedModules] = useState([]);
   const [activeTab, setActiveTab] = useState('basic');
+  const [isArchived, setIsArchived] = useState(false);
 
   const handleCheckboxChange = (e) => {
     setIsChecked(e.target.checked);
@@ -416,6 +416,7 @@ const CreateAccount = () => {
 
         // Set hasCustomAccess state
         setHasCustomAccess(data.hasCustomAccess || false);
+        setIsArchived(data.isArchived);
 
         // Use setFieldsValue after form is loaded to set the values correctly
         form.setFieldsValue({
@@ -776,16 +777,20 @@ const CreateAccount = () => {
               />
             </Form.Item>
 
-            <div className="buttons">
-              <Button type="default" htmlType="button" onClick={handleBack}>
-                Cancel
-              </Button>
-              <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
-                {id ? 'Update' : 'Save'}
-              </Button>
-            </div>
+
+            {!isArchived && (
+              <div className="buttons">
+                <Button type="default" htmlType="button" onClick={handleBack}>
+                  Cancel
+                </Button>
+                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
+                  {id ? 'Update' : 'Save'}
+                </Button>
+              </div>
+            )}
           </div>
 
+          {!isArchived && (
           <div className="column">
             {/* Form title */}
             <h3 className="juan-form-title">Data Privacy Agreement</h3>
@@ -841,6 +846,7 @@ const CreateAccount = () => {
               )}
             </div>
           </div>
+            )}
         </div>
       ),
     },
@@ -890,7 +896,14 @@ const CreateAccount = () => {
           <div className="arrows" onClick={handleBack}>
             <MdOutlineKeyboardArrowLeft />
           </div>
-          <p className="heading">{id ? 'Edit Account' : 'Create Account'}</p>
+          <p className="heading">
+            {isArchived
+              ? 'View Archived Account'  // Display when the account is archived
+              : id
+                ? 'Edit Account'           // Display when editing an existing account
+                : 'Create Account'         // Display when creating a new account
+            }
+          </p>
         </div>
 
         <Form

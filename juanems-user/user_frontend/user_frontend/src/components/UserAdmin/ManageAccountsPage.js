@@ -10,6 +10,7 @@ import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft, MdOutlineManageAccounts } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import { FaEye } from 'react-icons/fa';
 
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/ManageAccountsPage.css';
@@ -368,22 +369,26 @@ const ManageAccountsPage = () => {
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <Button
-            icon={<FaPen />}
+            icon={record.isArchived ? <FaEye /> : <FaPen />} // Change the icon based on the archive status
             style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-            onClick={() => navigate(`/admin/manage-accounts/edit/${record.key}`)}
+            onClick={() => navigate(`/admin/manage-accounts/edit/${record.key}`)} // Keep the path unchanged
           >
-            Edit
+            {record.isArchived ? 'View' : 'Edit'} 
           </Button>
+    
           {record.status !== 'Pending Verification' && (
             <Button
               icon={record.status === 'Active' ? <FaUserTimes /> : <FaUserCheck />}
               danger={record.status === 'Active'}
               style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
               onClick={() => handleStatusToggle(record)}
+              disabled={record.status !== 'Active' && record.isArchived} // Prevent activation if archived
+              title={record.status !== 'Active' && record.isArchived ? 'Cannot activate archived account' : ''}
             >
               {record.status === 'Active' ? 'Deactivate' : 'Activate'}
             </Button>
           )}
+    
           <Button
             icon={record.isArchived ? <FaBoxOpen /> : <FaBoxArchive />}
             style={{
@@ -393,14 +398,23 @@ const ManageAccountsPage = () => {
               justifyContent: 'flex-start',
             }}
             onClick={() => handleArchiveToggle(record)}
-            disabled={!record.isArchived && record.status === 'Active' || record.status === 'Pending Verification'}
-            title={!record.isArchived && record.status === 'Active' ? 'Cannot archive active accounts' : ''}
+            disabled={
+              (!record.isArchived && record.status === 'Active') ||
+              record.status === 'Pending Verification'
+            }
+            title={
+              (!record.isArchived && record.status === 'Active')
+                ? 'Cannot archive active accounts'
+                : record.status === 'Pending Verification'
+                ? 'Cannot archive accounts pending verification'
+                : ''
+            }
           >
             {record.isArchived ? 'Unarchive' : 'Archive'}
           </Button>
         </div>
       )
-    }
+    }    
   ];
 
   // Reusable date range filter component
