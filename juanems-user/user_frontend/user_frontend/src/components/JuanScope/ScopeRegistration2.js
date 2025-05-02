@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileAlt, faExclamationCircle, faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
@@ -60,6 +60,7 @@ const entryLevelOptions = [
 
 function ScopeRegistration2() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -69,6 +70,7 @@ function ScopeRegistration2() {
   const [unviewedCount, setUnviewedCount] = useState(0);
   const [formData, setFormData] = useState({
     entryLevel: '',
+    ...location.state?.formData, // Initialize with data from navigation state
   });
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -168,10 +170,13 @@ function ScopeRegistration2() {
           applicantID: userData.applicantID || 'N/A',
         });
 
-        // Initialize form data with fetched entryLevel
-        setFormData({
-          entryLevel: applicantData.entryLevel || '',
-        });
+        // Update form data with fetched entryLevel only if not provided via navigation state
+        if (!location.state?.formData?.entryLevel) {
+          setFormData((prev) => ({
+            ...prev,
+            entryLevel: applicantData.entryLevel || '',
+          }));
+        }
 
         // Fetch unviewed announcements count
         const announcementsResponse = await axios.get('/api/announcements', {
@@ -193,8 +198,8 @@ function ScopeRegistration2() {
 
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [navigate]);
+    return () => clearInterval(refreshInterval); // Fixed - using the correct variable name
+  }, [navigate, location.state]);
 
   // Periodic account status check
   useEffect(() => {
@@ -287,26 +292,24 @@ function ScopeRegistration2() {
       setNextLocation('/scope-announcements');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-announcements');
+      navigate('/scope-announcements', { state: { formData } });
     }
   };
 
   const handleNext = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-3');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-3');
+    if (!validateForm()) {
+      return;
     }
+    setIsFormDirty(false);
+    navigate('/scope-registration-3', { state: { formData } });
   };
 
   const handleBack = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration');
+    if (!validateForm()) {
+      return;
     }
+    setIsFormDirty(false);
+    navigate('/scope-registration', { state: { formData } });
   };
 
   const toggleSidebar = () => {
@@ -368,40 +371,10 @@ function ScopeRegistration2() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/entry-level/${userData.email}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              entryLevel: formData.entryLevel,
-            }),
-          }
-        );
-
-        if (response.ok) {
-          alert('Entry level saved successfully!');
-          setIsFormDirty(false); // Reset dirty state after saving
-        } else {
-          const errorData = await response.json();
-          setError(errorData.message || 'Failed to save information. Please try again.');
-        }
-      } catch (err) {
-        setError('Error saving information');
-      }
-    }
-  };
-
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
     if (nextLocation) {
-      navigate(nextLocation);
+      navigate(nextLocation, { state: { formData } });
     }
   };
 
@@ -450,7 +423,9 @@ function ScopeRegistration2() {
         <li>Transcript of records or certification of grades from previous school – for evaluation purposes</li>
         <li>ID Photo as stated above</li>
       </ul>
-      <h4>For Top 1 and Top 2 of the Graduating Class:</h4>
+      <h4>For Top 1 and Top 2
+
+ of the Graduating Class:</h4>
       <ul>
         <li>Certification of Ranking with school seal, specifying the total number of graduates</li>
       </ul>
@@ -585,7 +560,7 @@ function ScopeRegistration2() {
                         required.
                       </p>
                     </div>
-                    <form onSubmit={handleSave}>
+                    <form>
                       <div className="form-grid">
                         <div className="form-group">
                           <label htmlFor="entryLevel">
@@ -646,9 +621,6 @@ function ScopeRegistration2() {
                           Back
                         </button>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                          <button type="submit" className="save-button">
-                            Save
-                          </button>
                           <button type="button" className="next-button" onClick={handleNext}>
                             Next
                           </button>

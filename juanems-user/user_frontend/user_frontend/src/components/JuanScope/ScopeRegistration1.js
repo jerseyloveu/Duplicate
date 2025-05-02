@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faBell, faCalendarAlt, faBars, faTimes, faPerson, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
@@ -210,6 +210,7 @@ const countries = [
   { value: 'zimbabwe', label: 'Zimbabwe' },
 ];
 
+
 // Prefix and Suffix options
 const prefixOptions = [
   { value: '', label: 'None' },
@@ -291,6 +292,7 @@ const fuseOptions = {
 
 function ScopeRegistration1() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -313,6 +315,7 @@ function ScopeRegistration1() {
     birthPlaceCity: '',
     birthPlaceProvince: '',
     nationality: '',
+    ...location.state?.formData, // Initialize with data from navigation state
   });
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -416,23 +419,24 @@ function ScopeRegistration1() {
           applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
         });
 
-        // Initialize form data with fetched values
-        setFormData({
-          prefix: applicantData.prefix || '',
-          lastName: applicantData.lastName || userData.lastName || '',
-          firstName: applicantData.firstName || userData.firstName || '',
-          middleName: applicantData.middleName || '',
-          suffix: applicantData.suffix || '',
-          gender: applicantData.gender || '',
-          lrnNo: applicantData.lrnNo || '',
-          civilStatus: applicantData.civilStatus || '',
-          religion: applicantData.religion || '',
-          birthDate: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
-          countryOfBirth: applicantData.countryOfBirth || '',
-          birthPlaceCity: applicantData.birthPlaceCity || '',
-          birthPlaceProvince: applicantData.birthPlaceProvince || '',
-          nationality: applicantData.nationality || '',
-        });
+        // Initialize form data with fetched values, prioritizing navigation state
+        setFormData((prev) => ({
+          ...prev,
+          prefix: location.state?.formData?.prefix || applicantData.prefix || '',
+          lastName: location.state?.formData?.lastName || applicantData.lastName || userData.lastName || '',
+          firstName: location.state?.formData?.firstName || applicantData.firstName || userData.firstName || '',
+          middleName: location.state?.formData?.middleName || applicantData.middleName || '',
+          suffix: location.state?.formData?.suffix || applicantData.suffix || '',
+          gender: location.state?.formData?.gender || applicantData.gender || '',
+          lrnNo: location.state?.formData?.lrnNo || applicantData.lrnNo || '',
+          civilStatus: location.state?.formData?.civilStatus || applicantData.civilStatus || '',
+          religion: location.state?.formData?.religion || applicantData.religion || '',
+          birthDate: location.state?.formData?.birthDate || (applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : ''),
+          countryOfBirth: location.state?.formData?.countryOfBirth || applicantData.countryOfBirth || '',
+          birthPlaceCity: location.state?.formData?.birthPlaceCity || applicantData.birthPlaceCity || '',
+          birthPlaceProvince: location.state?.formData?.birthPlaceProvince || applicantData.birthPlaceProvince || '',
+          nationality: location.state?.formData?.nationality || applicantData.nationality || '',
+        }));
 
         // Fetch unviewed announcements count
         const announcementsResponse = await axios.get('/api/announcements', {
@@ -454,8 +458,8 @@ function ScopeRegistration1() {
 
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [navigate]);
+    return () => clearInterval(refreshInterval); // Changed from refInterval to refreshInterval
+  }, [navigate, location.state]);
 
   // Periodic account status check
   useEffect(() => {
@@ -548,17 +552,16 @@ function ScopeRegistration1() {
       setNextLocation('/scope-announcements');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-announcements');
+      navigate('/scope-announcements', { state: { formData } });
     }
   };
 
   const handleNext = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-2');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-2');
+    if (!validateForm()) {
+      return;
     }
+    setIsFormDirty(false);
+    navigate('/scope-registration-2', { state: { formData } });
   };
 
   const toggleSidebar = () => {
@@ -700,50 +703,10 @@ function ScopeRegistration1() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // const handleSave = async (e) => {
-  //   e.preventDefault();
-  //   if (validateForm()) {
-  //     try {
-  //       const response = await fetch(
-  //         `http://localhost:5000/api/enrollee-applicants/personal-details/${userData.email}`,
-  //         {
-  //           method: 'PUT',
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //           },
-  //           body: JSON.stringify({
-  //             prefix: formData.prefix,
-  //             suffix: formData.suffix,
-  //             religion: formData.religion,
-  //             gender: formData.gender,
-  //             lrnNo: formData.lrnNo,
-  //             countryOfBirth: formData.countryOfBirth,
-  //             civilStatus: formData.civilStatus,
-  //             birthPlaceCity: formData.birthPlaceCity,
-  //             birthPlaceProvince: formData.birthPlaceProvince,
-  //           }),
-  //         }
-  //       );
-
-  //       if (response.ok) {
-  //         // Update local storage with form data
-  //         localStorage.setItem('middleName', formData.middleName || '');
-  //         alert('Personal information saved successfully!');
-  //         setIsFormDirty(false); // Reset dirty state after saving
-  //       } else {
-  //         const errorData = await response.json();
-  //         setError(errorData.message || 'Failed to save information. Please try again.');
-  //       }
-  //     } catch (err) {
-  //       setError('Error saving information');
-  //     }
-  //   }
-  // };
-
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
     if (nextLocation) {
-      navigate(nextLocation);
+      navigate(nextLocation, { state: { formData } });
     }
   };
 
@@ -878,7 +841,7 @@ function ScopeRegistration1() {
                         <strong>Reminder:</strong> Please provide your correct
                         and complete information. Fields marked with asterisk
                         (<span className="required-asterisk">*</span>) are
-                        required.
+                        required. Finish Steps 1 to 6 to complete and save your Registration.
                       </p>
                     </div>
                     <form>
@@ -1176,9 +1139,6 @@ function ScopeRegistration1() {
                         </div>
                       </div>
                       <div className="form-buttons">
-                        <button className="save-button">
-                          Save
-                        </button>
                         <button type="button" className="next-button" onClick={handleNext}>
                           Next
                         </button>

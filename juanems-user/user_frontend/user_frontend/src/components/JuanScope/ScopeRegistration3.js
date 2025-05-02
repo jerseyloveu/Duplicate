@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAddressCard, faExclamationCircle, faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
 import { FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
+import axios from 'axios';
 
 function ScopeRegistration3() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,9 +28,10 @@ function ScopeRegistration3() {
     permanentHouseNo: '',
     permanentBarangay: '',
     permanentPostalCode: '',
-    mobileNo: '09123456789', // Placeholder for disabled field
+    mobileNo: '09123456789',
     telephoneNo: '',
-    emailAddress: 'user@example.com', // Placeholder for disabled field
+    emailAddress: 'user@example.com',
+    ...location.state?.formData,
   });
   const [sameAsPresent, setSameAsPresent] = useState(false);
   const [errors, setErrors] = useState({});
@@ -37,7 +40,6 @@ function ScopeRegistration3() {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
 
-  // Update current date and time every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -45,7 +47,6 @@ function ScopeRegistration3() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data and verify session
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -101,7 +102,6 @@ function ScopeRegistration3() {
 
         const userData = await userResponse.json();
 
-        // Update local storage
         localStorage.setItem('applicantID', userData.applicantID);
         localStorage.setItem('firstName', userData.firstName);
         localStorage.setItem('middleName', '');
@@ -114,16 +114,17 @@ function ScopeRegistration3() {
           firstName: userData.firstName || 'User',
           middleName: '',
           lastName: userData.lastName || '',
-          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
+          dob: userData.dob ? new  new Date(userData.dob).toISOString().split('T')[0] : '',
           nationality: userData.nationality || '',
           studentID: userData.studentID || 'N/A',
           applicantID: userData.applicantID || 'N/A',
         });
 
-        // Update formData with fetched email
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           emailAddress: userEmail,
+          mobileNo: userData.mobileNo || '09123456789',
+          ...(location.state?.formData || {})
         }));
 
         setLoading(false);
@@ -137,9 +138,8 @@ function ScopeRegistration3() {
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
-  }, [navigate]);
+  }, [navigate, location.state]);
 
-  // Periodic account status check
   useEffect(() => {
     const checkAccountStatus = async () => {
       try {
@@ -175,7 +175,6 @@ function ScopeRegistration3() {
     return () => clearInterval(interval);
   }, [navigate]);
 
-  // Handle unsaved changes warning
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isFormDirty) {
@@ -235,12 +234,11 @@ function ScopeRegistration3() {
   };
 
   const handleNext = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-4');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-4');
+    if (!validateForm()) {
+      return;
     }
+    setIsFormDirty(false);
+    navigate('/scope-registration-4', { state: { formData } });
   };
 
   const handleBack = () => {
@@ -248,7 +246,7 @@ function ScopeRegistration3() {
       setNextLocation('/scope-registration-2');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-registration-2');
+      navigate('/scope-registration-2', { state: { formData } });
     }
   };
 
@@ -264,7 +262,6 @@ function ScopeRegistration3() {
     const { name, value } = e.target;
     let sanitizedValue = value;
 
-    // Sanitize text fields
     if (['presentProvince', 'presentCity', 'presentBarangay', 'permanentProvince', 'permanentCity', 'permanentBarangay'].includes(name)) {
       sanitizedValue = value.replace(/[^a-zA-Z\s]/g, '').slice(0, 50);
       sanitizedValue = sanitizedValue.charAt(0).toUpperCase() + sanitizedValue.slice(1);
@@ -276,15 +273,26 @@ function ScopeRegistration3() {
       sanitizedValue = value.replace(/[^0-9-]/g, '').slice(0, 12);
     }
 
-    setFormData({
+    const updatedFormData = {
       ...formData,
       [name]: sanitizedValue,
-    });
+    };
 
-    setTouchedFields({
-      ...touchedFields,
+    if (sameAsPresent && name.startsWith('present')) {
+      const permanentField = name.replace('present', 'permanent');
+      updatedFormData[permanentField] = sanitizedValue;
+      setTouchedFields(prev => ({
+        ...prev,
+        [permanentField]: true,
+      }));
+    }
+
+    setFormData(updatedFormData);
+
+    setTouchedFields(prev => ({
+      ...prev,
       [name]: true,
-    });
+    }));
 
     setIsFormDirty(true);
   };
@@ -293,22 +301,22 @@ function ScopeRegistration3() {
     const checked = e.target.checked;
     setSameAsPresent(checked);
     if (checked) {
-      setFormData({
-        ...formData,
-        permanentProvince: formData.presentProvince,
-        permanentCity: formData.presentCity,
-        permanentHouseNo: formData.presentHouseNo,
-        permanentBarangay: formData.presentBarangay,
-        permanentPostalCode: formData.presentPostalCode,
-      });
-      setTouchedFields({
-        ...touchedFields,
+      setFormData(prev => ({
+        ...prev,
+        permanentProvince: prev.presentProvince,
+        permanentCity: prev.presentCity,
+        permanentHouseNo: prev.presentHouseNo,
+        permanentBarangay: prev.presentBarangay,
+        permanentPostalCode: prev.presentPostalCode,
+      }));
+      setTouchedFields(prev => ({
+        ...prev,
         permanentProvince: true,
         permanentCity: true,
         permanentHouseNo: true,
         permanentBarangay: true,
         permanentPostalCode: true,
-      });
+      }));
     }
     setIsFormDirty(true);
   };
@@ -320,38 +328,37 @@ function ScopeRegistration3() {
         if (!value) return 'Province is required';
         if (value.length < 2) return 'Province must be at least 2 characters';
         if (value.length > 50) return 'Province cannot exceed 50 characters';
-        return null;
+        return '';
       case 'presentCity':
       case 'permanentCity':
         if (!value) return 'City/Municipality is required';
         if (value.length < 2) return 'City/Municipality must be at least 2 characters';
         if (value.length > 50) return 'City/Municipality cannot exceed 50 characters';
-        return null;
+        return '';
       case 'presentHouseNo':
       case 'permanentHouseNo':
         if (!value) return 'House No. & Street is required';
         if (value.length > 100) return 'House No. & Street cannot exceed 100 characters';
-        return null;
+        return '';
       case 'presentBarangay':
       case 'permanentBarangay':
         if (!value) return 'Barangay is required';
         if (value.length < 2) return 'Barangay must be at least 2 characters';
         if (value.length > 50) return 'Barangay cannot exceed 50 characters';
-        return null;
+        return '';
       case 'presentPostalCode':
       case 'permanentPostalCode':
         if (!value) return 'Postal Code is required';
         if (!/^\d{4}$/.test(value)) return 'Postal Code must be exactly 4 digits';
-        return null;
+        return '';
       case 'telephoneNo':
         if (value && !/^\d{7,12}$/.test(value.replace(/-/g, ''))) return 'Invalid Telephone No.';
-        return null;
+        return '';
       default:
-        return null;
+        return '';
     }
   };
 
-  // Real-time validation
   useEffect(() => {
     const newErrors = {};
 
@@ -403,7 +410,7 @@ function ScopeRegistration3() {
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
     if (nextLocation) {
-      navigate(nextLocation);
+      navigate(nextLocation, { state: { formData } });
     }
   };
 
@@ -587,7 +594,7 @@ function ScopeRegistration3() {
                                   presentProvince: true,
                                 })
                               }
-                              className={errors.presentProvince ? 'input-error' : ''}
+                              shovel className={errors.presentProvince ? 'input-error' : ''}
                               placeholder="Enter Province"
                               maxLength={50}
                             />
@@ -674,7 +681,7 @@ function ScopeRegistration3() {
                                   presentPostalCode: true,
                                 })
                               }
-                              className={errors.permanentPostalCode ? 'input-error' : ''}
+                              className={errors.presentPostalCode ? 'input-error' : ''}
                               placeholder="Enter 4-digit Postal Code"
                               maxLength={4}
                             />
