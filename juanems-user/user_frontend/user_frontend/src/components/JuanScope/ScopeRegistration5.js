@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faArrowLeft, faTimes, faBars, faChevronDown, faChevronUp, faEdit, faTrash, faCheckCircle, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { FaPlus } from 'react-icons/fa';
@@ -10,6 +10,7 @@ import FamilyRecordModal from './FamilyRecordModal';
 
 function ScopeRegistration5() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -19,26 +20,29 @@ function ScopeRegistration5() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
-  const [contacts, setContacts] = useState([
-    {
-      id: 1,
-      relationship: 'Parent',
-      firstName: 'John',
-      middleName: 'A',
-      lastName: 'Doe',
-      occupation: 'Engineer',
-      country: 'philippines',
-      province: 'Metro Manila',
-      city: 'Quezon City',
-      houseNo: '123 Main St',
-      postalCode: '1100',
-      mobileNo: '09123456789',
-      telephoneNo: '',
-      emailAddress: 'john.doe@example.com',
-      isEmergencyContact: true,
-      isOpen: true,
-    },
-  ]);
+  const [contacts, setContacts] = useState(() => {
+    const savedContacts = localStorage.getItem('familyContacts');
+    return savedContacts ? JSON.parse(savedContacts) : [
+      {
+        id: 1,
+        relationship: 'Parent',
+        firstName: 'Juan',
+        middleName: 'A',
+        lastName: 'Dela Cruz',
+        occupation: 'Engineer',
+        country: 'philippines',
+        province: 'Metro Manila',
+        city: 'Quezon City',
+        houseNo: '123 Main St',
+        postalCode: '1100',
+        mobileNo: '+639123456789',
+        telephoneNo: '',
+        emailAddress: 'juan.delacruz@example.com',
+        isEmergencyContact: true,
+        isOpen: true,
+      },
+    ];
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [modalFormData, setModalFormData] = useState({
@@ -61,6 +65,21 @@ function ScopeRegistration5() {
   const [modalErrors, setModalErrors] = useState({});
   const [modalTouchedFields, setModalTouchedFields] = useState({});
 
+  // Format mobile number for display
+  const formatMobileNumber = (number) => {
+    if (!number) return '';
+    // Remove any non-digits
+    const digits = number.replace(/[^0-9]/g, '');
+    // If number starts with +63, keep it, otherwise assume it's the 10-digit number
+    if (digits.startsWith('63') && digits.length === 12) {
+      return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+    }
+    if (digits.length === 10 && digits.startsWith('9')) {
+      return `+63 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    }
+    return number; // Return original if format doesn't match
+  };
+
   // Update current date and time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -68,6 +87,11 @@ function ScopeRegistration5() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Save contacts to localStorage whenever contacts change
+  useEffect(() => {
+    localStorage.setItem('familyContacts', JSON.stringify(contacts));
+  }, [contacts]);
 
   // Fetch user data and verify session
   useEffect(() => {
@@ -143,6 +167,25 @@ function ScopeRegistration5() {
           studentID: userData.studentID || 'N/A',
           applicantID: userData.applicantID || 'N/A',
         });
+
+        // Fetch family contacts data
+        try {
+          const contactsResponse = await fetch(
+            `http://localhost:5000/api/enrollee-applicants/family-contacts/${userEmail}`
+          );
+          if (contactsResponse.ok) {
+            const contactsData = await contactsResponse.json();
+            if (contactsData.length > 0) {
+              setContacts(contactsData.map(contact => ({
+                ...contact,
+                mobileNo: formatMobileNumber(contact.mobileNo),
+                isOpen: true,
+              })));
+            }
+          }
+        } catch (err) {
+          console.warn('Family contacts fetch failed, using localStorage:', err);
+        }
 
         setLoading(false);
       } catch (err) {
@@ -248,20 +291,31 @@ function ScopeRegistration5() {
       setNextLocation('/scope-announcements');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-announcements');
+      navigate('/scope-announcements', { state: { contacts } });
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!contacts.some(contact => contact.isEmergencyContact)) {
-      alert('At least one family record should be set as contact for emergency.');
+      alert('Please select one family record as the contact for emergency.');
       return;
     }
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-6');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-6');
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+      await fetch('http://localhost:5000/api/enrollee-applicants/family-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          contacts,
+        }),
+      });
+      setIsFormDirty(false);
+      navigate('/scope-registration-6', { state: { contacts } });
+    } catch (err) {
+      setError('Failed to save family contacts.');
     }
   };
 
@@ -270,7 +324,7 @@ function ScopeRegistration5() {
       setNextLocation('/scope-registration-4');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-registration-4');
+      navigate('/scope-registration-4', { state: { contacts } });
     }
   };
 
@@ -305,7 +359,7 @@ function ScopeRegistration5() {
       mobileNo: '',
       telephoneNo: '',
       emailAddress: '',
-      isEmergencyContact: 'no',
+      isEmergencyContact: contacts.length === 0 ? 'yes' : 'no',
     });
     setModalErrors({});
     setModalTouchedFields({});
@@ -326,7 +380,7 @@ function ScopeRegistration5() {
       city: contact.city,
       houseNo: contact.houseNo,
       postalCode: contact.postalCode,
-      mobileNo: contact.mobileNo,
+      mobileNo: contact.mobileNo.replace(/[^0-9]/g, '').slice(-10), // Strip to 10 digits
       telephoneNo: contact.telephoneNo,
       emailAddress: contact.emailAddress,
       isEmergencyContact: contact.isEmergencyContact ? 'yes' : 'no',
@@ -337,18 +391,47 @@ function ScopeRegistration5() {
   };
 
   const handleDeleteContact = (id) => {
-    if (id === 1) return; // Prevent deletion of Contact 1
-    setContacts(contacts.filter(contact => contact.id !== id));
+    if (id === 1 && contacts.length === 1) {
+      alert('Contact 1 cannot be deleted as at least one contact is required.');
+      return;
+    }
+    const contactToDelete = contacts.find(contact => contact.id === id);
+    if (contactToDelete.isEmergencyContact) {
+      setContacts(contacts.filter(contact => contact.id !== id).map((contact, index) => ({
+        ...contact,
+        isEmergencyContact: index === 0,
+      })));
+    } else {
+      setContacts(contacts.filter(contact => contact.id !== id));
+    }
     setIsFormDirty(true);
   };
 
   const handleModalSave = (newContact) => {
+    let updatedContact = { 
+      ...newContact,
+      mobileNo: formatMobileNumber(newContact.mobileNo)
+    };
+
+    if (!editingContact) {
+      // Generate sequential ID for new contact
+      const maxId = contacts.length > 0 ? Math.max(...contacts.map(c => c.id)) : 0;
+      updatedContact.id = maxId + 1;
+    }
+
+    if (newContact.isEmergencyContact) {
+      setContacts(prev => prev.map(contact => ({
+        ...contact,
+        isEmergencyContact: contact.id === updatedContact.id,
+      })));
+    }
+
     if (editingContact) {
       setContacts(contacts.map(contact =>
-        contact.id === editingContact.id ? newContact : contact
+        contact.id === editingContact.id ? updatedContact : contact
       ));
     } else {
-      setContacts([...contacts, newContact]);
+      setContacts([...contacts, updatedContact]);
     }
     setShowModal(false);
     setIsFormDirty(true);
@@ -370,7 +453,7 @@ function ScopeRegistration5() {
       mobileNo: '',
       telephoneNo: '',
       emailAddress: '',
-      isEmergencyContact: 'no',
+      isEmergencyContact: contacts.length === 0 ? 'yes' : 'no',
     });
     setModalErrors({});
     setModalTouchedFields({});
@@ -379,7 +462,7 @@ function ScopeRegistration5() {
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
     if (nextLocation) {
-      navigate(nextLocation);
+      navigate(nextLocation, { state: { contacts } });
     }
   };
 
@@ -456,7 +539,7 @@ function ScopeRegistration5() {
                   <div className="personal-info-divider"></div>
                   <div className="reminder-box">
                     <p>
-                      <strong>Reminder:</strong> At least one family record should be set as contact for emergency.
+                      <strong>Reminder:</strong> Exactly one family record must be set as the contact for emergency. Contact 1 is set by default if only one contact exists.
                     </p>
                   </div>
                   <div className="form-section">
@@ -479,7 +562,7 @@ function ScopeRegistration5() {
                                 <p><strong>Name:</strong> {contact.firstName} {contact.middleName} {contact.lastName}</p>
                                 <p><strong>Relationship:</strong> {contact.relationship}</p>
                                 <p><strong>Address:</strong> {contact.houseNo}, {contact.city}, {contact.province}, {contact.country}</p>
-                                <p><strong>Mobile Number:</strong> {contact.mobileNo}</p>
+                                <p><strong>Mobile Number:</strong> {formatMobileNumber(contact.mobileNo)}</p>
                                 {contact.isEmergencyContact && (
                                   <div className="emergency-contact">
                                     <FontAwesomeIcon icon={faCheckCircle} />
@@ -492,11 +575,9 @@ function ScopeRegistration5() {
                               <button onClick={() => handleEditContact(contact)}>
                                 <FontAwesomeIcon icon={faEdit} />
                               </button>
-                              {contact.id !== 1 && (
-                                <button onClick={() => handleDeleteContact(contact.id)}>
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
-                              )}
+                              <button onClick={() => handleDeleteContact(contact.id)}>
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
                             </div>
                           </div>
                         )}
@@ -599,6 +680,7 @@ function ScopeRegistration5() {
           setTouchedFields={setModalTouchedFields}
           editingContact={editingContact}
           setIsFormDirty={setIsFormDirty}
+          contacts={contacts}
         />
       )}
     </div>

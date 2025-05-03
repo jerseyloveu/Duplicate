@@ -173,6 +173,7 @@ router.get('/personal-details/:email', async (req, res) => {
       middleName: applicant.middleName || '',
       lastName: applicant.lastName,
       dob: applicant.dob,
+      mobile: applicant.mobile,
       nationality: applicant.nationality,
       studentID: applicant.studentID,
       applicantID: applicant.applicantID,

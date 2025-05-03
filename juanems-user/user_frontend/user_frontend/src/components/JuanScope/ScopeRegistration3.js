@@ -17,7 +17,9 @@ function ScopeRegistration3() {
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('registrationData');
+    return savedData ? JSON.parse(savedData) : {
     presentProvince: '',
     presentCity: '',
     presentHouseNo: '',
@@ -28,11 +30,12 @@ function ScopeRegistration3() {
     permanentHouseNo: '',
     permanentBarangay: '',
     permanentPostalCode: '',
-    mobileNo: '09123456789',
+    mobile: '',
     telephoneNo: '',
     emailAddress: 'user@example.com',
     ...location.state?.formData,
-  });
+  };
+});
   const [sameAsPresent, setSameAsPresent] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -90,41 +93,54 @@ function ScopeRegistration3() {
           return;
         }
 
-        const userResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
-            createdAt
-          )}`
+        // Fetch personal details including firstName, middleName, lastName, and mobile
+        const personalDetailsResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
 
-        if (!userResponse.ok) {
-          throw new Error('Failed to fetch user data');
+        if (!personalDetailsResponse.ok) {
+          throw new Error('Failed to fetch personal details');
         }
 
-        const userData = await userResponse.json();
+        const personalData = await personalDetailsResponse.json();
 
-        localStorage.setItem('applicantID', userData.applicantID);
-        localStorage.setItem('firstName', userData.firstName);
-        localStorage.setItem('middleName', '');
-        localStorage.setItem('lastName', userData.lastName);
-        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', userData.nationality || '');
+        // Update local storage with fetched data
+        localStorage.setItem('applicantID', personalData.applicantID || '');
+        localStorage.setItem('firstName', personalData.firstName || '');
+        localStorage.setItem('middleName', personalData.middleName || '');
+        localStorage.setItem('lastName', personalData.lastName || '');
+        localStorage.setItem('mobile', personalData.mobile || '');
+        localStorage.setItem('dob', personalData.dob ? new Date(personalData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', personalData.nationality || '');
 
+        // Update userData state
         setUserData({
           email: userEmail,
-          firstName: userData.firstName || 'User',
-          middleName: '',
-          lastName: userData.lastName || '',
-          dob: userData.dob ? new  new Date(userData.dob).toISOString().split('T')[0] : '',
-          nationality: userData.nationality || '',
-          studentID: userData.studentID || 'N/A',
-          applicantID: userData.applicantID || 'N/A',
+          firstName: personalData.firstName || 'User',
+          middleName: personalData.middleName || '',
+          lastName: personalData.lastName || '',
+          dob: personalData.dob ? new Date(personalData.dob).toISOString().split('T')[0] : '',
+          nationality: personalData.nationality || '',
+          mobile: personalData.mobile || 'Cannot be determined',
+          studentID: personalData.studentID || 'N/A',
+          applicantID: personalData.applicantID || 'N/A',
         });
 
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
+          presentProvince: location.state?.formData?.presentProvince || '',
+          presentCity: location.state?.formData?.presentCity || '',
+          presentHouseNo: location.state?.formData?.presentHouseNo || '',
+          presentBarangay: location.state?.formData?.presentBarangay || '',
+          presentPostalCode: location.state?.formData?.presentPostalCode || '',
+          permanentProvince: location.state?.formData?.permanentProvince || '',
+          permanentCity: location.state?.formData?.permanentCity || '',
+          permanentHouseNo: location.state?.formData?.permanentHouseNo || '',
+          permanentBarangay: location.state?.formData?.permanentBarangay || '',
+          permanentPostalCode: location.state?.formData?.permanentPostalCode || '',
+          mobile: location.state?.formData?.mobile || personalData.mobile || '',
+          telephoneNo: location.state?.formData?.telephoneNo || '',
           emailAddress: userEmail,
-          mobileNo: userData.mobileNo || '09123456789',
-          ...(location.state?.formData || {})
         }));
 
         setLoading(false);
@@ -234,20 +250,15 @@ function ScopeRegistration3() {
   };
 
   const handleNext = () => {
-    if (!validateForm()) {
-      return;
+    if (validateForm()) {
+      localStorage.setItem('registrationData', JSON.stringify(formData));
+      navigate('/scope-registration-4', { state: { formData } });
     }
-    setIsFormDirty(false);
-    navigate('/scope-registration-4', { state: { formData } });
   };
 
   const handleBack = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-2');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-2', { state: { formData } });
-    }
+    localStorage.setItem('registrationData', JSON.stringify(formData));
+    navigate('/scope-registration-2', { state: { formData } });
   };
 
   const toggleSidebar = () => {
@@ -262,13 +273,15 @@ function ScopeRegistration3() {
     const { name, value } = e.target;
     let sanitizedValue = value;
 
-    if (['presentProvince', 'presentCity', 'presentBarangay', 'permanentProvince', 'permanentCity', 'permanentBarangay'].includes(name)) {
+    if (['presentProvince', 'presentCity', 'permanentProvince', 'permanentCity'].includes(name)) {
       sanitizedValue = value.replace(/[^a-zA-Z\s]/g, '').slice(0, 50);
       sanitizedValue = sanitizedValue.charAt(0).toUpperCase() + sanitizedValue.slice(1);
     } else if (['presentHouseNo', 'permanentHouseNo'].includes(name)) {
       sanitizedValue = value.slice(0, 100);
     } else if (['presentPostalCode', 'permanentPostalCode'].includes(name)) {
       sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 4);
+    } else if (['presentBarangay', 'permanentBarangay'].includes(name)) {
+      sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 5);
     } else if (name === 'telephoneNo') {
       sanitizedValue = value.replace(/[^0-9-]/g, '').slice(0, 12);
     }
@@ -343,8 +356,7 @@ function ScopeRegistration3() {
       case 'presentBarangay':
       case 'permanentBarangay':
         if (!value) return 'Barangay is required';
-        if (value.length < 2) return 'Barangay must be at least 2 characters';
-        if (value.length > 50) return 'Barangay cannot exceed 50 characters';
+        if (!/^\d{1,5}$/.test(value)) return 'Barangay must be 1 to 5 digits';
         return '';
       case 'presentPostalCode':
       case 'permanentPostalCode':
@@ -594,7 +606,7 @@ function ScopeRegistration3() {
                                   presentProvince: true,
                                 })
                               }
-                              shovel className={errors.presentProvince ? 'input-error' : ''}
+                              className={errors.presentProvince ? 'input-error' : ''}
                               placeholder="Enter Province"
                               maxLength={50}
                             />
@@ -653,11 +665,11 @@ function ScopeRegistration3() {
                                 })
                               }
                               className={errors.presentBarangay ? 'input-error' : ''}
-                              placeholder="Enter Barangay"
-                              maxLength={50}
+                              placeholder="Enter Barangay (up to 5 digits)"
+                              maxLength={5}
                             />
-                            <div className={`character-count ${formData.presentBarangay.length > 45 ? 'warning' : ''}`}>
-                              {formData.presentBarangay.length}/50
+                            <div className={`character-count ${formData.presentBarangay.length > 4 ? 'warning' : ''}`}>
+                              {formData.presentBarangay.length}/5
                             </div>
                             {errors.presentBarangay && (
                               <span className="error-message">
@@ -823,12 +835,12 @@ function ScopeRegistration3() {
                                 })
                               }
                               className={errors.permanentBarangay ? 'input-error' : ''}
-                              placeholder="Enter Barangay"
-                              maxLength={50}
+                              placeholder="Enter Barangay (up to 5 digits)"
+                              maxLength={5}
                               disabled={sameAsPresent}
                             />
-                            <div className={`character-count ${formData.permanentBarangay.length > 45 ? 'warning' : ''}`}>
-                              {formData.permanentBarangay.length}/50
+                            <div className={`character-count ${formData.permanentBarangay.length > 4 ? 'warning' : ''}`}>
+                              {formData.permanentBarangay.length}/5
                             </div>
                             {errors.permanentBarangay && (
                               <span className="error-message">
@@ -885,7 +897,7 @@ function ScopeRegistration3() {
                             type="text"
                             id="mobileNo"
                             name="mobileNo"
-                            value={formData.mobileNo}
+                            value={formData.mobile}
                             disabled
                             className="disabled-input"
                           />

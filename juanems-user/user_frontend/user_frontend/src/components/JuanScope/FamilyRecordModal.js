@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationCircle, faTimes, faUndo, faSave } from '@fortawesome/free-solid-svg-icons';
 import { FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 import Select from 'react-select';
 import '../../css/JuanScope/FamilyRecordModal.css';
 
-// List of countries (same as ScopeRegistration1.js)
+// List of countries
 const countries = [
     { value: 'philippines', label: 'Philippines' },
 ];
@@ -66,7 +66,25 @@ const FamilyRecordModal = ({
     setTouchedFields,
     editingContact,
     setIsFormDirty,
+    contacts,
 }) => {
+    const [permanentAddress, setPermanentAddress] = useState(null);
+
+    // Fetch permanent address from localStorage
+    useEffect(() => {
+        const savedData = localStorage.getItem('registrationData');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            setPermanentAddress({
+                province: parsedData.permanentProvince || '',
+                city: parsedData.permanentCity || '',
+                houseNo: parsedData.permanentHouseNo || '',
+                postalCode: parsedData.permanentPostalCode || '',
+                barangay: parsedData.permanentBarangay || '',
+            });
+        }
+    }, []);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         let sanitizedValue = value;
@@ -79,11 +97,17 @@ const FamilyRecordModal = ({
         } else if (name === 'postalCode') {
             sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 4);
         } else if (name === 'mobileNo') {
-            sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+            // Allow only digits and limit to 10 digits (excluding +63)
+            sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+            if (sanitizedValue.length === 10 && !sanitizedValue.startsWith('9')) {
+                sanitizedValue = ''; // Clear if doesn't start with 9
+            }
         } else if (name === 'telephoneNo') {
             sanitizedValue = value.replace(/[^0-9-]/g, '').slice(0, 12);
         } else if (name === 'emailAddress') {
             sanitizedValue = value.slice(0, 100);
+        } else if (name === 'isEmergencyContact') {
+            sanitizedValue = value;
         }
 
         setFormData({
@@ -118,10 +142,11 @@ const FamilyRecordModal = ({
         setFormData({
             ...formData,
             sameAsApplicant: checked,
-            province: checked ? 'Metro Manila' : formData.province,
-            city: checked ? 'Quezon City' : formData.city,
-            houseNo: checked ? '123 Main St' : formData.houseNo,
-            postalCode: checked ? '1100' : formData.postalCode,
+            province: checked && permanentAddress ? permanentAddress.province : formData.province,
+            city: checked && permanentAddress ? permanentAddress.city : formData.city,
+            houseNo: checked && permanentAddress ? permanentAddress.houseNo : formData.houseNo,
+            postalCode: checked && permanentAddress ? permanentAddress.postalCode : formData.postalCode,
+            barangay: checked && permanentAddress ? permanentAddress.barangay : formData.barangay,
         });
         setTouchedFields({
             ...touchedFields,
@@ -129,6 +154,7 @@ const FamilyRecordModal = ({
             city: true,
             houseNo: true,
             postalCode: true,
+            barangay: true,
         });
         setIsFormDirty(true);
     };
@@ -161,7 +187,7 @@ const FamilyRecordModal = ({
                 return null;
             case 'mobileNo':
                 if (!value) return 'Mobile No. is required';
-                if (!/^\d{11}$/.test(value)) return 'Mobile No. must be 11 digits';
+                if (!/^[9]\d{9}$/.test(value)) return 'Mobile No. must be 10 digits starting with 9';
                 return null;
             case 'emailAddress':
                 if (!value) return 'Email Address is required';
@@ -215,11 +241,12 @@ const FamilyRecordModal = ({
                 lastName: formData.lastName,
                 occupation: formData.occupation,
                 country: formData.country,
-                province: formData.sameAsApplicant ? 'Metro Manila' : formData.province,
-                city: formData.sameAsApplicant ? 'Quezon City' : formData.city,
-                houseNo: formData.sameAsApplicant ? '123 Main St' : formData.houseNo,
-                postalCode: formData.sameAsApplicant ? '1100' : formData.postalCode,
-                mobileNo: formData.mobileNo,
+                province: formData.sameAsApplicant && permanentAddress ? permanentAddress.province : formData.province,
+                city: formData.sameAsApplicant && permanentAddress ? permanentAddress.city : formData.city,
+                houseNo: formData.sameAsApplicant && permanentAddress ? permanentAddress.houseNo : formData.houseNo,
+                postalCode: formData.sameAsApplicant && permanentAddress ? permanentAddress.postalCode : formData.postalCode,
+                barangay: formData.sameAsApplicant && permanentAddress ? permanentAddress.barangay : formData.barangay,
+                mobileNo: `+63${formData.mobileNo}`,
                 telephoneNo: formData.telephoneNo,
                 emailAddress: formData.emailAddress,
                 isEmergencyContact: formData.isEmergencyContact === 'yes',
@@ -337,8 +364,12 @@ const FamilyRecordModal = ({
                                     id="sameAsApplicant"
                                     checked={formData.sameAsApplicant}
                                     onChange={handleCheckboxChange}
+                                    disabled={!permanentAddress}
                                 />
-                                <label htmlFor="sameAsApplicant">Same with applicant’s permanent address</label>
+                                <label htmlFor="sameAsApplicant">
+                                    Same with applicant’s permanent address
+                                    {!permanentAddress && ' (Address not available)'}
+                                </label>
                             </div>
                             <div className="form-group">
                                 <label htmlFor="country">
@@ -377,7 +408,7 @@ const FamilyRecordModal = ({
                                     </span>
                                 )}
                             </div>
-                            <div className="form-group">
+                            <div className = "form-group">
                                 <label htmlFor="city">
                                     City/Municipality:<span className="required-asterisk">*</span>
                                 </label>
@@ -443,6 +474,28 @@ const FamilyRecordModal = ({
                                     </span>
                                 )}
                             </div>
+                            <div className="form-group">
+                                <label htmlFor="barangay">
+                                    Barangay:<span className="required-asterisk">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    id="barangay"
+                                    name="barangay"
+                                    value={formData.barangay}
+                                    onChange={handleInputChange}
+                                    onBlur={() => setTouchedFields({ ...touchedFields, barangay: true })}
+                                    className={errors.barangay ? 'input-error' : ''}
+                                    placeholder="Enter Barangay"
+                                    maxLength={50}
+                                    disabled={formData.sameAsApplicant}
+                                />
+                                {errors.barangay && (
+                                    <span className="error-message">
+                                        <FontAwesomeIcon icon={faExclamationCircle} /> {errors.barangay}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="modal-section">
@@ -456,17 +509,20 @@ const FamilyRecordModal = ({
                                 <label htmlFor="mobileNo">
                                     Mobile No.:<span className="required-asterisk">*</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    id="mobileNo"
-                                    name="mobileNo"
-                                    value={formData.mobileNo}
-                                    onChange={handleInputChange}
-                                    onBlur={() => setTouchedFields({ ...touchedFields, mobileNo: true })}
-                                    className={errors.mobileNo ? 'input-error' : ''}
-                                    placeholder="Enter 11-digit Mobile No."
-                                    maxLength={11}
-                                />
+                                <div className="mobile-input-container">
+                                    <span className="country-code">+63</span>
+                                    <input
+                                        type="text"
+                                        id="mobileNo"
+                                        name="mobileNo"
+                                        value={formData.mobileNo}
+                                        onChange={handleInputChange}
+                                        onBlur={() => setTouchedFields({ ...touchedFields, mobileNo: true })}
+                                        className={errors.mobileNo ? 'input-error' : ''}
+                                        placeholder="9123456789"
+                                        maxLength={10}
+                                    />
+                                </div>
                                 {errors.mobileNo && (
                                     <span className="error-message">
                                         <FontAwesomeIcon icon={faExclamationCircle} /> {errors.mobileNo}
@@ -518,6 +574,7 @@ const FamilyRecordModal = ({
                                             value="yes"
                                             checked={formData.isEmergencyContact === 'yes'}
                                             onChange={handleInputChange}
+                                            disabled={contacts.some(contact => contact.isEmergencyContact && (!editingContact || contact.id !== editingContact.id))}
                                         />
                                         Yes
                                     </label>

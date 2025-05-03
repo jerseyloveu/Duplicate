@@ -396,3 +396,32 @@
         gap: 5px;
     }
 }
+
+/* Existing styles remain unchanged, adding styles for mobile input */
+.mobile-input-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.mobile-input-container .country-code {
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-right: 1px solid #ccc;
+    font-size: 12px;
+}
+
+.mobile-input-container input {
+    flex: 1;
+    border: none;
+    padding: 8px;
+    font-size: 12px;
+    outline: none;
+}
+
+.mobile-input-container input.input-error {
+    border: none;
+    background-color: #fff1f1;
+}

@@ -210,7 +210,6 @@ const countries = [
   { value: 'zimbabwe', label: 'Zimbabwe' },
 ];
 
-
 // Prefix and Suffix options
 const prefixOptions = [
   { value: '', label: 'None' },
@@ -300,7 +299,9 @@ function ScopeRegistration1() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unviewedCount, setUnviewedCount] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('registrationData');
+    return savedData ? JSON.parse(savedData) : {
     prefix: '',
     lastName: '',
     firstName: '',
@@ -315,8 +316,9 @@ function ScopeRegistration1() {
     birthPlaceCity: '',
     birthPlaceProvince: '',
     nationality: '',
-    ...location.state?.formData, // Initialize with data from navigation state
-  });
+    ...location.state?.formData,
+  };
+});
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [countryOptions, setCountryOptions] = useState(countries);
@@ -419,7 +421,6 @@ function ScopeRegistration1() {
           applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
         });
 
-        // Initialize form data with fetched values, prioritizing navigation state
         setFormData((prev) => ({
           ...prev,
           prefix: location.state?.formData?.prefix || applicantData.prefix || '',
@@ -458,7 +459,7 @@ function ScopeRegistration1() {
 
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
-    return () => clearInterval(refreshInterval); // Changed from refInterval to refreshInterval
+    return () => clearInterval(refreshInterval);
   }, [navigate, location.state]);
 
   // Periodic account status check
@@ -557,11 +558,11 @@ function ScopeRegistration1() {
   };
 
   const handleNext = () => {
-    if (!validateForm()) {
-      return;
+    if (validateForm()) {
+      // Save to localStorage
+      localStorage.setItem('registrationData', JSON.stringify(formData));
+      navigate('/scope-registration-2', { state: { formData } });
     }
-    setIsFormDirty(false);
-    navigate('/scope-registration-2', { state: { formData } });
   };
 
   const toggleSidebar = () => {
