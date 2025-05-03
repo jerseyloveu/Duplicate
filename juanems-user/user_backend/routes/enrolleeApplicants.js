@@ -807,6 +807,41 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// New route to save registration data
+router.post('/save-registration', async (req, res) => {
+  try {
+    const { email, formData } = req.body;
+
+    // Find the applicant by email
+    const applicant = await EnrolleeApplicant.findOne({ email });
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Applicant not found' });
+    }
+
+    // Update the applicant's registration data
+    applicant.firstName = formData.firstName;
+    applicant.middleName = formData.middleName;
+    applicant.lastName = formData.lastName;
+    applicant.dob = formData.dob;
+    applicant.mobile = formData.mobile;
+    applicant.nationality = formData.nationality;
+    applicant.academicYear = formData.academicYear;
+    applicant.academicTerm = formData.academicTerm;
+    applicant.academicStrand = formData.academicStrand;
+    applicant.academicLevel = formData.academicLevel;
+    applicant.registrationStatus = 'Complete'; // Add the registration status
+
+    // Save the updated applicant data
+    await applicant.save();
+
+    res.status(200).json({ message: 'Registration data saved successfully' });
+  } catch (err) {
+    console.error('Error saving registration data:', err);
+    res.status(500).json({ error: 'Server error during saving registration data' });
+  }
+});
+
 router.post('/logout', async (req, res) => {
   try {
     const { email, createdAt } = req.body;

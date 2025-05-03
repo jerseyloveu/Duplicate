@@ -5,6 +5,7 @@ import { faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons'
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
+import RegistrationSummary from './RegistrationSummary'; // Import the summary component
 
 function ScopeRegistration6() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function ScopeRegistration6() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
+  const [formData, setFormData] = useState({});
 
   // Update current date and time every minute
   useEffect(() => {
@@ -99,6 +101,14 @@ function ScopeRegistration6() {
           nationality: userData.nationality || '',
           studentID: userData.studentID || 'N/A',
           applicantID: userData.applicantID || 'N/A',
+        });
+
+        // Fetch all registration data
+        const registrationData = localStorage.getItem('registrationData');
+        const contacts = localStorage.getItem('familyContacts');
+        setFormData({
+          ...JSON.parse(registrationData),
+          contacts: JSON.parse(contacts),
         });
 
         setLoading(false);
@@ -209,11 +219,37 @@ function ScopeRegistration6() {
     }
   };
 
-  const handleSaveAndProceed = () => {
-    setIsFormDirty(false); // Reset dirty state as we're saving
-    navigate('/scope-exam-interview'); // Placeholder route
+  const handleSaveAndProceed = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+  
+      // Send a request to save the registration data
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/save-registration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          formData: formData,
+        }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        setIsFormDirty(false); // Reset dirty state as we're saving
+        navigate('/scope-exam-interview'); // Navigate to the next step
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error('Error saving registration data:', err);
+      alert('An error occurred while saving the registration data.');
+    }
   };
-
+  
   const handleBack = () => {
     if (isFormDirty) {
       setNextLocation('/scope-registration-5');
@@ -314,6 +350,7 @@ function ScopeRegistration6() {
                       Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete initial information after saving and proceeding to the next step.
                     </p>
                   </div>
+                  <RegistrationSummary formData={formData} /> {/* Display the summary */}
                   <div className="form-buttons">
                     <button
                       type="button"

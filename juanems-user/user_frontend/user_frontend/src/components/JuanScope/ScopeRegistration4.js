@@ -845,9 +845,6 @@ function ScopeRegistration4() {
                         Back
                       </button>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button type="submit" className="save-button">
-                          Save
-                        </button>
                         <button type="button" className="next-button" onClick={handleNext}>
                           Next
                         </button>
