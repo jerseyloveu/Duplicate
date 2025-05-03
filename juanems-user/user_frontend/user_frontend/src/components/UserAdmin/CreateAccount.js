@@ -377,7 +377,7 @@ const CreateAccount = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!isChecked) {
+    if (!isChecked && !id) {
       newErrors.agreement = 'You must agree to the data privacy agreement';
     }
 
@@ -549,7 +549,7 @@ const CreateAccount = () => {
       // After successful create/update, log the action
       const logAction = id ? 'Update' : 'Create';
       const fullAccountName = `${trimmedValues.firstName} ${trimmedValues.middleName} ${trimmedValues.lastName}`.replace(/\s+/g, ' ').trim();
-      const logDetail = `${logAction === 'Create' ? 'Created' : 'Updated'} account [${trimmedValues.userID}] for ${fullAccountName} (${trimmedValues.role}`;
+      const logDetail = `${logAction === 'Create' ? 'Created' : 'Updated'} account [${trimmedValues.userID}] of ${fullAccountName} (${trimmedValues.role}`;
 
       const logData = {
         userID: userID,
@@ -790,7 +790,7 @@ const CreateAccount = () => {
             )}
           </div>
 
-          {!isArchived && (
+          {!isArchived && !id && (
           <div className="column">
             {/* Form title */}
             <h3 className="juan-form-title">Data Privacy Agreement</h3>
