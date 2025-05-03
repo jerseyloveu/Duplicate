@@ -131,13 +131,13 @@ router.get('/check-email/:email', async (req, res) => {
 
     const existingInactive = await EnrolleeApplicant.findOne({
       email,
-      status: 'Inactive'
+      status: 'Incomplete'
     });
 
     if (existingInactive) {
       return res.status(200).json({
         message: 'Email is available (previous inactive account exists)',
-        status: 'Inactive'
+        status: 'Incomplete'
       });
     }
 
@@ -205,7 +205,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     if (applicant.verificationExpires < new Date()) {
-      applicant.status = 'Inactive';
+      applicant.status = 'Incomplete';
       await applicant.save();
       return res.status(400).json({
         message: 'Verification period has expired. Please register again.'
@@ -260,7 +260,7 @@ router.post('/verify-otp', async (req, res) => {
         _id: { $ne: applicant._id }
       },
       {
-        status: 'Inactive',
+        status: 'Incomplete',
         inactiveReason: 'New registration completed'
       }
     );
@@ -730,7 +730,7 @@ router.post('/login', async (req, res) => {
 
       if (pendingAccount) {
         if (pendingAccount.verificationExpires < new Date()) {
-          pendingAccount.status = 'Inactive';
+          pendingAccount.status = 'Incomplete';
           pendingAccount.inactiveReason = 'Auto-cleaned expired verification';
           await pendingAccount.save();
           return res.status(403).json({
@@ -748,7 +748,7 @@ router.post('/login', async (req, res) => {
 
       const inactiveAccount = await EnrolleeApplicant.findOne({
         email: cleanEmail,
-        status: 'Inactive'
+        status: 'Incomplete'
       });
 
       if (inactiveAccount) {
@@ -807,30 +807,150 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// New route to save registration data
+// Helper function to validate and sanitize string inputs
+const sanitizeString = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+// Helper function to validate formData structure
+const validateFormData = (formData) => {
+  const errors = [];
+
+  // Step 1: Personal Information (required fields)
+  if (!sanitizeString(formData.firstName)) errors.push('First name is required');
+  if (!sanitizeString(formData.lastName)) errors.push('Last name is required');
+  if (!sanitizeString(formData.birthDate)) errors.push('Birth date is required');
+  if (!sanitizeString(formData.nationality)) errors.push('Nationality is required');
+
+  // Step 2: Admission and Enrollment Requirements
+  if (!sanitizeString(formData.entryLevel)) errors.push('Entry level is required');
+
+  // Step 3: Contact Details (required fields)
+  if (!sanitizeString(formData.mobile)) errors.push('Mobile number is required');
+  if (!sanitizeString(formData.presentCity)) errors.push('Present city is required');
+  if (!sanitizeString(formData.permanentCity)) errors.push('Permanent city is required');
+
+  // Step 4: Educational Background (at least one school required)
+  if (!sanitizeString(formData.elementarySchoolName) && !sanitizeString(formData.juniorHighSchoolName)) {
+    errors.push('At least one school name (elementary or junior high) is required');
+  }
+
+  // Step 5: Family Background
+  if (!Array.isArray(formData.contacts) || formData.contacts.length === 0) {
+    errors.push('At least one family contact is required');
+  } else {
+    formData.contacts.forEach((contact, index) => {
+      if (!sanitizeString(contact.relationship)) {
+        errors.push(`Contact ${index + 1}: Relationship is required`);
+      }
+      if (!sanitizeString(contact.firstName)) {
+        errors.push(`Contact ${index + 1}: First name is required`);
+      }
+      if (!sanitizeString(contact.lastName)) {
+        errors.push(`Contact ${index + 1}: Last name is required`);
+      }
+    });
+  }
+
+  return errors;
+};
+
 router.post('/save-registration', async (req, res) => {
   try {
     const { email, formData } = req.body;
 
-    // Find the applicant by email
-    const applicant = await EnrolleeApplicant.findOne({ email });
-
-    if (!applicant) {
-      return res.status(404).json({ error: 'Applicant not found' });
+    // Validate input
+    if (!sanitizeString(email)) {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+    if (!formData || typeof formData !== 'object') {
+      return res.status(400).json({ error: 'Invalid or missing form data' });
     }
 
-    // Update the applicant's registration data
-    applicant.firstName = formData.firstName;
-    applicant.middleName = formData.middleName;
-    applicant.lastName = formData.lastName;
-    applicant.dob = formData.dob;
-    applicant.mobile = formData.mobile;
-    applicant.nationality = formData.nationality;
-    applicant.academicYear = formData.academicYear;
-    applicant.academicTerm = formData.academicTerm;
-    applicant.academicStrand = formData.academicStrand;
-    applicant.academicLevel = formData.academicLevel;
-    applicant.registrationStatus = 'Complete'; // Add the registration status
+    // Validate formData structure
+    const validationErrors = validateFormData(formData);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ error: 'Validation failed', details: validationErrors });
+    }
+
+    // Find the applicant by email
+    const applicant = await EnrolleeApplicant.findOne({ email: email.toLowerCase(), status: 'Active' });
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    // Update personal information (Step 1)
+    applicant.prefix = sanitizeString(formData.prefix);
+    applicant.firstName = sanitizeString(formData.firstName) || applicant.firstName;
+    applicant.middleName = sanitizeString(formData.middleName);
+    applicant.lastName = sanitizeString(formData.lastName) || applicant.lastName;
+    applicant.suffix = sanitizeString(formData.suffix);
+    applicant.gender = sanitizeString(formData.gender);
+    applicant.lrnNo = sanitizeString(formData.lrnNo);
+    applicant.civilStatus = sanitizeString(formData.civilStatus);
+    applicant.religion = sanitizeString(formData.religion);
+    applicant.birthDate = sanitizeString(formData.birthDate);
+    applicant.countryOfBirth = sanitizeString(formData.countryOfBirth);
+    applicant.birthPlaceCity = sanitizeString(formData.birthPlaceCity);
+    applicant.birthPlaceProvince = sanitizeString(formData.birthPlaceProvince);
+    applicant.nationality = sanitizeString(formData.nationality) || applicant.nationality;
+
+    // Update admission and enrollment requirements (Step 2)
+    applicant.entryLevel = sanitizeString(formData.entryLevel);
+
+    // Update contact details (Step 3)
+    applicant.presentHouseNo = sanitizeString(formData.presentHouseNo);
+    applicant.presentBarangay = sanitizeString(formData.presentBarangay);
+    applicant.presentCity = sanitizeString(formData.presentCity);
+    applicant.presentProvince = sanitizeString(formData.presentProvince);
+    applicant.presentPostalCode = sanitizeString(formData.presentPostalCode);
+    applicant.permanentHouseNo = sanitizeString(formData.permanentHouseNo);
+    applicant.permanentBarangay = sanitizeString(formData.permanentBarangay);
+    applicant.permanentCity = sanitizeString(formData.permanentCity);
+    applicant.permanentProvince = sanitizeString(formData.permanentProvince);
+    applicant.permanentPostalCode = sanitizeString(formData.permanentPostalCode);
+    applicant.mobile = sanitizeString(formData.mobile) || applicant.mobile;
+    applicant.telephoneNo = sanitizeString(formData.telephoneNo);
+    applicant.emailAddress = sanitizeString(formData.emailAddress) || applicant.email;
+
+    // Update educational background (Step 4)
+    applicant.elementarySchoolName = sanitizeString(formData.elementarySchoolName);
+    applicant.elementaryLastYearAttended = sanitizeString(formData.elementaryLastYearAttended);
+    applicant.elementaryGeneralAverage = sanitizeString(formData.elementaryGeneralAverage);
+    applicant.elementaryRemarks = sanitizeString(formData.elementaryRemarks);
+    applicant.juniorHighSchoolName = sanitizeString(formData.juniorHighSchoolName);
+    applicant.juniorHighLastYearAttended = sanitizeString(formData.juniorHighLastYearAttended);
+    applicant.juniorHighGeneralAverage = sanitizeString(formData.juniorHighGeneralAverage);
+    applicant.juniorHighRemarks = sanitizeString(formData.juniorHighRemarks);
+
+    // Update family background (Step 5)
+    applicant.familyContacts = [];
+    if (Array.isArray(formData.contacts)) {
+      for (const contact of formData.contacts) {
+        if (typeof contact === 'object' && contact) {
+          applicant.familyContacts.push({
+            relationship: sanitizeString(contact.relationship),
+            firstName: sanitizeString(contact.firstName),
+            middleName: sanitizeString(contact.middleName),
+            lastName: sanitizeString(contact.lastName),
+            occupation: sanitizeString(contact.occupation),
+            houseNo: sanitizeString(contact.houseNo),
+            city: sanitizeString(contact.city),
+            province: sanitizeString(contact.province),
+            country: sanitizeString(contact.country),
+            mobileNo: sanitizeString(contact.mobileNo),
+            telephoneNo: sanitizeString(contact.telephoneNo),
+            emailAddress: sanitizeString(contact.emailAddress),
+            isEmergencyContact: typeof contact.isEmergencyContact === 'boolean' ? contact.isEmergencyContact : false
+          });
+        }
+      }
+    }
+
+    // Mark registration as complete
+    applicant.registrationStatus = 'Complete';
 
     // Save the updated applicant data
     await applicant.save();
@@ -838,7 +958,11 @@ router.post('/save-registration', async (req, res) => {
     res.status(200).json({ message: 'Registration data saved successfully' });
   } catch (err) {
     console.error('Error saving registration data:', err);
-    res.status(500).json({ error: 'Server error during saving registration data' });
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message).join(', ');
+      return res.status(400).json({ error: `Validation error: ${errors}` });
+    }
+    res.status(500).json({ error: `Server error: ${err.message || 'Unknown error'}` });
   }
 });
 

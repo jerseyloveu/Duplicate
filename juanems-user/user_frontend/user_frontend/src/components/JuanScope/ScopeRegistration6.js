@@ -5,7 +5,7 @@ import { faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons'
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
-import RegistrationSummary from './RegistrationSummary'; // Import the summary component
+import RegistrationSummary from './RegistrationSummary';
 
 function ScopeRegistration6() {
   const navigate = useNavigate();
@@ -106,9 +106,20 @@ function ScopeRegistration6() {
         // Fetch all registration data
         const registrationData = localStorage.getItem('registrationData');
         const contacts = localStorage.getItem('familyContacts');
+        let parsedRegistrationData, parsedContacts;
+        try {
+          parsedRegistrationData = registrationData ? JSON.parse(registrationData) : {};
+          parsedContacts = contacts ? JSON.parse(contacts) : [];
+        } catch (parseError) {
+          console.error('Error parsing localStorage data:', parseError);
+          setError('Invalid registration data. Please restart the registration process.');
+          setLoading(false);
+          return;
+        }
+
         setFormData({
-          ...JSON.parse(registrationData),
-          contacts: JSON.parse(contacts),
+          ...parsedRegistrationData,
+          contacts: Array.isArray(parsedContacts) ? parsedContacts : [],
         });
 
         setLoading(false);
@@ -222,8 +233,24 @@ function ScopeRegistration6() {
   const handleSaveAndProceed = async () => {
     try {
       const userEmail = localStorage.getItem('userEmail');
-  
-      // Send a request to save the registration data
+      if (!userEmail) {
+        setError('User email not found. Please log in again.');
+        navigate('/scope-login');
+        return;
+      }
+
+      // Validate formData
+      if (!formData || Object.keys(formData).length === 0) {
+        setError('Registration data is missing. Please complete all previous steps.');
+        return;
+      }
+
+      if (!Array.isArray(formData.contacts)) {
+        setError('Family contacts data is invalid.');
+        return;
+      }
+
+      // Send request to save registration data
       const response = await fetch('http://localhost:5000/api/enrollee-applicants/save-registration', {
         method: 'POST',
         headers: {
@@ -231,25 +258,25 @@ function ScopeRegistration6() {
         },
         body: JSON.stringify({
           email: userEmail,
-          formData: formData,
+          formData,
         }),
       });
-  
+
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
+        setIsFormDirty(false);
         alert(data.message);
-        setIsFormDirty(false); // Reset dirty state as we're saving
-        navigate('/scope-exam-interview'); // Navigate to the next step
+        navigate('/scope-exam-interview');
       } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.error}`);
+        setError(data.error || 'Failed to save registration data.');
       }
     } catch (err) {
       console.error('Error saving registration data:', err);
-      alert('An error occurred while saving the registration data.');
+      setError('An error occurred while saving the registration data. Please try again.');
     }
   };
-  
+
   const handleBack = () => {
     if (isFormDirty) {
       setNextLocation('/scope-registration-5');
@@ -350,7 +377,7 @@ function ScopeRegistration6() {
                       Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete initial information after saving and proceeding to the next step.
                     </p>
                   </div>
-                  <RegistrationSummary formData={formData} /> {/* Display the summary */}
+                  <RegistrationSummary formData={formData} />
                   <div className="form-buttons">
                     <button
                       type="button"
