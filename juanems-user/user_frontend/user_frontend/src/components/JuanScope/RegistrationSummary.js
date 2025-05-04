@@ -25,6 +25,10 @@ const RegistrationSummary = ({ formData }) => {
 
       <div className="summary-section">
         <h4>Admission and Enrollment Requirements (Step 2)</h4>
+        <p><strong>Academic Year:</strong> {formData.academicYear}</p>
+        <p><strong>Academic Strand:</strong> {formData.academicStrand}</p>
+        <p><strong>Academic Term:</strong> {formData.academicTerm}</p>
+        <p><strong>Academic Level:</strong> {formData.academicLevel}</p>
         <p><strong>Entry Level:</strong> {formData.entryLevel}</p>
       </div>
 

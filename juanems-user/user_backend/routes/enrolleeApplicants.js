@@ -187,6 +187,10 @@ router.get('/personal-details/:email', async (req, res) => {
       nationality: applicant.nationality,
       // Step 2: Admission and Enrollment Requirements
       entryLevel: applicant.entryLevel || '',
+      academicYear: applicant.academicYear || '',
+      academicStrand: applicant.academicStrand || '',
+      academicTerm: applicant.academicTerm || '',
+      academicLevel: applicant.academicLevel || '',
       // Step 3: Contact Details
       presentHouseNo: applicant.presentHouseNo || '',
       presentBarangay: applicant.presentBarangay || '',
@@ -218,6 +222,7 @@ router.get('/personal-details/:email', async (req, res) => {
       registrationStatus: applicant.registrationStatus,
       dob: applicant.dob,
     };
+    console.log('Fetched applicantData:', applicant);
 
     console.log(`Personal details fetched for ${cleanEmail}:`, responseData);
 

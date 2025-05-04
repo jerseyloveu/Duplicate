@@ -71,85 +71,86 @@ function RegistrationStatusComplete() {
         }
 
         const userResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
-            createdAt
-          )}`
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
 
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
 
-        const userData = await userResponse.json();
+        const userDataResponse = await userResponse.json();
 
-        // Fetch saved registration data from the database
-        const applicantResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
-        );
-        if (!applicantResponse.ok) {
-          throw new Error('Failed to fetch applicant details');
-        }
-        const applicantData = await applicantResponse.json();
-
-        localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
-        localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
-        localStorage.setItem('middleName', applicantData.middleName || '');
-        localStorage.setItem('lastName', applicantData.lastName || userData.lastName);
-        localStorage.setItem('dob', applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', applicantData.nationality || '');
+        localStorage.setItem('applicantID', userDataResponse.applicantID || userDataResponse.applicantID);
+        localStorage.setItem('firstName', userDataResponse.firstName || userDataResponse.firstName);
+        localStorage.setItem('middleName', userDataResponse.middleName || '');
+        localStorage.setItem('lastName', userDataResponse.lastName || userDataResponse.lastName);
+        localStorage.setItem('dob', userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', userDataResponse.nationality || '');
+        localStorage.setItem('academicYear', userDataResponse.academicYear || '');
+        localStorage.setItem('academicStrand', userDataResponse.academicStrand || '');
+        localStorage.setItem('academicTerm', userDataResponse.academicTerm || '');
+        localStorage.setItem('academicLevel', userDataResponse.academicLevel || '');
 
         setUserData({
           email: userEmail,
-          firstName: applicantData.firstName || userData.firstName || 'User',
-          middleName: applicantData.middleName || '',
-          lastName: applicantData.lastName || userData.lastName || '',
-          dob: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
-          nationality: applicantData.nationality || '',
-          studentID: applicantData.studentID || userData.studentID || 'N/A',
-          applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
+          firstName: userDataResponse.firstName || userDataResponse.firstName || 'User',
+          middleName: userDataResponse.middleName || '',
+          lastName: userDataResponse.lastName || userDataResponse.lastName || '',
+          dob: userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '',
+          nationality: userDataResponse.nationality || '',
+          studentID: userDataResponse.studentID || userDataResponse.studentID || 'N/A',
+          applicantID: userDataResponse.applicantID || userDataResponse.applicantID || 'N/A',
+          academicYear: userDataResponse.academicYear || '',
+          academicStrand: userDataResponse.academicStrand || '',
+          academicTerm: userDataResponse.academicTerm || '',
+          academicLevel: userDataResponse.academicLevel || '',
         });
 
-        setRegistrationStatus(applicantData.registrationStatus || 'Complete');
+        setRegistrationStatus(userDataResponse.registrationStatus || 'Complete');
 
         // Set formData with data from the database
         setFormData({
-          prefix: applicantData.prefix || '',
-          firstName: applicantData.firstName || '',
-          middleName: applicantData.middleName || '',
-          lastName: applicantData.lastName || '',
-          suffix: applicantData.suffix || '',
-          gender: applicantData.gender || '',
-          lrnNo: applicantData.lrnNo || '',
-          civilStatus: applicantData.civilStatus || '',
-          religion: applicantData.religion || '',
-          birthDate: applicantData.birthDate || '',
-          countryOfBirth: applicantData.countryOfBirth || '',
-          birthPlaceCity: applicantData.birthPlaceCity || '',
-          birthPlaceProvince: applicantData.birthPlaceProvince || '',
-          nationality: applicantData.nationality || '',
-          entryLevel: applicantData.entryLevel || '',
-          presentHouseNo: applicantData.presentHouseNo || '',
-          presentBarangay: applicantData.presentBarangay || '',
-          presentCity: applicantData.presentCity || '',
-          presentProvince: applicantData.presentProvince || '',
-          presentPostalCode: applicantData.presentPostalCode || '',
-          permanentHouseNo: applicantData.permanentHouseNo || '',
-          permanentBarangay: applicantData.permanentBarangay || '',
-          permanentCity: applicantData.permanentCity || '',
-          permanentProvince: applicantData.permanentProvince || '',
-          permanentPostalCode: applicantData.permanentPostalCode || '',
-          mobile: applicantData.mobile || '',
-          telephoneNo: applicantData.telephoneNo || '',
-          emailAddress: applicantData.emailAddress || '',
-          elementarySchoolName: applicantData.elementarySchoolName || '',
-          elementaryLastYearAttended: applicantData.elementaryLastYearAttended || '',
-          elementaryGeneralAverage: applicantData.elementaryGeneralAverage || '',
-          elementaryRemarks: applicantData.elementaryRemarks || '',
-          juniorHighSchoolName: applicantData.juniorHighSchoolName || '',
-          juniorHighLastYearAttended: applicantData.juniorHighLastYearAttended || '',
-          juniorHighGeneralAverage: applicantData.juniorHighGeneralAverage || '',
-          juniorHighRemarks: applicantData.juniorHighRemarks || '',
-          contacts: applicantData.contacts || [],
+          prefix: userDataResponse.prefix || '',
+          firstName: userDataResponse.firstName || '',
+          middleName: userDataResponse.middleName || '',
+          lastName: userDataResponse.lastName || '',
+          suffix: userDataResponse.suffix || '',
+          gender: userDataResponse.gender || '',
+          lrnNo: userDataResponse.lrnNo || '',
+          civilStatus: userDataResponse.civilStatus || '',
+          religion: userDataResponse.religion || '',
+          birthDate: userDataResponse.birthDate || '',
+          countryOfBirth: userDataResponse.countryOfBirth || '',
+          birthPlaceCity: userDataResponse.birthPlaceCity || '',
+          birthPlaceProvince: userDataResponse.birthPlaceProvince || '',
+          nationality: userDataResponse.nationality || '',
+          entryLevel: userDataResponse.entryLevel || '',
+          academicYear: userDataResponse.academicYear || '',
+          academicStrand: userDataResponse.academicStrand || '',
+          academicTerm: userDataResponse.academicTerm || '',
+          academicLevel: userDataResponse.academicLevel || '',
+          presentHouseNo: userDataResponse.presentHouseNo || '',
+          presentBarangay: userDataResponse.presentBarangay || '',
+          presentCity: userDataResponse.presentCity || '',
+          presentProvince: userDataResponse.presentProvince || '',
+          presentPostalCode: userDataResponse.presentPostalCode || '',
+          permanentHouseNo: userDataResponse.permanentHouseNo || '',
+          permanentBarangay: userDataResponse.permanentBarangay || '',
+          permanentCity: userDataResponse.permanentCity || '',
+          permanentProvince: userDataResponse.permanentProvince || '',
+          permanentPostalCode: userDataResponse.permanentPostalCode || '',
+          mobile: userDataResponse.mobile || '',
+          telephoneNo: userDataResponse.telephoneNo || '',
+          emailAddress: userDataResponse.emailAddress || userDataResponse.email,
+          elementarySchoolName: userDataResponse.elementarySchoolName || '',
+          elementaryLastYearAttended: userDataResponse.elementaryLastYearAttended || '',
+          elementaryGeneralAverage: userDataResponse.elementaryGeneralAverage || '',
+          elementaryRemarks: userDataResponse.elementaryRemarks || '',
+          juniorHighSchoolName: userDataResponse.juniorHighSchoolName || '',
+          juniorHighLastYearAttended: userDataResponse.juniorHighLastYearAttended || '',
+          juniorHighGeneralAverage: userDataResponse.juniorHighGeneralAverage || '',
+          juniorHighRemarks: userDataResponse.juniorHighRemarks || '',
+          contacts: userDataResponse.familyContacts || [],
         });
 
         setLoading(false);

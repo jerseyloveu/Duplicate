@@ -85,7 +85,7 @@ function SideNavigation({ userData, registrationStatus, onNavigate, isOpen }) {
       enabled: true, // Always enabled
     },
     {
-      path: '/scope-exam-interview',
+      path: '/scope-exam-interview-application',
       icon: faClipboardCheck,
       label: '2. Exam & Interview Application',
       enabled: registrationStatus === 'Complete',

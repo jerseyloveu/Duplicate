@@ -71,10 +71,14 @@ function ScopeRegistration2() {
   const [formData, setFormData] = useState(() => {
     const savedData = localStorage.getItem('registrationData');
     return savedData ? JSON.parse(savedData) : {
-    entryLevel: '',
-    ...location.state?.formData,
-  };
-});
+      entryLevel: '',
+      academicYear: '',
+      academicStrand: '',
+      academicTerm: '',
+      academicLevel: '',
+      ...location.state?.formData,
+    };
+  });
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [isFormDirty, setIsFormDirty] = useState(false);
@@ -133,54 +137,50 @@ function ScopeRegistration2() {
           return;
         }
 
-        const userResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
-            createdAt
-          )}`
+        const applicantResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
 
-        if (!userResponse.ok) {
-          throw new Error('Failed to fetch user data');
+        if (!applicantResponse.ok) {
+          throw new Error('Failed to fetch applicant details');
         }
 
-        const userDataResponse = await userResponse.json();
+        const applicantData = await applicantResponse.json();
 
-        // Fetch entry level for ScopeRegistration2
-        let entryLevel = '';
-        try {
-          const applicantResponse = await fetch(
-            `http://localhost:5000/api/enrollee-applicants/entry-level/${userEmail}`
-          );
-          if (applicantResponse.ok) {
-            const applicantData = await applicantResponse.json();
-            entryLevel = applicantData.entryLevel || '';
-          }
-        } catch (err) {
-          console.warn('Entry level fetch failed, using default:', err);
-        }
-
-        // Update local storage
-        localStorage.setItem('applicantID', userDataResponse.applicantID || '');
-        localStorage.setItem('firstName', userDataResponse.firstName || '');
-        localStorage.setItem('middleName', userDataResponse.middleName || '');
-        localStorage.setItem('lastName', userDataResponse.lastName || '');
-        localStorage.setItem('dob', userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', userDataResponse.nationality || '');
+        // Store fields in localStorage similar to ScopeRegistration1.js
+        localStorage.setItem('applicantID', applicantData.applicantID || '');
+        localStorage.setItem('firstName', applicantData.firstName || '');
+        localStorage.setItem('middleName', applicantData.middleName || '');
+        localStorage.setItem('lastName', applicantData.lastName || '');
+        localStorage.setItem('dob', applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', applicantData.nationality || '');
+        localStorage.setItem('academicYear', applicantData.academicYear || '');
+        localStorage.setItem('academicStrand', applicantData.academicStrand || '');
+        localStorage.setItem('academicTerm', applicantData.academicTerm || '');
+        localStorage.setItem('academicLevel', applicantData.academicLevel || '');
 
         setUserData({
           email: userEmail,
-          firstName: userDataResponse.firstName || 'User',
-          middleName: userDataResponse.middleName || '',
-          lastName: userDataResponse.lastName || '',
-          dob: userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '',
-          nationality: userDataResponse.nationality || '',
-          studentID: userDataResponse.studentID || 'N/A',
-          applicantID: userDataResponse.applicantID || 'N/A',
+          firstName: applicantData.firstName || 'User',
+          middleName: applicantData.middleName || '',
+          lastName: applicantData.lastName || '',
+          dob: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
+          nationality: applicantData.nationality || '',
+          studentID: applicantData.studentID || 'N/A',
+          applicantID: applicantData.applicantID || 'N/A',
+          academicYear: applicantData.academicYear || '',
+          academicStrand: applicantData.academicStrand || '',
+          academicTerm: applicantData.academicTerm || '',
+          academicLevel: applicantData.academicLevel || '',
         });
 
         setFormData((prev) => ({
           ...prev,
-          entryLevel: location.state?.formData?.entryLevel || entryLevel,
+          entryLevel: location.state?.formData?.entryLevel || applicantData.entryLevel || prev.entryLevel || '',
+          academicYear: applicantData.academicYear || prev.academicYear || '',
+          academicStrand: applicantData.academicStrand || prev.academicStrand || '',
+          academicTerm: applicantData.academicTerm || prev.academicTerm || '',
+          academicLevel: applicantData.academicLevel || prev.academicLevel || '',
         }));
 
         // Fetch unviewed announcements count
@@ -304,7 +304,6 @@ function ScopeRegistration2() {
       navigate('/scope-announcements', { state: { formData } });
     }
   };
-
 
   const handleNext = () => {
     if (validateForm()) {
@@ -566,6 +565,54 @@ function ScopeRegistration2() {
                     </div>
                     <form>
                       <div className="form-grid">
+                        <div className="form-group">
+                          <label htmlFor="academicYear">Academic Year:</label>
+                          <input
+                            type="text"
+                            id="academicYear"
+                            name="academicYear"
+                            value={formData.academicYear}
+                            disabled
+                            className="disabled-input"
+                            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="academicStrand">Academic Strand:</label>
+                          <input
+                            type="text"
+                            id="academicStrand"
+                            name="academicStrand"
+                            value={formData.academicStrand}
+                            disabled
+                            className="disabled-input"
+                            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="academicTerm">Academic Term:</label>
+                          <input
+                            type="text"
+                            id="academicTerm"
+                            name="academicTerm"
+                            value={formData.academicTerm}
+                            disabled
+                            className="disabled-input"
+                            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="academicLevel">Academic Level:</label>
+                          <input
+                            type="text"
+                            id="academicLevel"
+                            name="academicLevel"
+                            value={formData.academicLevel}
+                            disabled
+                            className="disabled-input"
+                            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed' }}
+                          />
+                        </div>
                         <div className="form-group">
                           <label htmlFor="entryLevel">
                             Entry Level:<span className="required-asterisk">*</span>

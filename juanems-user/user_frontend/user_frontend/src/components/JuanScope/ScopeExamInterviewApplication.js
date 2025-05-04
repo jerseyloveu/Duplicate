@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarAlt, faBars, faTimes, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
-import RegistrationSummary from './RegistrationSummary';
+import ModernDatePicker from './ModernDatePicker'; // Import the new date picker component
 
-function ScopeRegistration6() {
+function ScopeExamInterviewApplication() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({});
   const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
@@ -19,7 +19,8 @@ function ScopeRegistration6() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
-  const [formData, setFormData] = useState({});
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [errors, setErrors] = useState({});
 
   // Update current date and time every minute
   useEffect(() => {
@@ -29,7 +30,7 @@ function ScopeRegistration6() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data, registration status, and verify session
+  // Fetch user data and verify session
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -50,7 +51,6 @@ function ScopeRegistration6() {
           return;
         }
 
-        // Verify account status
         const verificationResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
         );
@@ -74,78 +74,65 @@ function ScopeRegistration6() {
           return;
         }
 
-        // Fetch user data
         const userResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
+          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
+            createdAt
+          )}`
         );
 
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
 
-        const userDataResponse = await userResponse.json();
+        const userData = await userResponse.json();
 
-        // Update local storage
-        localStorage.setItem('applicantID', userDataResponse.applicantID);
-        localStorage.setItem('firstName', userDataResponse.firstName);
-        localStorage.setItem('middleName', userDataResponse.middleName || '');
-        localStorage.setItem('lastName', userDataResponse.lastName);
-        localStorage.setItem('dob', userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', userDataResponse.nationality || '');
-        localStorage.setItem('academicYear', userDataResponse.academicYear || '');
-        localStorage.setItem('academicStrand', userDataResponse.academicStrand || '');
-        localStorage.setItem('academicTerm', userDataResponse.academicTerm || '');
-        localStorage.setItem('academicLevel', userDataResponse.academicLevel || '');
+        const applicantResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
+        );
+        if (!applicantResponse.ok) {
+          throw new Error('Failed to fetch applicant details');
+        }
+        const applicantData = await applicantResponse.json();
+
+        localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
+        localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
+        localStorage.setItem('middleName', applicantData.middleName || '');
+        localStorage.setItem('lastName', applicantData.lastName || userData.lastName);
+        localStorage.setItem('dob', applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', applicantData.nationality || '');
 
         setUserData({
           email: userEmail,
-          firstName: userDataResponse.firstName || 'User',
-          middleName: userDataResponse.middleName || '',
-          lastName: userDataResponse.lastName || '',
-          dob: userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '',
-          nationality: userDataResponse.nationality || '',
-          studentID: userDataResponse.studentID || 'N/A',
-          applicantID: userDataResponse.applicantID || 'N/A',
-          academicYear: userDataResponse.academicYear || '',
-          academicStrand: userDataResponse.academicStrand || '',
-          academicTerm: userDataResponse.academicTerm || '',
-          academicLevel: userDataResponse.academicLevel || '',
+          firstName: applicantData.firstName || userData.firstName || 'User',
+          middleName: applicantData.middleName || '',
+          lastName: applicantData.lastName || userData.lastName || '',
+          dob: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
+          nationality: applicantData.nationality || '',
+          studentID: applicantData.studentID || userData.studentID || 'N/A',
+          applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
         });
 
-        setRegistrationStatus(userDataResponse.registrationStatus || 'Incomplete');
+        setRegistrationStatus(applicantData.registrationStatus || 'Incomplete');
 
-        // If registration is complete, redirect to registration-status-complete
-        if (userDataResponse.registrationStatus === 'Complete') {
-          navigate('/scope-registration-status-complete');
+        if (applicantData.registrationStatus !== 'Complete') {
+          navigate('/scope-registration-6');
           return;
         }
 
-        // Fetch all registration data
-        const registrationDataLocal = localStorage.getItem('registrationData');
-        const contacts = localStorage.getItem('familyContacts');
-        let parsedRegistrationData, parsedContacts;
-        try {
-          parsedRegistrationData = registrationDataLocal ? JSON.parse(registrationDataLocal) : {};
-          parsedContacts = contacts ? JSON.parse(contacts) : [];
-        } catch (parseError) {
-          console.error('Error parsing localStorage data:', parseError);
-          setError('Invalid registration data. Please restart the registration process.');
-          setLoading(false);
-          return;
+        // Fetch previously selected exam date, if any
+        const examResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/exam-interview/${userEmail}`
+        );
+        if (examResponse.ok) {
+          const examData = await examResponse.json();
+          if (examData.selectedDate) {
+            setSelectedDate(new Date(examData.selectedDate));
+          }
         }
-
-        setFormData({
-          ...parsedRegistrationData,
-          contacts: Array.isArray(parsedContacts) ? parsedContacts : [],
-          academicYear: userDataResponse.academicYear || parsedRegistrationData.academicYear || '',
-          academicStrand: userDataResponse.academicStrand || parsedRegistrationData.academicStrand || '',
-          academicTerm: userDataResponse.academicTerm || parsedRegistrationData.academicTerm || '',
-          academicLevel: userDataResponse.academicLevel || parsedRegistrationData.academicLevel || '',
-        });
 
         setLoading(false);
       } catch (err) {
-        console.error('Error loading registration data:', err);
+        console.error('Error loading data:', err);
         setError('Failed to load user data. Please try again.');
         setLoading(false);
       }
@@ -251,7 +238,26 @@ function ScopeRegistration6() {
     }
   };
 
-  const handleSaveAndProceed = async () => {
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    setIsFormDirty(true);
+    setErrors((prev) => ({ ...prev, selectedDate: null }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!selectedDate) {
+      newErrors.selectedDate = 'Selected Date is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const userEmail = localStorage.getItem('userEmail');
       if (!userEmail) {
@@ -260,50 +266,41 @@ function ScopeRegistration6() {
         return;
       }
 
-      // Validate formData
-      if (!formData || Object.keys(formData).length === 0) {
-        setError('Registration data is missing. Please complete all previous steps.');
-        return;
-      }
-
-      if (!Array.isArray(formData.contacts)) {
-        setError('Family contacts data is invalid.');
-        return;
-      }
-
-      // Send request to save registration data
-      const response = await fetch('http://localhost:5000/api/enrollee-applicants/save-registration', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          formData,
-        }),
-      });
+      const response = await fetch(
+        'http://localhost:5000/api/enrollee-applicants/save-exam-interview',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            selectedDate: selectedDate.toISOString(),
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
         setIsFormDirty(false);
-        alert(data.message);
-        navigate('/scope-exam-interview-application');
+        alert(data.message || 'Exam and Interview date saved successfully.');
+        navigate('/scope-exam-interview-result');
       } else {
-        setError(data.error || 'Failed to save registration data.');
+        setError(data.error || 'Failed to save exam and interview date.');
       }
     } catch (err) {
-      console.error('Error saving registration data:', err);
-      setError('An error occurred while saving the registration data. Please try again.');
+      console.error('Error saving exam and interview date:', err);
+      setError('An error occurred while saving the exam and interview date. Please try again.');
     }
   };
 
   const handleBack = () => {
     if (isFormDirty) {
-      setNextLocation('/scope-registration-5');
+      setNextLocation('/scope-registration-6');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-registration-5');
+      navigate('/scope-registration-6');
     }
   };
 
@@ -322,7 +319,7 @@ function ScopeRegistration6() {
     }
   };
 
-  const handleModalCancelNavigation = () => {
+  const handleModalCancel = () => {
     setShowUnsavedModal(false);
     setNextLocation(null);
   };
@@ -369,77 +366,79 @@ function ScopeRegistration6() {
             <div className="scope-error">{error}</div>
           ) : (
             <div className="registration-content">
-              <h2 className="registration-title">Registration</h2>
+              <h2 className="registration-title">Exam & Interview Application</h2>
               <div className="registration-divider"></div>
               <div className="registration-container">
-                <div className="step-indicator">
-                  <div className="step-circles">
-                    <div className="step-circle completed">1</div>
-                    <div className="step-line completed"></div>
-                    <div className="step-circle completed">2</div>
-                    <div className="step-line completed"></div>
-                    <div className="step-circle completed">3</div>
-                    <div className="step-line completed"></div>
-                    <div className="step-circle completed">4</div>
-                    <div className="step-line completed"></div>
-                    <div className="step-circle completed">5</div>
-                    <div className="step-line completed"></div>
-                    <div className="step-circle active">6</div>
-                  </div>
-                  <div className="step-text">Step 6 of 6</div>
+                <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '1.5rem' }}>
+                  Select your preferred available date for the exam and interview. Once confirmed, you'll be notified of the scheduled date and time in the Exam & Interview Result.
                 </div>
                 <div className="personal-info-section">
-                  <div className="reminder-box" style={{ backgroundColor: '#34A853' }}>
+                  <div className="personal-info-header">
+                    <FontAwesomeIcon
+                      icon={faCalendarAlt}
+                      style={{ color: '#212121' }}
+                    />
+                    <h3>Preferred Exam and Interview Date</h3>
+                  </div>
+                  <div className="personal-info-divider"></div>
+                  <div className="reminder-box">
                     <p>
-                      <strong>Admission: Registration Completed!</strong>
+                      <strong>Reminder:</strong> Please provide your correct and complete information. Fields marked with asterisk (<span className="required-asterisk">*</span>) are required.
                     </p>
                   </div>
-                  <div style={{ margin: '1rem 0', fontSize: '14px', color: '#333', lineHeight: '1.5' }}>
-                    <p>
-                      Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete the information after saving and proceeding to the next step.
-                    </p>
-                  </div>
-                  <RegistrationSummary formData={formData} />
-                  <div className="form-buttons">
-                    <button
-                      type="button"
-                      className="back-button"
-                      onClick={handleBack}
-                    >
-                      <FontAwesomeIcon icon={faArrowLeft} />
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      className="save-button"
-                      onClick={handleSaveAndProceed}
-                      disabled={registrationStatus === 'Complete'}
-                      style={{
-                        backgroundColor: registrationStatus === 'Complete' ? '#d3d3d3' : '#34A853',
-                        cursor: registrationStatus === 'Complete' ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      Save and Proceed to Exam & Interview Application
-                    </button>
-                  </div>
-                  {registrationStatus === 'Complete' && (
-                    <div style={{ marginTop: '1rem', color: '#333', fontSize: '14px' }}>
-                      <p>
-                        Your registration is already complete. Please{' '}
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigate('/scope-registration-status-complete');
-                          }}
-                          style={{ color: '#007BFF', textDecoration: 'underline' }}
-                        >
-                          click here
-                        </a>{' '}
-                        to view your registration details and proceed to the Exam & Interview Application.
-                      </p>
+                  <form>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="selectedDate">
+                          Selected Date:<span className="required-asterisk">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="selectedDate"
+                          name="selectedDate"
+                          value={selectedDate ? selectedDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          }) : ''}
+                          readOnly
+                          className="disabled-input"
+                        />
+                        {errors.selectedDate && (
+                          <span className="error-message">
+                            <FontAwesomeIcon icon={faCalendarAlt} /> {errors.selectedDate}
+                          </span>
+                        )}
+                      </div>
+                      <div className="form-group">
+                        <label>Calendar:</label>
+                        {/* Replace react-datepicker with our new ModernDatePicker */}
+                        <div className="modern-datepicker-wrapper">
+                          <ModernDatePickerAdapter 
+                            selectedDate={selectedDate}
+                            onDateChange={handleDateChange}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  )}
+                    <div className="form-buttons">
+                      <button
+                        type="button"
+                        className="back-button"
+                        onClick={handleBack}
+                      >
+                        <FontAwesomeIcon icon={faArrowLeft} />
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        className="next-button"
+                        onClick={handleNext}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -482,7 +481,7 @@ function ScopeRegistration6() {
             <div className="scope-modal-buttons">
               <button
                 className="scope-modal-cancel"
-                onClick={handleModalCancelNavigation}
+                onClick={handleModalCancel}
               >
                 Stay
               </button>
@@ -500,4 +499,56 @@ function ScopeRegistration6() {
   );
 }
 
-export default ScopeRegistration6;
+// This adapter component connects our modern date picker to the parent component
+function ModernDatePickerAdapter({ selectedDate, onDateChange }) {
+  // Define available dates - you'll replace this with your actual data
+  const availableDates = [
+    // Example: These are May 2025 dates from the original code
+    new Date(2025, 4, 10),
+    new Date(2025, 4, 11),
+    new Date(2025, 4, 17),
+    new Date(2025, 4, 18),
+    new Date(2025, 4, 24),
+    new Date(2025, 4, 25),
+  ];
+  
+  // Extract just the day numbers from the available dates
+  const availableDayNumbers = availableDates.map(date => date.getDate());
+  
+  // We'll use State to manage our component's own view of the selected date
+  const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate);
+  
+  // Keep our internal state in sync with the parent component
+  useEffect(() => {
+    setInternalSelectedDate(selectedDate);
+  }, [selectedDate]);
+  
+  // When the date changes in our modern picker
+  const handleDateChange = (date) => {
+    setInternalSelectedDate(date);
+    onDateChange(date); // Pass the date up to the parent component
+  };
+  
+  // Current date to set min date
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 1); // Start from tomorrow
+  
+  // Max date (3 months from now)
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 3);
+  
+  // Render the modern date picker with our adapter props
+  return (
+    <div className="modern-datepicker">
+      <ModernDatePicker 
+        selectedDate={internalSelectedDate}
+        onSelectDate={handleDateChange}
+        availableDates={availableDayNumbers}
+        minDate={minDate}
+        maxDate={maxDate}
+      />
+    </div>
+  );
+}
+
+export default ScopeExamInterviewApplication;
