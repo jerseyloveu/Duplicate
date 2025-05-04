@@ -422,6 +422,12 @@ function ScopeRegistration1() {
 
         setRegistrationStatus(registrationData.registrationStatus || 'Incomplete');
 
+        // Navigate to RegistrationStatusComplete if registration is Complete
+        if (registrationData.registrationStatus === 'Complete') {
+          navigate('/scope-registration-status-complete');
+          return;
+        }
+
         setFormData((prev) => ({
           ...prev,
           prefix: location.state?.formData?.prefix || applicantData.prefix || '',

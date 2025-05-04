@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
 import RegistrationSummary from './RegistrationSummary';
 
-function ScopeRegistration6() {
+function RegistrationStatusComplete() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({});
-  const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
+  const [registrationStatus, setRegistrationStatus] = useState('Complete');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [nextLocation, setNextLocation] = useState(null);
   const [formData, setFormData] = useState({});
 
   // Update current date and time every minute
@@ -29,7 +26,7 @@ function ScopeRegistration6() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data, registration status, and verify session
+  // Fetch user data and verify session
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -50,7 +47,6 @@ function ScopeRegistration6() {
           return;
         }
 
-        // Verify account status
         const verificationResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
         );
@@ -74,7 +70,6 @@ function ScopeRegistration6() {
           return;
         }
 
-        // Fetch user data
         const userResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
             createdAt
@@ -87,59 +82,74 @@ function ScopeRegistration6() {
 
         const userData = await userResponse.json();
 
-        // Fetch registration status
-        const registrationResponse = await fetch(
+        // Fetch saved registration data from the database
+        const applicantResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
-        if (!registrationResponse.ok) {
-          throw new Error('Failed to fetch registration status');
+        if (!applicantResponse.ok) {
+          throw new Error('Failed to fetch applicant details');
         }
-        const registrationData = await registrationResponse.json();
+        const applicantData = await applicantResponse.json();
 
-        // Update local storage
-        localStorage.setItem('applicantID', userData.applicantID);
-        localStorage.setItem('firstName', userData.firstName);
-        localStorage.setItem('middleName', registrationData.middleName || '');
-        localStorage.setItem('lastName', userData.lastName);
-        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', userData.nationality || '');
+        localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
+        localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
+        localStorage.setItem('middleName', applicantData.middleName || '');
+        localStorage.setItem('lastName', applicantData.lastName || userData.lastName);
+        localStorage.setItem('dob', applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', applicantData.nationality || '');
 
         setUserData({
           email: userEmail,
-          firstName: userData.firstName || 'User',
-          middleName: registrationData.middleName || '',
-          lastName: userData.lastName || '',
-          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
-          nationality: userData.nationality || '',
-          studentID: userData.studentID || 'N/A',
-          applicantID: userData.applicantID || 'N/A',
+          firstName: applicantData.firstName || userData.firstName || 'User',
+          middleName: applicantData.middleName || '',
+          lastName: applicantData.lastName || userData.lastName || '',
+          dob: applicantData.dob ? new Date(applicantData.dob).toISOString().split('T')[0] : '',
+          nationality: applicantData.nationality || '',
+          studentID: applicantData.studentID || userData.studentID || 'N/A',
+          applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
         });
 
-        setRegistrationStatus(registrationData.registrationStatus || 'Incomplete');
+        setRegistrationStatus(applicantData.registrationStatus || 'Complete');
 
-        // If registration is complete, redirect to registration-status-complete
-        if (registrationData.registrationStatus === 'Complete') {
-          navigate('/scope-registration-status-complete');
-          return;
-        }
-
-        // Fetch all registration data
-        const registrationDataLocal = localStorage.getItem('registrationData');
-        const contacts = localStorage.getItem('familyContacts');
-        let parsedRegistrationData, parsedContacts;
-        try {
-          parsedRegistrationData = registrationDataLocal ? JSON.parse(registrationDataLocal) : {};
-          parsedContacts = contacts ? JSON.parse(contacts) : [];
-        } catch (parseError) {
-          console.error('Error parsing localStorage data:', parseError);
-          setError('Invalid registration data. Please restart the registration process.');
-          setLoading(false);
-          return;
-        }
-
+        // Set formData with data from the database
         setFormData({
-          ...parsedRegistrationData,
-          contacts: Array.isArray(parsedContacts) ? parsedContacts : [],
+          prefix: applicantData.prefix || '',
+          firstName: applicantData.firstName || '',
+          middleName: applicantData.middleName || '',
+          lastName: applicantData.lastName || '',
+          suffix: applicantData.suffix || '',
+          gender: applicantData.gender || '',
+          lrnNo: applicantData.lrnNo || '',
+          civilStatus: applicantData.civilStatus || '',
+          religion: applicantData.religion || '',
+          birthDate: applicantData.birthDate || '',
+          countryOfBirth: applicantData.countryOfBirth || '',
+          birthPlaceCity: applicantData.birthPlaceCity || '',
+          birthPlaceProvince: applicantData.birthPlaceProvince || '',
+          nationality: applicantData.nationality || '',
+          entryLevel: applicantData.entryLevel || '',
+          presentHouseNo: applicantData.presentHouseNo || '',
+          presentBarangay: applicantData.presentBarangay || '',
+          presentCity: applicantData.presentCity || '',
+          presentProvince: applicantData.presentProvince || '',
+          presentPostalCode: applicantData.presentPostalCode || '',
+          permanentHouseNo: applicantData.permanentHouseNo || '',
+          permanentBarangay: applicantData.permanentBarangay || '',
+          permanentCity: applicantData.permanentCity || '',
+          permanentProvince: applicantData.permanentProvince || '',
+          permanentPostalCode: applicantData.permanentPostalCode || '',
+          mobile: applicantData.mobile || '',
+          telephoneNo: applicantData.telephoneNo || '',
+          emailAddress: applicantData.emailAddress || '',
+          elementarySchoolName: applicantData.elementarySchoolName || '',
+          elementaryLastYearAttended: applicantData.elementaryLastYearAttended || '',
+          elementaryGeneralAverage: applicantData.elementaryGeneralAverage || '',
+          elementaryRemarks: applicantData.elementaryRemarks || '',
+          juniorHighSchoolName: applicantData.juniorHighSchoolName || '',
+          juniorHighLastYearAttended: applicantData.juniorHighLastYearAttended || '',
+          juniorHighGeneralAverage: applicantData.juniorHighGeneralAverage || '',
+          juniorHighRemarks: applicantData.juniorHighRemarks || '',
+          contacts: applicantData.contacts || [],
         });
 
         setLoading(false);
@@ -191,19 +201,6 @@ function ScopeRegistration6() {
     return () => clearInterval(interval);
   }, [navigate]);
 
-  // Handle unsaved changes warning
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (isFormDirty) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isFormDirty]);
-
   const handleLogout = async () => {
     try {
       const userEmail = localStorage.getItem('userEmail');
@@ -241,69 +238,8 @@ function ScopeRegistration6() {
     }
   };
 
-  const handleAnnouncements = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-announcements');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-announcements');
-    }
-  };
-
-  const handleSaveAndProceed = async () => {
-    try {
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) {
-        setError('User email not found. Please log in again.');
-        navigate('/scope-login');
-        return;
-      }
-
-      // Validate formData
-      if (!formData || Object.keys(formData).length === 0) {
-        setError('Registration data is missing. Please complete all previous steps.');
-        return;
-      }
-
-      if (!Array.isArray(formData.contacts)) {
-        setError('Family contacts data is invalid.');
-        return;
-      }
-
-      // Send request to save registration data
-      const response = await fetch('http://localhost:5000/api/enrollee-applicants/save-registration', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          formData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsFormDirty(false);
-        alert(data.message);
-        navigate('/scope-exam-interview-application');
-      } else {
-        setError(data.error || 'Failed to save registration data.');
-      }
-    } catch (err) {
-      console.error('Error saving registration data:', err);
-      setError('An error occurred while saving the registration data. Please try again.');
-    }
-  };
-
-  const handleBack = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-5');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-5');
-    }
+  const handleProceed = () => {
+    navigate('/scope-exam-interview-application');
   };
 
   const toggleSidebar = () => {
@@ -312,18 +248,6 @@ function ScopeRegistration6() {
 
   const closeSidebar = () => {
     setSidebarOpen(false);
-  };
-
-  const handleModalConfirm = () => {
-    setShowUnsavedModal(false);
-    if (nextLocation) {
-      navigate(nextLocation);
-    }
-  };
-
-  const handleModalCancelNavigation = () => {
-    setShowUnsavedModal(false);
-    setNextLocation(null);
   };
 
   return (
@@ -383,9 +307,9 @@ function ScopeRegistration6() {
                     <div className="step-line completed"></div>
                     <div className="step-circle completed">5</div>
                     <div className="step-line completed"></div>
-                    <div className="step-circle active">6</div>
+                    <div className="step-circle completed">6</div>
                   </div>
-                  <div className="step-text">Step 6 of 6</div>
+                  <div className="step-text">Registration Complete</div>
                 </div>
                 <div className="personal-info-section">
                   <div className="reminder-box" style={{ backgroundColor: '#34A853' }}>
@@ -395,50 +319,19 @@ function ScopeRegistration6() {
                   </div>
                   <div style={{ margin: '1rem 0', fontSize: '14px', color: '#333', lineHeight: '1.5' }}>
                     <p>
-                      Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete the information after saving and proceeding to the next step.
+                      Your registration is complete. Review your submitted information below. You can proceed to the Exam & Interview Application.
                     </p>
                   </div>
                   <RegistrationSummary formData={formData} />
                   <div className="form-buttons">
                     <button
                       type="button"
-                      className="back-button"
-                      onClick={handleBack}
-                    >
-                      <FontAwesomeIcon icon={faArrowLeft} />
-                      Back
-                    </button>
-                    <button
-                      type="button"
                       className="save-button"
-                      onClick={handleSaveAndProceed}
-                      disabled={registrationStatus === 'Complete'}
-                      style={{
-                        backgroundColor: registrationStatus === 'Complete' ? '#d3d3d3' : '#34A853',
-                        cursor: registrationStatus === 'Complete' ? 'not-allowed' : 'pointer',
-                      }}
+                      onClick={handleProceed}
                     >
-                      Save and Proceed to Exam & Interview Application
+                      Proceed to Exam & Interview Application
                     </button>
                   </div>
-                  {registrationStatus === 'Complete' && (
-                    <div style={{ marginTop: '1rem', color: '#333', fontSize: '14px' }}>
-                      <p>
-                        Your registration is already complete. Please{' '}
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigate('/scope-registration-status-complete');
-                          }}
-                          style={{ color: '#007BFF', textDecoration: 'underline' }}
-                        >
-                          click here
-                        </a>{' '}
-                        to view your registration details and proceed to the Exam & Interview Application.
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -473,30 +366,8 @@ function ScopeRegistration6() {
           </div>
         </div>
       )}
-      {showUnsavedModal && (
-        <div className="scope-modal-overlay">
-          <div className="scope-confirm-modal">
-            <h3>Unsaved Changes</h3>
-            <p>You have unsaved changes. Do you want to leave without saving?</p>
-            <div className="scope-modal-buttons">
-              <button
-                className="scope-modal-cancel"
-                onClick={handleModalCancelNavigation}
-              >
-                Stay
-              </button>
-              <button
-                className="scope-modal-confirm"
-                onClick={handleModalConfirm}
-              >
-                Leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-export default ScopeRegistration6;
+export default RegistrationStatusComplete;

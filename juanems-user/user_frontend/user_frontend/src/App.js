@@ -20,6 +20,7 @@ import ScopeRegistration3 from './components/JuanScope/ScopeRegistration3';
 import ScopeRegistration4 from './components/JuanScope/ScopeRegistration4';
 import ScopeRegistration5 from './components/JuanScope/ScopeRegistration5';
 import ScopeRegistration6 from './components/JuanScope/ScopeRegistration6';
+import RegistrationStatusComplete from './components/JuanScope/RegistrationStatusComplete';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -45,7 +46,6 @@ import Admin_CreateSubject from './components/UserAdmin/CreateSubject';
 import Admin_AccessControl from './components/UserAdmin/AccessControl'; 
 import Admin_VerifyEmail from './components/UserAdmin/VerifyEmail'; 
 import Admin_ForgotPassword from './components/UserAdmin/ForgotPassword';
-
 
 function App() {
   return (
@@ -75,6 +75,7 @@ function App() {
           <Route path="/scope-registration-4" element={<SessionManager><ScopeRegistration4 /></SessionManager>}/>
           <Route path="/scope-registration-5" element={<SessionManager><ScopeRegistration5 /></SessionManager>}/>
           <Route path="/scope-registration-6" element={<SessionManager><ScopeRegistration6 /></SessionManager>}/>
+          <Route path="//scope-registration-status-complete" element={<SessionManager><RegistrationStatusComplete /></SessionManager>}/>
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>
