@@ -38,7 +38,6 @@ const ManageSectionsPage = () => {
 const fetchSections = async (search = '', showArchived = false) => {
     setLoading(true);
     try {
-        // Make sure to correctly pass the showArchived parameter
         const response = await fetch(`/api/admin/sections?archived=${showArchived}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -86,8 +85,7 @@ const fetchSections = async (search = '', showArchived = false) => {
 
     useEffect(() => {
         fetchSections(searchTerm, showArchived);
-        console.log("fetching date archive")
-        console.log(showArchived)
+        console.log("Archived Status:" + showArchived)
     }, [showArchived]); // Re-fetch on toggle
 
     const handleExport = () => {
@@ -403,7 +401,6 @@ const fetchSections = async (search = '', showArchived = false) => {
                     </p>
                 </div>
 
-                { }
                 <div className="table-functions">
                     <div className="left-tools">
                         <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>

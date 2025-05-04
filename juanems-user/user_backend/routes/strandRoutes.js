@@ -27,15 +27,56 @@ router.post('/create-strand', async (req, res) => {
     }
 });
 
-// GET all strands
-// GET /api/admin/strands
+// GET all strands with optional archived filter
+// GET /api/admin/strands or GET /api/admin/strands?archived=true
 router.get('/', async (req, res) => {
     try {
-        const strands = await Strands.find().sort({ createdAt: -1 });
+        // Parse the archived parameter from the query string
+        const showArchived = req.query.archived === 'true';
+        console.log(`API received request with archived=${req.query.archived}, parsed to showArchived=${showArchived}`);
+        
+        let query = {};
+        
+        // Apply filtering based on archived parameter if it exists
+        if (req.query.archived !== undefined) {
+            query = { isArchived: showArchived };
+            console.log('Applying filter by archive status:', query);
+        }
+        
+        const strands = await Strands.find(query).sort({ createdAt: -1 });
+        
+        console.log(`Found ${strands.length} strands matching query`);
+        console.log(`Archives in response: ${strands.filter(item => item.isArchived).length}`);
+        console.log(`Non-archives in response: ${strands.filter(item => !item.isArchived).length}`);
+        
         res.status(200).json({ data: strands });
     } catch (error) {
         console.error('Get strands error:', error);
         res.status(500).json({ message: 'Server error fetching strands.' });
+    }
+});
+
+// Archive/Unarchive strand
+// PATCH /api/admin/strands/archive/:id
+router.patch('/archive/:id', async (req, res) => {
+    try {
+        const { isArchived } = req.body; // Get the desired archive state from request body
+
+        const strand = await Strands.findByIdAndUpdate(
+            req.params.id,
+            { isArchived },
+            { new: true }
+        );
+
+        if (!strand) return res.status(404).json({ message: 'Strand not found' });
+
+        res.json({
+            message: `Strand ${isArchived ? 'archived' : 'unarchived'} successfully`,
+            strand
+        });
+    } catch (err) {
+        console.error(`Error ${req.body.isArchived ? 'archiving' : 'unarchiving'} strand:`, err);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

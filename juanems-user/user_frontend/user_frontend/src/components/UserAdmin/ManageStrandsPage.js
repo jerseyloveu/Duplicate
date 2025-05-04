@@ -7,9 +7,11 @@ import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
 import { FaPen, FaPlus, FaSearch, FaTrashAlt } from 'react-icons/fa';
+import { FaBoxArchive, FaBoxOpen } from "react-icons/fa6";
 import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft } from 'react-icons/md';
+import { FaEye } from 'react-icons/fa';
 
 import '../../css/UserAdmin/Global.css';
 
@@ -29,14 +31,16 @@ const ManageStrandsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [tableFilters, setTableFilters] = useState({});
     const [sorter, setSorter] = useState({});
+    const [showArchived, setShowArchived] = useState(false);
 
-    const fetchStrands = async (search = '') => {
+    const fetchStrands = async (search = '', showArchived = false) => {
         setLoading(true);
         try {
-            const response = await fetch('/api/admin/strands');
+            const response = await fetch(`/api/admin/strands?archived=${showArchived}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
+            console.log("API response:", result); // Log the response to check what you're receiving
 
             const filteredData = result.data.filter(item => {
                 const createdAtFormatted = dayjs(item.createdAt).isValid()
@@ -45,6 +49,9 @@ const ManageStrandsPage = () => {
                 const updatedAtFormatted = dayjs(item.updatedAt).isValid()
                     ? dayjs(item.updatedAt).format('MMM D, YYYY h:mm A').toLowerCase()
                     : '';
+
+                // Only apply search filter if there is actually a search term
+                if (search === '') return true;
 
                 return (
                     item.strandCode.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,19 +77,20 @@ const ManageStrandsPage = () => {
     };
 
     useEffect(() => {
-        fetchStrands(); // Initial fetch on page load
-    }, []);
+        fetchStrands(searchTerm, showArchived);
+        console.log("Archived Status:" + showArchived)
+    }, [showArchived]); // Re-fetch on toggle
 
     const handleSearch = (value) => {
         setSearchTerm(value);
-        fetchStrands(value);
+        fetchStrands(value, showArchived);
     };
 
     const handleClearFilters = () => {
         setTableFilters({});
         setSorter({});
         setSearchTerm('');
-        fetchStrands('');
+        fetchStrands('', showArchived);
     };
 
 
@@ -201,6 +209,74 @@ const ManageStrandsPage = () => {
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-strands/create');
 
+    const handleArchiveToggle = async (record) => {
+        const { _id, isArchived, status} = record;
+        
+        if (!isArchived && status === 'Active') {
+            alert('Cannot archive an active strand. Please deactivate the strand first.');
+            return null;
+        }
+        
+        const actionType = isArchived ? 'Unarchive' : 'Archive';
+        console.log(`Attempting to ${actionType.toLowerCase()} strand: ${_id}`);
+        
+        try {
+            // Fetch latest strand info by ID
+            const strandRes = await fetch(`http://localhost:5000/api/admin/strands/${_id}`)
+            if (!strandRes.ok) throw new Error('Failed to fetch strand details');
+            
+            const strand = await strandRes.json();
+            const {strandName} = strand.data || {};
+            
+            // Proceed with archiving/unarchiving
+            const response = await fetch(`/api/admin/strands/archive/${_id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ isArchived: !isArchived })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to ${actionType.toLowerCase()} strand`);
+            }
+            
+            alert(`Strand ${actionType.toLowerCase()}d successfully!`);
+            
+            // Log the action using the current admin's info
+            const adminID = localStorage.getItem('userID');
+            const adminName = localStorage.getItem('fullName');
+            const adminRole = localStorage.getItem('role');
+            
+            const logDetail = `${actionType}d strand ${strandName} [ID: ${_id}]`;
+            
+            const logData = {
+                userID: adminID,
+                accountName: adminName,
+                role: adminRole,
+                action: actionType,
+                detail: logDetail,
+            };
+            
+            await fetch('http://localhost:5000/api/admin/system-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            });
+            
+            // Refresh strands
+            fetchStrands(searchTerm, showArchived);
+            return await response.json();
+            
+        } catch (error) {
+            console.error(`${actionType} error:`, error);
+            alert(`Error ${actionType.toLowerCase()}ing strand`);
+            return null;
+        }
+    };
+
     // Table column definitions
     const columns = [
         {
@@ -278,24 +354,30 @@ const ManageStrandsPage = () => {
             render: (_, record) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <Button
-                        icon={<FaPen />}
+                        icon={record.isArchived ? <FaEye /> : <FaPen />} // Change the icon based on the archive status
                         style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
-                        onClick={() => navigate(`/admin/manage-strands/edit/${record.key}`)}
+                        onClick={() => navigate(`/admin/manage-strands/edit/${record.key}`)} // Keep the path unchanged
                     >
-                        Edit
+                        {record.isArchived ? 'View' : 'Edit'}
                     </Button>
                     <Button
-                        icon={<FaTrashAlt />}
-                        danger
+                        icon={record.isArchived ? <FaBoxOpen /> : <FaBoxArchive />}
                         style={{
                             width: '150px',
                             margin: '0 auto',
                             display: 'flex',
-                            justifyContent: 'flex-start'
+                            justifyContent: 'flex-start',
                         }}
-                        onClick={() => handleDelete(record.key)}
+                        onClick={() => handleArchiveToggle(record)}
+                        disabled={
+                            (!record.isArchived && record.status === 'Active')}
+                        title={
+                            (!record.isArchived && record.status === 'Active')
+                                ? 'Cannot archive active sections'
+                                : ''
+                        }
                     >
-                        Delete
+                        {record.isArchived ? 'Unarchive' : 'Archive'}
                     </Button>
                 </div>
             )
@@ -329,19 +411,26 @@ const ManageStrandsPage = () => {
     return (
         <div className="main main-container">
             <Header />
+            {showArchived && (
+                <Tag className="archived-tag" color="orange">
+                    Viewing Archived Strands
+                </Tag>
+            )}
             <div className="main-content">
                 <div className="page-title">
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">Manage Strands</p>
+                    <p className="heading">
+                        {showArchived ? "Archived Strands" : "Manage Strands"}
+                    </p>
                 </div>
 
                 {/* Table controls */}
                 <div className="table-functions">
                     <div className="left-tools">
                         <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>
-                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchStrands(searchTerm)}>Refresh</Button>
+                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchStrands(searchTerm, showArchived)}>Refresh</Button>
                         <Button icon={<BiExport />} onClick={handleExport}>Export</Button>
                     </div>
                     <div className="right-tools">
@@ -353,6 +442,12 @@ const ManageStrandsPage = () => {
                             onChange={(e) => handleSearch(e.target.value)}
                             suffix={<FaSearch style={{ color: '#aaa' }} />}
                         />
+                        <Button
+                            icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />}
+                            onClick={() => setShowArchived(!showArchived)}
+                        >
+                            {showArchived ? 'Close Archive' : 'Show Archived'}
+                        </Button>
                         <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
                             Create Strand
                         </Button>

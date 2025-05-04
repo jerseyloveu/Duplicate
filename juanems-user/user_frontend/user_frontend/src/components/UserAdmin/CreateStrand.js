@@ -27,6 +27,7 @@ const CreateStrand = () => {
     });
     const variant = Form.useWatch('variant', form);
     const { id } = useParams();
+    const [isArchived, setIsArchived] = useState(false);
 
     useEffect(() => {
         fetchSubjects();
@@ -48,6 +49,7 @@ const CreateStrand = () => {
                 console.log('Fetched strand data:', result);
 
                 const data = result.data;
+                setIsArchived(data.isArchived);
 
                 // Set form fields with fetched data
                 form.setFieldsValue({
@@ -296,7 +298,14 @@ const CreateStrand = () => {
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">{id ? 'Edit Strand' : 'Create Strand'}</p>
+                    <p className="heading">
+                        {isArchived
+                            ? 'View Archived Strand'  // Display when the account is archived
+                            : id
+                                ? 'Edit Strand'           // Display when editing an existing account
+                                : 'Create Strand'         // Display when creating a new account
+                        }
+                    </p>
                 </div>
 
                 <Form
@@ -321,6 +330,13 @@ const CreateStrand = () => {
                                 <Input placeholder="Please enter strand code" />
                             </Form.Item>
                             <Form.Item
+                                label="Strand Name"
+                                name="strandName"
+                                rules={[{ required: true, message: 'Please input strand name!' }]}
+                            >
+                                <Input placeholder="Please enter strand name" />
+                            </Form.Item>
+                            <Form.Item
                                 label="Status"
                                 name="status"
                                 rules={[{ required: true, message: 'Please select a status!' }]}
@@ -330,21 +346,16 @@ const CreateStrand = () => {
                                     <Select.Option value="Inactive">Inactive</Select.Option>
                                 </Select>
                             </Form.Item>
-                            <Form.Item
-                                label="Strand Name"
-                                name="strandName"
-                                rules={[{ required: true, message: 'Please input strand name!' }]}
-                            >
-                                <Input placeholder="Please enter strand name" />
-                            </Form.Item>
-                            <div className="buttons" style={{ marginTop: '20px' }}>
-                                <Button type="default" htmlType="button" onClick={handleBack}>
-                                    Cancel
-                                </Button>
-                                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
-                                    {id ? 'Update' : 'Save'}
-                                </Button>
-                            </div>
+                            {!isArchived && (
+                                <div className="buttons" style={{ marginTop: '20px' }}>
+                                    <Button type="default" htmlType="button" onClick={handleBack}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
+                                        {id ? 'Update' : 'Save'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="column">
