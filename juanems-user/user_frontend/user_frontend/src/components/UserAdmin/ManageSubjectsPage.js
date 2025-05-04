@@ -7,10 +7,11 @@ import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
 import { FaPen, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaBoxArchive, FaBoxOpen } from "react-icons/fa6";
 import { FiFilter } from 'react-icons/fi';
-import { FaTrashAlt } from "react-icons/fa";
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
+import { FaEye } from 'react-icons/fa';
 
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/ManageSubjectsPage.css';
@@ -31,15 +32,16 @@ const ManageSubjectsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [tableFilters, setTableFilters] = useState({});
     const [sorter, setSorter] = useState({});
+    const [showArchived, setShowArchived] = useState(false);
 
-    // Fetch subjects
-    const fetchSubjects = async (search = '') => {
+    const fetchSubjects = async (search = '', showArchived = false) => {
         setLoading(true);
         try {
-            const response = await fetch('/api/admin/subjects');
+            const response = await fetch(`/api/admin/subjects?archived=${showArchived}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
+            console.log("API response:", result); // Log the response to check what you're receiving
 
             const filteredData = result.data.filter(item => {
                 const createdAtFormatted = dayjs(item.createdAt).isValid()
@@ -78,8 +80,9 @@ const ManageSubjectsPage = () => {
     };
 
     useEffect(() => {
-        fetchSubjects(); // Initial fetch on page load
-    }, []);
+        fetchSubjects(searchTerm, showArchived);
+        console.log("Archived Status:" + showArchived)
+    }, [showArchived]); // Re-fetch on toggle
 
     const handleExport = () => {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -135,60 +138,66 @@ const ManageSubjectsPage = () => {
 
     const handleSearch = (value) => {
         setSearchTerm(value);
-        fetchSubjects(value);
+        fetchSubjects(value, showArchived);
     };
 
     const handleClearFilters = () => {
         setTableFilters({});
         setSorter({});
         setSearchTerm('');
-        fetchSubjects('');
+        fetchSubjects('', showArchived);
     };
 
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-subjects/create');
 
+
+    const handleArchiveToggle = async (record) => {
+        const { _id, isArchived, status } = record;
     
-    const handleDelete = async (subjectID) => {
+        if (!isArchived && status === 'Active') {
+            alert('Cannot archive an active subject. Please deactivate the subject first.');
+            return null;
+        }
+    
+        const actionType = isArchived ? 'Unarchive' : 'Archive';
+        console.log(`Attempting to ${actionType.toLowerCase()} subject: ${_id}`);
+    
         try {
-            const confirmDelete = window.confirm('Are you sure you want to delete this subject?');
-            if (!confirmDelete) return;
+            // Fetch latest subject info by ID
+            const subjectRes = await fetch(`http://localhost:5000/api/admin/subjects/${_id}`);
+            if (!subjectRes.ok) throw new Error('Failed to fetch subject details');
     
-            // Step 1: Fetch subject details for logging
-            const subjectRes = await fetch(`http://localhost:5000/api/admin/subjects/${subjectID}`);
-            if (!subjectRes.ok) {
-                return message.error('Failed to fetch subject details for logging.');
-            }
+            const subject = await subjectRes.json();
+            const { subjectName } = subject.data || {};
     
-            const { data: subject } = await subjectRes.json();
-            const { subjectCode, subjectName } = subject;
-    
-            // Step 2: Proceed with deletion
-            const response = await fetch(`http://localhost:5000/api/admin/subjects/${subjectID}`, {
-                method: 'DELETE',
+            // Proceed with archiving/unarchiving
+            const response = await fetch(`/api/admin/subjects/archive/${_id}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ isArchived: !isArchived })
             });
     
-            const data = await response.json();
-    
             if (!response.ok) {
-                return message.error(data.message || 'Failed to delete subject');
+                throw new Error(`Failed to ${actionType.toLowerCase()} subject`);
             }
     
-            // Step 3: Log deletion to system logs
+            alert(`Subject ${actionType.toLowerCase()}d successfully!`);
+    
+            // Log the action using the current admin's info
             const adminID = localStorage.getItem('userID');
             const adminName = localStorage.getItem('fullName');
             const adminRole = localStorage.getItem('role');
     
-            const logDetail = `Deleted subject "${subjectName}" (Code: ${subjectCode || 'N/A'})`;
+            const logDetail = `${actionType}d subject ${subjectName} [ID: ${_id}]`;
     
             const logData = {
                 userID: adminID,
                 accountName: adminName,
                 role: adminRole,
-                action: 'Delete',
+                action: actionType,
                 detail: logDetail,
             };
     
@@ -197,18 +206,20 @@ const ManageSubjectsPage = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(logData),
+                body: JSON.stringify(logData)
             });
     
-            // Step 4: Refresh table and notify
-            fetchSubjects();
-            message.success('Subject deleted successfully!');
-        } catch (error) {
-            console.error('Error deleting subject:', error);
-            message.error(error.message || 'Failed to delete subject. Please try again.');
-        }
-    };
+            // Refresh subjects
+            fetchSubjects(searchTerm, showArchived);
+            return await response.json();
     
+        } catch (error) {
+            console.error(`${actionType} error:`, error);
+            alert(`Error ${actionType.toLowerCase()}ing subject`);
+            return null;
+        }
+    };    
+
 
     // Table column definitions
     const columns = [
@@ -385,32 +396,32 @@ const ManageSubjectsPage = () => {
             width: 280,
             render: (_, record) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Edit Button */}
                     <Button
-                        icon={<FaPen />}
-                        style={{
-                            width: '150px',
-                            margin: '0 auto',
-                            display: 'flex',
-                            justifyContent: 'flex-start'
-                        }}
-                        onClick={() => navigate(`/admin/manage-subjects/edit/${record.key}`)}
+                        icon={record.isArchived ? <FaEye /> : <FaPen />} // Change the icon based on the archive status
+                        style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+                        onClick={() => navigate(`/admin/manage-subjects/edit/${record.key}`)} // Keep the path unchanged
                     >
-                        Edit
+                        {record.isArchived ? 'View' : 'Edit'}
                     </Button>
-        
+
                     <Button
-                        icon={<FaTrashAlt/>}
-                        danger
+                        icon={record.isArchived ? <FaBoxOpen /> : <FaBoxArchive />}
                         style={{
                             width: '150px',
                             margin: '0 auto',
                             display: 'flex',
-                            justifyContent: 'flex-start'
+                            justifyContent: 'flex-start',
                         }}
-                        onClick={() => handleDelete(record.key)} 
+                        onClick={() => handleArchiveToggle(record)}
+                        disabled={
+                            (!record.isArchived && record.status === 'Active')}
+                        title={
+                            (!record.isArchived && record.status === 'Active')
+                                ? 'Cannot archive active sections'
+                                : ''
+                        }
                     >
-                        Delete
+                        {record.isArchived ? 'Unarchive' : 'Archive'}
                     </Button>
                 </div>
             )
@@ -444,19 +455,26 @@ const ManageSubjectsPage = () => {
     return (
         <div className="main main-container">
             <Header />
+            {showArchived && (
+                <Tag className="archived-tag" color="orange">
+                    Viewing Archived Subjects
+                </Tag>
+            )}
             <div className="main-content">
                 <div className="page-title">
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">Manage Subjects</p>
+                    <p className="heading">
+                        {showArchived ? "Archived Subjects" : "Manage Subjects"}
+                    </p>
                 </div>
 
                 {/* Table controls */}
                 <div className="table-functions">
                     <div className="left-tools">
                         <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>
-                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchSubjects(searchTerm)}>Refresh</Button>
+                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchSubjects(searchTerm, showArchived)}>Refresh</Button>
                         <Button icon={<BiExport />} onClick={handleExport}>Export</Button>
                     </div>
                     <div className="right-tools">
@@ -468,6 +486,12 @@ const ManageSubjectsPage = () => {
                             onChange={(e) => handleSearch(e.target.value)}
                             suffix={<FaSearch style={{ color: '#aaa' }} />}
                         />
+                        <Button
+                            icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />}
+                            onClick={() => setShowArchived(!showArchived)}
+                        >
+                            {showArchived ? 'Close Archive' : 'Show Archived'}
+                        </Button>
                         <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
                             Create Subject
                         </Button>

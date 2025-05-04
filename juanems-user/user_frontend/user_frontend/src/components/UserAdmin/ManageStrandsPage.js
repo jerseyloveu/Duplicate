@@ -1,4 +1,4 @@
-import { Button, DatePicker, Input, Table, Tag, message } from 'antd';
+import { Button, DatePicker, Input, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import utc from 'dayjs/plugin/utc';
@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
-import { FaPen, FaPlus, FaSearch, FaTrashAlt } from 'react-icons/fa';
+import { FaPen, FaPlus, FaSearch } from 'react-icons/fa';
 import { FaBoxArchive, FaBoxOpen } from "react-icons/fa6";
 import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
@@ -147,64 +147,6 @@ const ManageStrandsPage = () => {
             });
     };
 
-    const handleDelete = async (_id) => {
-        try {
-            // Confirm deletion
-            const confirmDelete = window.confirm('Are you sure you want to delete this strand?');
-            if (!confirmDelete) return;
-
-            // Fetch strand details first for logging
-            const strandRes = await fetch(`http://localhost:5000/api/admin/strands/${_id}`);
-            if (!strandRes.ok) {
-                return message.error('Failed to fetch strand details for logging.');
-            }
-
-            const { data: strand } = await strandRes.json();
-            const { strandCode, strandName } = strand;
-
-            // Proceed with deletion
-            const response = await fetch(`http://localhost:5000/api/admin/strands/${_id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                return message.error(data.message || 'Failed to delete strand');
-            }
-
-            // Log the deletion
-            const adminID = localStorage.getItem('userID');
-            const adminName = localStorage.getItem('fullName');
-            const adminRole = localStorage.getItem('role');
-
-            const logData = {
-                userID: adminID,
-                accountName: adminName,
-                role: adminRole,
-                action: 'Delete',
-                detail: `Deleted strand [${strandCode}] - ${strandName}`,
-            };
-
-            await fetch('http://localhost:5000/api/admin/system-logs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(logData)
-            });
-
-            // Refresh and notify
-            fetchStrands();
-            message.success('Strand deleted successfully!');
-        } catch (error) {
-            console.error('Error deleting strand:', error);
-            message.error(error.message || 'Failed to delete strand. Please try again.');
-        }
-    };
 
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-strands/create');

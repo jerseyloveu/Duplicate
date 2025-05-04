@@ -17,6 +17,7 @@ const CreateSubject = () => {
     const [form] = Form.useForm();
     const variant = Form.useWatch('variant', form);
     const { id } = useParams();
+    const [isArchived, setIsArchived] = useState(false);
 
     useEffect(() => {
         const fetchSubject = async () => {
@@ -35,6 +36,7 @@ const CreateSubject = () => {
 
                 // Extract the actual subject data from the "data" object
                 const data = result.data;
+                setIsArchived(data.isArchived);
 
                 // Use setFieldsValue after form is loaded to set the values correctly
                 form.setFieldsValue({
@@ -170,7 +172,14 @@ const CreateSubject = () => {
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">{id ? 'Edit Subject' : 'Create Subject'}</p>
+                    <p className="heading">
+                        {isArchived
+                            ? 'View Archived Subject'  // Display when the account is archived
+                            : id
+                                ? 'Edit Subject'           // Display when editing an existing account
+                                : 'Create Subject'         // Display when creating a new account
+                        }
+                    </p>
                 </div>
 
                 <Form
@@ -348,14 +357,16 @@ const CreateSubject = () => {
                             >
                                 <Input placeholder="Enter subject order" />
                             </Form.Item>
-                            <div className="buttons">
-                                <Button type="default" htmlType="button" onClick={handleBack}>
-                                    Cancel
-                                </Button>
-                                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
-                                    {id ? 'Update' : 'Save'}
-                                </Button>
-                            </div>
+                            {!isArchived && (
+                                <div className="buttons">
+                                    <Button type="default" htmlType="button" onClick={handleBack}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
+                                        {id ? 'Update' : 'Save'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Form>

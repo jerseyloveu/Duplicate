@@ -58,15 +58,56 @@ router.post('/create-subject', async (req, res) => {
     }
 });
 
-// GET all subjects
-// GET /api/admin/subjects
+// GET all subjects with optional archived filter
+// GET /api/admin/subjects or GET /api/admin/subjects?archived=true
 router.get('/', async (req, res) => {
     try {
-        const subjects = await Subjects.find().sort({ createdAt: -1 });
+        // Parse the archived parameter from the query string
+        const showArchived = req.query.archived === 'true';
+        console.log(`API received request with archived=${req.query.archived}, parsed to showArchived=${showArchived}`);
+        
+        let query = {};
+        
+        // Apply filtering based on archived parameter if it exists
+        if (req.query.archived !== undefined) {
+            query = { isArchived: showArchived };
+            console.log('Applying filter by archive status:', query);
+        }
+        
+        const subjects = await Subjects.find(query).sort({ createdAt: -1 });
+        
+        console.log(`Found ${subjects.length} subjects matching query`);
+        console.log(`Archives in response: ${subjects.filter(item => item.isArchived).length}`);
+        console.log(`Non-archives in response: ${subjects.filter(item => !item.isArchived).length}`);
+        
         res.status(200).json({ data: subjects });
     } catch (error) {
         console.error('Get subjects error:', error);
         res.status(500).json({ message: 'Server error fetching subjects.' });
+    }
+});
+
+// Archive/Unarchive subject
+// PATCH /api/admin/subjects/archive/:id
+router.patch('/archive/:id', async (req, res) => {
+    try {
+        const { isArchived } = req.body; // Get the desired archive state from request body
+
+        const subject = await Subjects.findByIdAndUpdate(
+            req.params.id,
+            { isArchived },
+            { new: true }
+        );
+
+        if (!subject) return res.status(404).json({ message: 'Subject not found' });
+
+        res.json({
+            message: `Subject ${isArchived ? 'archived' : 'unarchived'} successfully`,
+            subject
+        });
+    } catch (err) {
+        console.error(`Error ${req.body.isArchived ? 'archiving' : 'unarchiving'} subject:`, err);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

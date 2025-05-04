@@ -13,6 +13,7 @@ const SubjectsSchema = new mongoose.Schema({
     gradeLevel: { type: String, required: true },
     status: {type: String, required: true},
     subjectOrder: {type: String, required: true},
+    isArchived: {type: Boolean, default: false}  
   }, { timestamps: true });
 
 module.exports = mongoose.model('Subjects', SubjectsSchema);
