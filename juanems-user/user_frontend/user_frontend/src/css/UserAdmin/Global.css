@@ -130,3 +130,12 @@ p {
     border-color: #a57100;
     color: white;
 }
+
+.archived-tag {
+    width: 100%;
+    background-color: #ff0004;  
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    padding: 5px;
+  }

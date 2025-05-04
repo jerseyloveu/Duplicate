@@ -890,7 +890,7 @@ const CreateAccount = () => {
 
   return (
     <div className="main main-container">
-      <Header />
+      <Header />[]
       <div className="main-content">
         <div className="page-title">
           <div className="arrows" onClick={handleBack}>

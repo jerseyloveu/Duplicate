@@ -15,25 +15,27 @@ const CreateSection = () => {
     const [form] = Form.useForm();
     const variant = Form.useWatch('variant', form);
     const { id } = useParams();
+    const [isArchived, setIsArchived] = useState(false);
 
     useEffect(() => {
         const fetchSection = async () => {
             if (!id) return; // only fetch if editing
-    
+
             try {
                 const res = await fetch(`http://localhost:5000/api/admin/sections/${id}`);
                 const result = await res.json();
-    
+
                 if (!res.ok) {
                     return message.error(result.message || 'Failed to load section data.');
                 }
-    
+
                 // Log the fetched data to the console
                 console.log('Fetched section data:', result);
-    
+
                 // Extract the actual section data from the "data" object
                 const data = result.data;
-    
+                setIsArchived(data.isArchived);
+
                 // Use setFieldsValue after form is loaded to set the values correctly
                 form.setFieldsValue({
                     sectionName: data.sectionName,
@@ -42,16 +44,16 @@ const CreateSection = () => {
                     capacity: data.capacity,
                     status: data.status,
                 });
-    
+
             } catch (error) {
                 console.error('Error fetching section:', error);
                 message.error('Error fetching section data.');
             }
         };
-    
+
         fetchSection();
     }, [id, form]); // Depend on 'id' and 'form' to reload when necessary
-    
+
 
     const handleBack = () => navigate('/admin/manage-sections');
 
@@ -64,13 +66,13 @@ const CreateSection = () => {
                 capacity: values.capacity.trim(),
                 status: values.status.trim(),
             };
-    
+
             const url = id
                 ? `http://localhost:5000/api/admin/sections/${id}`
                 : 'http://localhost:5000/api/admin/sections/create-section';
-    
+
             const method = id ? 'PUT' : 'POST';
-    
+
             const response = await fetch(url, {
                 method,
                 headers: {
@@ -78,9 +80,9 @@ const CreateSection = () => {
                 },
                 body: JSON.stringify(trimmedValues)
             });
-    
+
             const data = await response.json();
-    
+
             if (!response.ok) {
                 if (response.status === 409) {
                     return message.error(data.message);
@@ -131,7 +133,7 @@ const CreateSection = () => {
             console.error('Error submitting section:', error);
             message.error(error.message || 'Failed to submit section. Please try again.');
         }
-    };    
+    };
 
     return (
         <div className="main main-container">
@@ -141,7 +143,14 @@ const CreateSection = () => {
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">{id ? 'Edit Section' : 'Create Section'}</p>
+                    <p className="heading">
+                        {isArchived
+                            ? 'View Archived Section'  // Display when the account is archived
+                            : id
+                                ? 'Edit Section'           // Display when editing an existing account
+                                : 'Create Section'         // Display when creating a new account
+                        }
+                    </p>
                 </div>
 
                 <Form
@@ -221,14 +230,16 @@ const CreateSection = () => {
                                     <Select.Option value="Inactive">Inactive</Select.Option>
                                 </Select>
                             </Form.Item>
-                            <div className="buttons">
-                                <Button type="default" htmlType="button" onClick={handleBack}>
-                                    Cancel
-                                </Button>
-                                <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
-                                    {id ? 'Update' : 'Save'}
-                                </Button>
-                            </div>
+                            {!isArchived && (
+                                <div className="buttons">
+                                    <Button type="default" htmlType="button" onClick={handleBack}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="primary" htmlType="submit" className={id ? '' : 'create-btn'}>
+                                        {id ? 'Update' : 'Save'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                         <div className="column">
                         </div>

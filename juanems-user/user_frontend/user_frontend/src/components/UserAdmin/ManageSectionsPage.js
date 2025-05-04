@@ -6,10 +6,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { BiExport } from 'react-icons/bi';
-import { FaPen, FaPlus, FaSearch, FaTrashAlt } from 'react-icons/fa';
+import { FaPen, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaBoxArchive, FaBoxOpen } from "react-icons/fa6";
 import { FiFilter } from 'react-icons/fi';
 import { HiOutlineRefresh } from 'react-icons/hi';
 import { MdOutlineKeyboardArrowLeft } from 'react-icons/md';
+import { FaEye } from 'react-icons/fa';
 
 import '../../css/UserAdmin/Global.css';
 import '../../css/UserAdmin/ManageSections.css';
@@ -30,53 +32,63 @@ const ManageSectionsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [tableFilters, setTableFilters] = useState({});
     const [sorter, setSorter] = useState({});
+    const [showArchived, setShowArchived] = useState(false);
 
     // Fetch sections
-    const fetchSections = async (search = '') => {
-        setLoading(true);
-        try {
-            const response = await fetch('/api/admin/sections');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+const fetchSections = async (search = '', showArchived = false) => {
+    setLoading(true);
+    try {
+        // Make sure to correctly pass the showArchived parameter
+        const response = await fetch(`/api/admin/sections?archived=${showArchived}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-            const result = await response.json();
+        const result = await response.json();
+        console.log("API response:", result); // Log the response to check what you're receiving
 
-            const filteredData = result.data.filter(item => {
-                const createdAtFormatted = dayjs(item.createdAt).isValid()
-                    ? dayjs(item.createdAt).format('MMM D, YYYY h:mm A').toLowerCase()
-                    : '';
-                const updatedAtFormatted = dayjs(item.updatedAt).isValid()
-                    ? dayjs(item.updatedAt).format('MMM D, YYYY h:mm A').toLowerCase()
-                    : '';
+        // Filter and format data
+        const filteredData = result.data.filter(item => {
+            // Make sure the filter is checking proper values
+            const createdAtFormatted = dayjs(item.createdAt).isValid()
+                ? dayjs(item.createdAt).format('MMM D, YYYY h:mm A').toLowerCase()
+                : '';
+            const updatedAtFormatted = dayjs(item.updatedAt).isValid()
+                ? dayjs(item.updatedAt).format('MMM D, YYYY h:mm A').toLowerCase()
+                : '';
 
-                return (
-                    item.sectionName?.toLowerCase().includes(search.toLowerCase()) ||
-                    item.gradeLevel?.toLowerCase().includes(search.toLowerCase()) ||
-                    item.strand?.toLowerCase().includes(search.toLowerCase()) ||
-                    item.capacity?.toLowerCase().includes(search.toLowerCase()) ||
-                    item.status?.toLowerCase().includes(search.toLowerCase()) ||
-                    createdAtFormatted.includes(search.toLowerCase()) ||
-                    updatedAtFormatted.includes(search.toLowerCase())
-                );
-            });
+            // Only apply search filter if there is actually a search term
+            if (search === '') return true;
+            
+            return (
+                item.sectionName?.toLowerCase().includes(search.toLowerCase()) ||
+                item.gradeLevel?.toLowerCase().includes(search.toLowerCase()) ||
+                item.strand?.toLowerCase().includes(search.toLowerCase()) ||
+                item.capacity?.toString().toLowerCase().includes(search.toLowerCase()) || // Fixed capacity to ensure it's a string
+                item.status?.toLowerCase().includes(search.toLowerCase()) ||
+                createdAtFormatted.includes(search.toLowerCase()) ||
+                updatedAtFormatted.includes(search.toLowerCase())
+            );
+        });
 
-            const formattedData = filteredData.map((item, index) => ({
-                ...item,
-                key: item._id || index,
-            }));
+        const formattedData = filteredData.map((item, index) => ({
+            ...item,
+            key: item._id || index,
+        }));
 
-            setDataSource(formattedData);
-        } catch (error) {
-            console.error('Error fetching sections:', error);
-            setDataSource([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+        setDataSource(formattedData);
+        console.log("Data loaded:", formattedData.length, "items, showArchived:", showArchived);
+    } catch (error) {
+        console.error('Error fetching sections:', error);
+        setDataSource([]);
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
-        fetchSections(); // Initial fetch on page load
-    }, []);
-
+        fetchSections(searchTerm, showArchived);
+        console.log("fetching date archive")
+        console.log(showArchived)
+    }, [showArchived]); // Re-fetch on toggle
 
     const handleExport = () => {
         const currentDate = new Date().toISOString().split('T')[0];
@@ -132,60 +144,67 @@ const ManageSectionsPage = () => {
 
     const handleSearch = (value) => {
         setSearchTerm(value);
-        fetchSections(value);
+        fetchSections(value, showArchived);
     };
 
     const handleClearFilters = () => {
         setTableFilters({});
         setSorter({});
         setSearchTerm('');
-        fetchSections('');
+        fetchSections('', showArchived);
     };
 
     const handleBack = () => navigate('/admin/manage-program');
     const handleCreate = () => navigate('/admin/manage-sections/create');
 
 
-    const handleDelete = async (_id) => {
+    const handleArchiveToggle = async (record) => {
+        const { _id, isArchived, status} = record;
+
+        if (!isArchived && status === 'Active') {
+            alert('Cannot archive an active section. Please deactivate the section first.');
+            return null;
+        }
+
+        const actionType = isArchived ? 'Unarchive' : 'Archive';
+        console.log(`Attempting to ${actionType.toLowerCase()} section: ${_id}`);
+
         try {
-            // Confirm deletion
-            const confirmDelete = window.confirm('Are you sure you want to delete this section?');
-            if (!confirmDelete) return;
+            // Fetch latest section info by ID
+            const sectionRes = await fetch(`http://localhost:5000/api/admin/sections/${_id}`)
+            if (!sectionRes.ok) throw new Error('Failed to fetch section details');
 
-            // Fetch section details first for logging
-            const sectionRes = await fetch(`http://localhost:5000/api/admin/sections/${_id}`);
-            if (!sectionRes.ok) {
-                return message.error('Failed to fetch section details for logging.');
-            }
-
-            const { data: section } = await sectionRes.json();
-            const { sectionName, gradeLevel, strand } = section;
-
-            // Proceed with deletion
-            const response = await fetch(`http://localhost:5000/api/admin/sections/${_id}`, {
-                method: 'DELETE',
+            const section = await sectionRes.json();
+            const {sectionName} = section.data || {}; 
+            
+            // Proceed with archiving/unarchiving
+            const response = await fetch(`/api/admin/sections/archive/${_id}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ isArchived: !isArchived })
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                return message.error(data.message || 'Failed to delete section');
+                throw new Error(`Failed to ${actionType.toLowerCase()} section`);
             }
 
-            // Log the deletion
+            alert(`Section ${actionType.toLowerCase()}d successfully!`);
+
+            // Log the action using the current admin's info
             const adminID = localStorage.getItem('userID');
             const adminName = localStorage.getItem('fullName');
             const adminRole = localStorage.getItem('role');
+
+            const logDetail = `${actionType}d section ${sectionName} [ID: ${_id}]`;
 
             const logData = {
                 userID: adminID,
                 accountName: adminName,
                 role: adminRole,
-                action: 'Delete',
-                detail: `Deleted section [${sectionName}] of ${gradeLevel} - ${strand}`,
+                action: actionType,
+                detail: logDetail,
             };
 
             await fetch('http://localhost:5000/api/admin/system-logs', {
@@ -196,15 +215,16 @@ const ManageSectionsPage = () => {
                 body: JSON.stringify(logData)
             });
 
-            // Refresh and notify
-            fetchSections();
-            message.success('Section deleted successfully!');
+            // Refresh sections
+            fetchSections(searchTerm, showArchived);
+            return await response.json();
+
         } catch (error) {
-            console.error('Error deleting section:', error);
-            message.error(error.message || 'Failed to delete section. Please try again.');
+            console.error(`${actionType} error:`, error);
+            alert(`Error ${actionType.toLowerCase()}ing section`);
+            return null;
         }
     };
-
 
     // Table column definitions
     const columns = [
@@ -246,7 +266,7 @@ const ManageSectionsPage = () => {
             filteredValue: tableFilters.strand || null,
         },
         {
-            title: 'Capacity.',
+            title: 'Capacity',
             width: 120,
             dataIndex: 'capacity',
             key: 'capacity',
@@ -310,32 +330,31 @@ const ManageSectionsPage = () => {
             width: 280,
             render: (_, record) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Edit Button */}
                     <Button
-                        icon={<FaPen />}
-                        style={{
-                            width: '150px',
-                            margin: '0 auto',
-                            display: 'flex',
-                            justifyContent: 'flex-start'
-                        }}
-                        onClick={() => navigate(`/admin/manage-sections/edit/${record.key}`)}
+                        icon={record.isArchived ? <FaEye /> : <FaPen />} // Change the icon based on the archive status
+                        style={{ width: '150px', margin: '0 auto', display: 'flex', justifyContent: 'flex-start' }}
+                        onClick={() => navigate(`/admin/manage-sections/edit/${record.key}`)} // Keep the path unchanged
                     >
-                        Edit
+                        {record.isArchived ? 'View' : 'Edit'}
                     </Button>
-
                     <Button
-                        icon={<FaTrashAlt />}
-                        danger
+                        icon={record.isArchived ? <FaBoxOpen /> : <FaBoxArchive />}
                         style={{
                             width: '150px',
                             margin: '0 auto',
                             display: 'flex',
-                            justifyContent: 'flex-start'
+                            justifyContent: 'flex-start',
                         }}
-                        onClick={() => handleDelete(record.key)}
+                        onClick={() => handleArchiveToggle(record)}
+                        disabled={
+                            (!record.isArchived && record.status === 'Active')}
+                        title={
+                            (!record.isArchived && record.status === 'Active')
+                                ? 'Cannot archive active sections'
+                                : ''
+                        }
                     >
-                        Delete
+                        {record.isArchived ? 'Unarchive' : 'Archive'}
                     </Button>
                 </div>
             )
@@ -369,19 +388,26 @@ const ManageSectionsPage = () => {
     return (
         <div className="main main-container">
             <Header />
+            {showArchived && (
+                <Tag className="archived-tag" color="orange">
+                    Viewing Archived Sections
+                </Tag>
+            )}
             <div className="main-content">
                 <div className="page-title">
                     <div className="arrows" onClick={handleBack}>
                         <MdOutlineKeyboardArrowLeft />
                     </div>
-                    <p className="heading">Manage Sections</p>
+                    <p className="heading">
+                        {showArchived ? "Archived Sections" : "Manage Sections"}
+                    </p>
                 </div>
 
-                {/* Table controls */}
+                { }
                 <div className="table-functions">
                     <div className="left-tools">
                         <Button icon={<FiFilter />} onClick={handleClearFilters}>Clear Filter</Button>
-                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchSections(searchTerm)}>Refresh</Button>
+                        <Button icon={<HiOutlineRefresh />} onClick={() => fetchSections(searchTerm, showArchived)}>Refresh</Button>
                         <Button icon={<BiExport />} onClick={handleExport}>Export</Button>
                     </div>
                     <div className="right-tools">
@@ -393,6 +419,12 @@ const ManageSectionsPage = () => {
                             onChange={(e) => handleSearch(e.target.value)}
                             suffix={<FaSearch style={{ color: '#aaa' }} />}
                         />
+                        <Button
+                            icon={showArchived ? <FaBoxOpen /> : <FaBoxArchive />}
+                            onClick={() => setShowArchived(!showArchived)}
+                        >
+                            {showArchived ? 'Close Archive' : 'Show Archived'}
+                        </Button>
                         <Button type="ghost" className="create-btn" icon={<FaPlus />} onClick={handleCreate}>
                             Create Section
                         </Button>
@@ -401,7 +433,7 @@ const ManageSectionsPage = () => {
 
                 {/* Sections table */}
                 <Table
-                    style={{ width: '100%', flex: 1 }} 
+                    style={{ width: '100%', flex: 1 }}
                     columns={columns}
                     dataSource={Array.isArray(dataSource) ? dataSource : []}
                     loading={loading}
