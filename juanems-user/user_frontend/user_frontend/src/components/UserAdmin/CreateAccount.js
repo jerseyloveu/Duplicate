@@ -1,17 +1,16 @@
-import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
-import { Form, Input, Select, Button, message, Switch, Tabs, Card, Checkbox, Row, Col, Divider } from 'antd';
+import { BookOutlined, CalendarOutlined, DollarOutlined, FileTextOutlined, FolderOpenOutlined, FormOutlined, LineChartOutlined, LockOutlined, ScheduleOutlined, SettingOutlined, TeamOutlined, UsergroupAddOutlined } from "@ant-design/icons";
+import { Button, Card, Checkbox, Col, Divider, Form, Input, message, Row, Select, Switch, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { FaUser } from "react-icons/fa";
 import { IoSettings } from "react-icons/io5";
-import { LockOutlined } from "@ant-design/icons";
+import { MdOutlineKeyboardArrowLeft } from "react-icons/md";
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOutlined, CalendarOutlined, UsergroupAddOutlined, SettingOutlined, FileTextOutlined, ScheduleOutlined, DollarOutlined, FormOutlined, FolderOpenOutlined, LineChartOutlined, TeamOutlined } from '@ant-design/icons';
 
-import Footer from './Footer';
-import Header from './Header';
+import '../../css/JuanScope/Register.css';
 import '../../css/UserAdmin/CreateAccount.css';
 import '../../css/UserAdmin/Global.css';
-import '../../css/JuanScope/Register.css';
+import Footer from './Footer';
+import Header from './Header';
 
 // Define module structures - copied from AccessControl.js
 const admissionsModules = {
@@ -235,7 +234,7 @@ const CustomAccessForm = ({ role, selectedModules, setSelectedModules, hasCustom
     setSelectedModules(Array.from(updated));
   };
 
-  const isParentIndeterminate = (parent, submodules) => {
+  const isParentIndeterminate = (_parent, submodules) => {
     const hasSome = submodules.some((sub) => selectedModules.includes(sub));
     const hasAll = submodules.every((sub) => selectedModules.includes(sub));
     return hasSome && !hasAll;
@@ -334,17 +333,27 @@ const handleNameBeforeInput = (e) => {
   }
 };
 
+
 const formatMobile = (value) => {
-  if (!value) return ''; // If value is undefined or empty, return an empty string
-  const digits = value.replace(/\D/g, ''); // remove non-digit characters
-  const part1 = digits.slice(0, 4);
-  const part2 = digits.slice(4, 7);
-  const part3 = digits.slice(7, 11);
-  let formatted = part1;
-  if (part2) formatted += '-' + part2;
-  if (part3) formatted += '-' + part3;
-  return formatted;
+  if (!value) return '';
+
+  let digits = value.replace(/\D/g, '');
+
+  // Limit to 10 digits max
+  digits = digits.slice(0, 10);
+
+  const part1 = digits.slice(0, 3);
+  const part2 = digits.slice(3, 6);
+  const part3 = digits.slice(6, 10);
+
+  let formatted = '';
+  if (part1) formatted += `${part1}`;
+  if (part2) formatted += ` ${part2}`;
+  if (part3) formatted += ` ${part3}`;
+
+  return formatted.trim();
 };
+
 
 const CreateAccount = () => {
   const navigate = useNavigate();
@@ -395,7 +404,6 @@ const CreateAccount = () => {
   }, [role]);
 
 
-
   useEffect(() => {
     const fetchAccount = async () => {
       if (!id) return; // only fetch if editing
@@ -412,7 +420,9 @@ const CreateAccount = () => {
         const data = result.data;
 
         // Check if mobile exists and format it
-        const formattedMobile = data.mobile ? formatMobile(data.mobile) : '';
+        // We only need the last 10 digits for display
+        const mobileDigits = data.mobile ? data.mobile.replace(/\D/g, '').slice(-10) : '';
+        const formattedMobile = mobileDigits ? formatMobile(mobileDigits) : '';
 
         // Set hasCustomAccess state
         setHasCustomAccess(data.hasCustomAccess || false);
@@ -452,6 +462,7 @@ const CreateAccount = () => {
   }, [id, form]);
 
 
+
   useEffect(() => {
     if (role) {
       // Turn off custom access when role changes
@@ -484,6 +495,13 @@ const CreateAccount = () => {
       // Generate a random password
       const password = generatePassword();
 
+      // Get mobile digits and ensure it starts with a 0
+      let mobileDigits = formValues.mobile?.replace(/\D/g, '') || '';
+      // Add leading 0 if it doesn't start with 0
+      if (mobileDigits && !mobileDigits.startsWith('0')) {
+        mobileDigits = '0' + mobileDigits;
+      }
+
       // Trim string fields
       const trimmedValues = {
         ...formValues, // Use formValues instead of undefined values
@@ -491,7 +509,7 @@ const CreateAccount = () => {
         middleName: formValues.middleName?.trim() || '',
         lastName: formValues.lastName?.trim() || '',
         email: formValues.email?.trim() || '',
-        mobile: formValues.mobile?.replace(/\D/g, '') || '',
+        mobile: mobileDigits, // Store with leading 0
         role: formValues.role || '',
         status: formValues.status || '',
         password: password || '',
@@ -635,22 +653,41 @@ const CreateAccount = () => {
                   validator: async (_, value) => {
                     if (!value) return Promise.reject('Please input mobile number!');
 
-                    const digits = value.replace(/\D/g, '');
+                    // Use 'let' instead of 'const' since we need to modify this variable
+                    let digits = value.replace(/\D/g, '');
 
-                    if (digits.length !== 11 || !digits.startsWith('09')) {
-                      return Promise.reject('Please enter a valid Philippine mobile number\n(09XX-XXX-XXXX)');
+                    // Take only the last 10 digits if more are entered
+                    if (digits.length > 10) {
+                      digits = digits.slice(-10);
+                    }
+
+                    if (digits[0] !== '9') {
+                      return Promise.reject('Please enter a valid Philippine mobile number (starts with 9)');
+                    }
+
+                    if (digits.length !== 10) {
+                      return Promise.reject('Please enter a valid 10-digit mobile number');
+                    }
+
+                    // Store the current form mobile value's digits for comparison
+                    let currentMobileDigits = form.getFieldValue('mobile')?.replace(/\D/g, '');
+                    if (currentMobileDigits && currentMobileDigits.length > 10) {
+                      currentMobileDigits = currentMobileDigits.slice(-10);
                     }
 
                     // Only check availability if we're not editing (no id) or if the mobile number has changed
-                    if (!id || digits !== form.getFieldValue('mobile')) {
+                    if (!id || digits !== currentMobileDigits) {
                       try {
+                        // Add a leading 0 when checking availability
+                        const mobileWithLeadingZero = '0' + digits;
+
                         const res = await fetch('http://localhost:5000/api/admin/check-availability', {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',
                           },
                           body: JSON.stringify({
-                            mobile: digits,
+                            mobile: mobileWithLeadingZero, // Check with leading zero
                             excludeId: id // Pass the current account ID to exclude it from check
                           }),
                         });
@@ -670,17 +707,20 @@ const CreateAccount = () => {
                 },
               ]}
             >
+
               <Input
-                placeholder="09XX-XXX-XXXX"
+                placeholder="(XXX) XXX XXXX"
+                addonBefore="+63"
                 value={mobileNumber}
                 onChange={(e) => {
-                  const formatted = formatMobile(e.target.value);
-                  setMobileNumber(formatted);
-                  form.setFieldsValue({ mobile: formatted });
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10); // restrict to 10 digits
+                  const formattedValue = formatMobile(digits); // format after slicing
+                  setMobileNumber(formattedValue);
+                  form.setFieldsValue({ mobile: formattedValue });
                 }}
-                maxLength={13} // 11 digits + 2 dashes
               />
             </Form.Item>
+
 
             <Form.Item
               label="Email"
@@ -791,62 +831,62 @@ const CreateAccount = () => {
           </div>
 
           {!isArchived && !id && (
-          <div className="column">
-            {/* Form title */}
-            <h3 className="juan-form-title">Data Privacy Agreement</h3>
-            <div className="juan-title-underline"></div>
-            {/* Data Privacy Agreement Checkbox */}
-            <div className="juan-form-group" style={{ gridColumn: '1 / -1' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <input
-                  type="checkbox"
-                  id="agreement"
-                  checked={isChecked}
-                  onChange={handleCheckboxChange}
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    margin: '2px 0 0 0',
-                    flexShrink: 0
-                  }}
-                  className={`juan-custom-checkbox ${errors.agreement ? 'juan-input-error' : ''}`}
-                />
-                <label
-                  htmlFor="agreement"
-                  style={{
-                    textAlign: 'justify',
-                    whiteSpace: 'normal',
-                    wordWrap: 'break-word',
-                    display: 'inline-block',
-                    width: '100%',
-                    fontWeight: 'normal',
-                    fontSize: '13px',
-                    margin: 0
-                  }}
-                >
-                  {id ? (
-                    // Message for updating an account
-                    <span>
-                      <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
-                    </span>
-                  ) : (
-                    // Message for creating a new account
-                    <span>
-                      <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
-                    </span>
-                  )}
-                  <br /><br />
-                  In compliance with the Data Privacy Act of 2012, San Juan de Dios Educational Foundation Inc. – College will safeguard all submitted data and use it solely for official academic and administrative purposes.
-                </label>
-              </div>
-              {errors.agreement && (
-                <div className="juan-error-message" style={{ color: 'red', marginTop: '5px' }}>
-                  {errors.agreement}
+            <div className="column">
+              {/* Form title */}
+              <h3 className="juan-form-title">Data Privacy Agreement</h3>
+              <div className="juan-title-underline"></div>
+              {/* Data Privacy Agreement Checkbox */}
+              <div className="juan-form-group" style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="agreement"
+                    checked={isChecked}
+                    onChange={handleCheckboxChange}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      margin: '2px 0 0 0',
+                      flexShrink: 0
+                    }}
+                    className={`juan-custom-checkbox ${errors.agreement ? 'juan-input-error' : ''}`}
+                  />
+                  <label
+                    htmlFor="agreement"
+                    style={{
+                      textAlign: 'justify',
+                      whiteSpace: 'normal',
+                      wordWrap: 'break-word',
+                      display: 'inline-block',
+                      width: '100%',
+                      fontWeight: 'normal',
+                      fontSize: '13px',
+                      margin: 0
+                    }}
+                  >
+                    {id ? (
+                      // Message for updating an account
+                      <span>
+                        <strong>I hereby affirm that all information updated in this form is accurate and truthful to the best of my knowledge, and has been modified with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account update</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      </span>
+                    ) : (
+                      // Message for creating a new account
+                      <span>
+                        <strong>I hereby affirm that all information provided in this form is accurate and truthful to the best of my knowledge, and has been submitted with the consent and acknowledgment of the concerned individual and/or their parent/guardian. </strong>This <strong>account creation</strong> has been carried out by an authorized representative of the institution in accordance with institutional policies.
+                      </span>
+                    )}
+                    <br /><br />
+                    In compliance with the Data Privacy Act of 2012, San Juan de Dios Educational Foundation Inc. – College will safeguard all submitted data and use it solely for official academic and administrative purposes.
+                  </label>
                 </div>
-              )}
+                {errors.agreement && (
+                  <div className="juan-error-message" style={{ color: 'red', marginTop: '5px' }}>
+                    {errors.agreement}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-            )}
+          )}
         </div>
       ),
     },
@@ -890,7 +930,7 @@ const CreateAccount = () => {
 
   return (
     <div className="main main-container">
-      <Header />[]
+      <Header />
       <div className="main-content">
         <div className="page-title">
           <div className="arrows" onClick={handleBack}>
