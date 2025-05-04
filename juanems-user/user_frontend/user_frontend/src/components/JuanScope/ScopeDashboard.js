@@ -20,6 +20,7 @@ function ScopeDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userData, setUserData] = useState({});
+  const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
@@ -86,6 +87,15 @@ function ScopeDashboard() {
 
         const userData = await userResponse.json();
 
+        // Fetch registration status
+        const registrationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
+        );
+        if (!registrationResponse.ok) {
+          throw new Error('Failed to fetch registration status');
+        }
+        const registrationData = await registrationResponse.json();
+
         if (userData.applicantID && !localStorage.getItem('applicantID')) {
           localStorage.setItem('applicantID', userData.applicantID);
         }
@@ -104,6 +114,8 @@ function ScopeDashboard() {
           studentID: localStorage.getItem('studentID') || userData.studentID || 'N/A',
           applicantID: localStorage.getItem('applicantID') || userData.applicantID || 'N/A',
         });
+
+        setRegistrationStatus(registrationData.registrationStatus || 'Incomplete');
 
         // Fetch unviewed announcements count
         const announcementsResponse = await axios.get('/api/announcements', {
@@ -234,6 +246,7 @@ function ScopeDashboard() {
         <div className="scope-dashboard-content">
           <SideNavigation 
             userData={userData} 
+            registrationStatus={registrationStatus}
             onNavigate={closeSidebar}
             isOpen={sidebarOpen} 
           />
@@ -296,7 +309,7 @@ function ScopeDashboard() {
                 </div>
               </div>
             )}
-            <EnrollmentProcess />
+            <EnrollmentProcess registrationStatus={registrationStatus} />
           </main>
         </div>
         {sidebarOpen && (

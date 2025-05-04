@@ -27,7 +27,7 @@ function ScopeAnnouncement() {
     lastName: localStorage.getItem('lastName') || '',
     applicantID: localStorage.getItem('applicantID') || 'N/A'
   });
-
+  const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -69,6 +69,16 @@ function ScopeAnnouncement() {
       setLoading(true);
       const userEmail = localStorage.getItem('userEmail');
       
+      // Fetch registration status
+      const registrationResponse = await axios.get(
+        `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
+      );
+      if (!registrationResponse.data) {
+        throw new Error('Failed to fetch registration status');
+      }
+      setRegistrationStatus(registrationResponse.data.registrationStatus || 'Incomplete');
+
+      // Fetch announcements
       const response = await axios.get('/api/announcements', {
         params: {
           page,
@@ -171,10 +181,10 @@ function ScopeAnnouncement() {
         <div className="scope-dashboard-content">
           <SideNavigation 
             userData={userData} 
+            registrationStatus={registrationStatus}
             onNavigate={closeSidebar}
             isOpen={sidebarOpen}
           />
-
           <main className={`scope-main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
             <div className="announcement-container">
               <div className="announcement-content">

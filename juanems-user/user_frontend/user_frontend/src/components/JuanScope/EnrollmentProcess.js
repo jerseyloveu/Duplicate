@@ -1,7 +1,9 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import '../../css/JuanScope/EnrollmentProcess.css';
 
-const EnrollmentProcess = () => {
+const EnrollmentProcess = ({ registrationStatus }) => {
   const steps = [
     {
       title: "Step 1 of 14: Registration",
@@ -105,6 +107,9 @@ const EnrollmentProcess = () => {
             <div key={index} className="step-item">
               <div className="step-number-circle">
                 <span>{index + 1}</span>
+                {index === 0 && registrationStatus === 'Complete' && (
+                  <FontAwesomeIcon icon={faCheckCircle} className="step-complete-icon" />
+                )}
               </div>
               
               <div className="step-content-container">

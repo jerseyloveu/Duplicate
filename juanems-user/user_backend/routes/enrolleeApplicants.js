@@ -150,7 +150,7 @@ router.get('/check-email/:email', async (req, res) => {
   }
 });
 
-// Route to fetch personal details
+// Updated Route to fetch all personal details with logging
 router.get('/personal-details/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -162,22 +162,66 @@ router.get('/personal-details/:email', async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (!applicant) {
+      console.error(`No active applicant found for email: ${cleanEmail}`);
       return res.status(404).json({
         message: 'Active account not found',
         errorType: 'account_not_found',
       });
     }
 
-    res.json({
+    const responseData = {
+      // Step 1: Personal Information
+      prefix: applicant.prefix || '',
       firstName: applicant.firstName,
       middleName: applicant.middleName || '',
       lastName: applicant.lastName,
-      dob: applicant.dob,
-      mobile: applicant.mobile,
+      suffix: applicant.suffix || '',
+      gender: applicant.gender || '',
+      lrnNo: applicant.lrnNo || '',
+      civilStatus: applicant.civilStatus || '',
+      religion: applicant.religion || '',
+      birthDate: applicant.birthDate || '',
+      countryOfBirth: applicant.countryOfBirth || '',
+      birthPlaceCity: applicant.birthPlaceCity || '',
+      birthPlaceProvince: applicant.birthPlaceProvince || '',
       nationality: applicant.nationality,
+      // Step 2: Admission and Enrollment Requirements
+      entryLevel: applicant.entryLevel || '',
+      // Step 3: Contact Details
+      presentHouseNo: applicant.presentHouseNo || '',
+      presentBarangay: applicant.presentBarangay || '',
+      presentCity: applicant.presentCity || '',
+      presentProvince: applicant.presentProvince || '',
+      presentPostalCode: applicant.presentPostalCode || '',
+      permanentHouseNo: applicant.permanentHouseNo || '',
+      permanentBarangay: applicant.permanentBarangay || '',
+      permanentCity: applicant.permanentCity || '',
+      permanentProvince: applicant.permanentProvince || '',
+      permanentPostalCode: applicant.permanentPostalCode || '',
+      mobile: applicant.mobile,
+      telephoneNo: applicant.telephoneNo || '',
+      emailAddress: applicant.emailAddress || applicant.email,
+      // Step 4: Educational Background
+      elementarySchoolName: applicant.elementarySchoolName || '',
+      elementaryLastYearAttended: applicant.elementaryLastYearAttended || '',
+      elementaryGeneralAverage: applicant.elementaryGeneralAverage || '',
+      elementaryRemarks: applicant.elementaryRemarks || '',
+      juniorHighSchoolName: applicant.juniorHighSchoolName || '',
+      juniorHighLastYearAttended: applicant.juniorHighLastYearAttended || '',
+      juniorHighGeneralAverage: applicant.juniorHighGeneralAverage || '',
+      juniorHighRemarks: applicant.juniorHighRemarks || '',
+      // Step 5: Family Background
+      contacts: applicant.familyContacts || [],
+      // Additional fields
       studentID: applicant.studentID,
       applicantID: applicant.applicantID,
-    });
+      registrationStatus: applicant.registrationStatus,
+      dob: applicant.dob,
+    };
+
+    console.log(`Personal details fetched for ${cleanEmail}:`, responseData);
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error fetching personal details:', error);
     res.status(500).json({
