@@ -953,7 +953,7 @@ router.post('/save-registration', async (req, res) => {
     applicant.presentHouseNo = sanitizeString(formData.presentHouseNo);
     applicant.presentBarangay = sanitizeString(formData.presentBarangay);
     applicant.presentCity = sanitizeString(formData.presentCity);
-    applicant.presentProvince = sanitizeString(formData.presentProvince);
+    applicant.presentProvince = incurableString(formData.presentProvince);
     applicant.presentPostalCode = sanitizeString(formData.presentPostalCode);
     applicant.permanentHouseNo = sanitizeString(formData.permanentHouseNo);
     applicant.permanentBarangay = sanitizeString(formData.permanentBarangay);
@@ -1114,6 +1114,63 @@ router.get('/activity/:email', async (req, res) => {
       message: 'Server error while fetching activity data',
       errorType: 'server_error'
     });
+  }
+});
+
+router.post('/save-exam-interview', async (req, res) => {
+  try {
+    const { email, selectedDate, preferredExamAndInterviewApplicationStatus } = req.body;
+
+    if (!sanitizeString(email) || !selectedDate || !preferredExamAndInterviewApplicationStatus) {
+      return res.status(400).json({ error: 'Email, selected date, and status are required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOne({ 
+      email: email.toLowerCase(), 
+      status: 'Active' 
+    });
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    if (applicant.preferredExamAndInterviewApplicationStatus === 'Complete') {
+      return res.status(400).json({ error: 'Exam and interview date already saved' });
+    }
+
+    applicant.preferredExamAndInterviewDate = new Date(selectedDate);
+    applicant.preferredExamAndInterviewApplicationStatus = preferredExamAndInterviewApplicationStatus;
+
+    await applicant.save();
+
+    res.status(200).json({ message: 'Exam and interview date saved successfully' });
+  } catch (err) {
+    console.error('Error saving exam and interview data:', err);
+    res.status(500).json({ error: 'Server error while saving exam and interview data' });
+  }
+});
+
+router.get('/exam-interview/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const cleanEmail = email.trim().toLowerCase();
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email: cleanEmail,
+      status: 'Active',
+    }).sort({ createdAt: -1 });
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    res.status(200).json({
+      selectedDate: applicant.preferredExamAndInterviewDate,
+      preferredExamAndInterviewApplicationStatus: applicant.preferredExamAndInterviewApplicationStatus
+    });
+  } catch (err) {
+    console.error('Error fetching exam and interview data:', err);
+    res.status(500).json({ error: 'Server error while fetching exam and interview data' });
   }
 });
 

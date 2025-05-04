@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -22,6 +22,28 @@ import '../../css/JuanScope/SideNavigation.css';
 function SideNavigation({ userData, registrationStatus, onNavigate, isOpen }) {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [examInterviewStatus, setExamInterviewStatus] = useState('Incomplete');
+
+  useEffect(() => {
+    const fetchExamInterviewStatus = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/exam-interview/${userData.email}`
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch exam and interview status');
+        }
+        const data = await response.json();
+        setExamInterviewStatus(data.preferredExamAndInterviewApplicationStatus || 'Incomplete');
+      } catch (err) {
+        console.error('Error fetching exam and interview status:', err);
+      }
+    };
+
+    if (userData.email) {
+      fetchExamInterviewStatus();
+    }
+  }, [userData.email]);
 
   const formatEmail = (email) => {
     if (!email) return '';
@@ -82,7 +104,7 @@ function SideNavigation({ userData, registrationStatus, onNavigate, isOpen }) {
       path: '/scope-registration',
       icon: faFileAlt,
       label: '1. Registration',
-      enabled: true, // Always enabled
+      enabled: true,
     },
     {
       path: '/scope-exam-interview-application',
@@ -91,10 +113,10 @@ function SideNavigation({ userData, registrationStatus, onNavigate, isOpen }) {
       enabled: registrationStatus === 'Complete',
     },
     {
-      path: '#',
+      path: '/scope-admission-requirements',
       icon: faBook,
       label: '3. Admission Requirements',
-      enabled: false,
+      enabled: examInterviewStatus === 'Complete',
     },
     {
       path: '#',

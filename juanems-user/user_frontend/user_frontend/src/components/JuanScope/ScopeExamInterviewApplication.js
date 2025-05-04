@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarAlt, faBars, faTimes, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarAlt, faBars, faTimes, faArrowLeft, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
-import ModernDatePicker from './ModernDatePicker'; // Import the new date picker component
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 function ScopeExamInterviewApplication() {
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ function ScopeExamInterviewApplication() {
   const [nextLocation, setNextLocation] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [errors, setErrors] = useState({});
+  const [availableDates, setAvailableDates] = useState([]);
+  const [showDateConfirmModal, setShowDateConfirmModal] = useState(false);
+  const [isDateSaved, setIsDateSaved] = useState(false);
 
   // Update current date and time every minute
   useEffect(() => {
@@ -30,7 +34,7 @@ function ScopeExamInterviewApplication() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data and verify session
+  // Fetch user data, verify session, and fetch available exam dates
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -40,7 +44,7 @@ function ScopeExamInterviewApplication() {
       return;
     }
 
-    const fetchUserData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
 
@@ -119,7 +123,7 @@ function ScopeExamInterviewApplication() {
           return;
         }
 
-        // Fetch previously selected exam date, if any
+        // Fetch previously selected exam date and status
         const examResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/exam-interview/${userEmail}`
         );
@@ -127,19 +131,29 @@ function ScopeExamInterviewApplication() {
           const examData = await examResponse.json();
           if (examData.selectedDate) {
             setSelectedDate(new Date(examData.selectedDate));
+            setIsDateSaved(examData.preferredExamAndInterviewApplicationStatus === 'Complete');
           }
         }
+
+        // Fetch available exam dates
+        const datesResponse = await fetch('http://localhost:5000/api/dropdown/exam-dates');
+        if (!datesResponse.ok) {
+          throw new Error('Failed to fetch available exam dates');
+        }
+        const datesData = await datesResponse.json();
+        const parsedDates = datesData.map(item => new Date(item.date));
+        setAvailableDates(parsedDates);
 
         setLoading(false);
       } catch (err) {
         console.error('Error loading data:', err);
-        setError('Failed to load user data. Please try again.');
+        setError('Failed to load user data or exam dates. Please try again.');
         setLoading(false);
       }
     };
 
-    fetchUserData();
-    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+    fetchData();
+    const refreshInterval = setInterval(fetchData, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
   }, [navigate]);
 
@@ -239,18 +253,39 @@ function ScopeExamInterviewApplication() {
   };
 
   const handleDateChange = (date) => {
-    setSelectedDate(date);
-    setIsFormDirty(true);
-    setErrors((prev) => ({ ...prev, selectedDate: null }));
+    if (!isDateSaved) {
+      setSelectedDate(date);
+      setIsFormDirty(true);
+      setErrors((prev) => ({ ...prev, selectedDate: null }));
+      setShowDateConfirmModal(true);
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
     if (!selectedDate) {
       newErrors.selectedDate = 'Selected Date is required';
+    } else if (!availableDates.some(d => 
+      d.getDate() === selectedDate.getDate() &&
+      d.getMonth() === selectedDate.getMonth() &&
+      d.getFullYear() === selectedDate.getFullYear()
+    )) {
+      newErrors.selectedDate = 'Selected date is not available';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleConfirmDate = () => {
+    setShowDateConfirmModal(false);
+    setIsFormDirty(true);
+  };
+
+  const handleCancelDate = () => {
+    setSelectedDate(null);
+    setShowDateConfirmModal(false);
+    setIsFormDirty(false);
+    setErrors((prev) => ({ ...prev, selectedDate: null }));
   };
 
   const handleNext = async () => {
@@ -276,6 +311,7 @@ function ScopeExamInterviewApplication() {
           body: JSON.stringify({
             email: userEmail,
             selectedDate: selectedDate.toISOString(),
+            preferredExamAndInterviewApplicationStatus: 'Complete',
           }),
         }
       );
@@ -284,6 +320,7 @@ function ScopeExamInterviewApplication() {
 
       if (response.ok) {
         setIsFormDirty(false);
+        setIsDateSaved(true);
         alert(data.message || 'Exam and Interview date saved successfully.');
         navigate('/scope-exam-interview-result');
       } else {
@@ -372,6 +409,23 @@ function ScopeExamInterviewApplication() {
                 <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '1.5rem' }}>
                   Select your preferred available date for the exam and interview. Once confirmed, you'll be notified of the scheduled date and time in the Exam & Interview Result.
                 </div>
+                {isDateSaved && (
+                  <div style={{ margin: '1rem 0', color: '#333', fontSize: '14px', backgroundColor: '#e0f7fa', padding: '1rem', borderRadius: '5px' }}>
+                    <p>
+                      Your exam and interview date has been saved and cannot be changed. Please proceed to view the{' '}
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate('/scope-admission-requirements');
+                        }}
+                        style={{ color: '#007BFF', textDecoration: 'underline' }}
+                      >
+                        Admission Requirements
+                      </a>.
+                    </p>
+                  </div>
+                )}
                 <div className="personal-info-section">
                   <div className="personal-info-header">
                     <FontAwesomeIcon
@@ -383,7 +437,7 @@ function ScopeExamInterviewApplication() {
                   <div className="personal-info-divider"></div>
                   <div className="reminder-box">
                     <p>
-                      <strong>Reminder:</strong> Please provide your correct and complete information. Fields marked with asterisk (<span className="required-asterisk">*</span>) are required.
+                      <strong>Reminder:</strong> Please select an available date. Fields marked with asterisk (<span className="required-asterisk">*</span>) are required. Once saved, the date cannot be changed.
                     </p>
                   </div>
                   <form>
@@ -412,11 +466,12 @@ function ScopeExamInterviewApplication() {
                       </div>
                       <div className="form-group">
                         <label>Calendar:</label>
-                        {/* Replace react-datepicker with our new ModernDatePicker */}
                         <div className="modern-datepicker-wrapper">
                           <ModernDatePickerAdapter 
                             selectedDate={selectedDate}
                             onDateChange={handleDateChange}
+                            availableDates={availableDates}
+                            disabled={isDateSaved}
                           />
                         </div>
                       </div>
@@ -434,6 +489,11 @@ function ScopeExamInterviewApplication() {
                         type="button"
                         className="next-button"
                         onClick={handleNext}
+                        disabled={isDateSaved}
+                        style={{
+                          backgroundColor: isDateSaved ? '#d3d3d3' : '#34A853',
+                          cursor: isDateSaved ? 'not-allowed' : 'pointer',
+                        }}
                       >
                         Next
                       </button>
@@ -495,57 +555,107 @@ function ScopeExamInterviewApplication() {
           </div>
         </div>
       )}
+      {showDateConfirmModal && (
+        <div className="scope-modal-overlay">
+          <div className="scope-confirm-modal">
+            <h3>Confirm Date Selection</h3>
+            <p>
+              You have selected{' '}
+              <strong>
+                {selectedDate?.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </strong>
+              . This date cannot be changed once saved. Are you sure?
+            </p>
+            <div className="scope-modal-buttons">
+              <button
+                className="scope-modal-cancel"
+                onClick={handleCancelDate}
+              >
+                Cancel
+              </button>
+              <button
+                className="scope-modal-confirm"
+                onClick={handleConfirmDate}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// This adapter component connects our modern date picker to the parent component
-function ModernDatePickerAdapter({ selectedDate, onDateChange }) {
-  // Define available dates - you'll replace this with your actual data
-  const availableDates = [
-    // Example: These are May 2025 dates from the original code
-    new Date(2025, 4, 10),
-    new Date(2025, 4, 11),
-    new Date(2025, 4, 17),
-    new Date(2025, 4, 18),
-    new Date(2025, 4, 24),
-    new Date(2025, 4, 25),
-  ];
+function ModernDatePickerAdapter({ selectedDate, onDateChange, availableDates, disabled }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-  // Extract just the day numbers from the available dates
-  const availableDayNumbers = availableDates.map(date => date.getDate());
-  
-  // We'll use State to manage our component's own view of the selected date
-  const [internalSelectedDate, setInternalSelectedDate] = useState(selectedDate);
-  
-  // Keep our internal state in sync with the parent component
-  useEffect(() => {
-    setInternalSelectedDate(selectedDate);
-  }, [selectedDate]);
-  
-  // When the date changes in our modern picker
-  const handleDateChange = (date) => {
-    setInternalSelectedDate(date);
-    onDateChange(date); // Pass the date up to the parent component
+  const [dateError, setDateError] = useState(null);
+
+  const handleDateSelection = (date) => {
+    if (disabled) return;
+
+    if (date < today) {
+      setDateError('The selected date has already passed. Please choose another available date.');
+      return;
+    }
+    
+    const isAvailable = availableDates.some(d => 
+      d.getDate() === date.getDate() &&
+      d.getMonth() === date.getMonth() &&
+      d.getFullYear() === date.getFullYear()
+    );
+    
+    if (!isAvailable) {
+      setDateError('Selected date is not available. Please choose from the available dates.');
+      return;
+    }
+    
+    setDateError(null);
+    onDateChange(date);
   };
-  
-  // Current date to set min date
-  const minDate = new Date();
-  minDate.setDate(minDate.getDate() + 1); // Start from tomorrow
-  
-  // Max date (3 months from now)
-  const maxDate = new Date();
-  maxDate.setMonth(maxDate.getMonth() + 3);
-  
-  // Render the modern date picker with our adapter props
+
   return (
     <div className="modern-datepicker">
-      <ModernDatePicker 
-        selectedDate={internalSelectedDate}
-        onSelectDate={handleDateChange}
-        availableDates={availableDayNumbers}
-        minDate={minDate}
-        maxDate={maxDate}
+      {dateError && (
+        <div className="date-error-message">
+          <FontAwesomeIcon icon={faExclamationCircle} />
+          {dateError}
+        </div>
+      )}
+      <DatePicker
+        selected={selectedDate}
+        onChange={handleDateSelection}
+        minDate={today}
+        maxDate={availableDates.length > 0 
+          ? new Date(Math.max(...availableDates))
+          : new Date(new Date().setMonth(new Date().getMonth() + 3))}
+        includeDates={availableDates}
+        inline
+        calendarClassName="modern-calendar"
+        disabled={disabled}
+        dayClassName={(date) => {
+          const isAvailable = availableDates.some(
+            (d) => d.getDate() === date.getDate() &&
+                   d.getMonth() === date.getMonth() &&
+                   d.getFullYear() === date.getFullYear()
+          );
+          const isSelected = selectedDate &&
+                            date.getDate() === selectedDate.getDate() &&
+                            date.getMonth() === selectedDate.getMonth() &&
+                            date.getFullYear() === selectedDate.getFullYear();
+          const isPast = date < today;
+          
+          return isSelected ? 'selected-date' :
+                 isAvailable ? 'available-date' :
+                 isPast ? 'passed-date' :
+                 'unavailable-date';
+        }}
       />
     </div>
   );

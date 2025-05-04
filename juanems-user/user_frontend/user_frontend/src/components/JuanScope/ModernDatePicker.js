@@ -2,35 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../../css/JuanScope/ModernDatePicker.css';
 
-function ModernDatePicker({ 
-  selectedDate, 
-  onSelectDate, 
-  availableDates = [], 
-  minDate = new Date(), 
-  maxDate = null 
+function ModernDatePicker({
+  selectedDate,
+  onSelectDate,
+  availableDates = [],
+  minDate = new Date(),
+  maxDate = null
 }) {
   // Initialize with current month or selected date's month
   const [currentMonth, setCurrentMonth] = useState(
     selectedDate ? new Date(selectedDate) : new Date()
   );
-  
+
   // Update current month when selected date changes
   useEffect(() => {
     if (selectedDate) {
       setCurrentMonth(new Date(selectedDate));
     }
   }, [selectedDate]);
-  
+
   // Calculate days in month
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
-  
+
   // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
   const getFirstDayOfMonth = (year, month) => {
     return new Date(year, month, 1).getDay();
   };
-  
+
   // Format date as string
   const formatDate = (date) => {
     if (!date) return '';
@@ -40,13 +40,13 @@ function ModernDatePicker({
       day: 'numeric'
     });
   };
-  
+
   // Handle date selection
   const handleDateClick = (day) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     onSelectDate(newDate);
   };
-  
+
   // Navigate to previous month
   const prevMonth = () => {
     setCurrentMonth(prevDate => {
@@ -55,7 +55,7 @@ function ModernDatePicker({
       return newDate;
     });
   };
-  
+
   // Navigate to next month
   const nextMonth = () => {
     setCurrentMonth(prevDate => {
@@ -64,66 +64,68 @@ function ModernDatePicker({
       return newDate;
     });
   };
-  
+
   // Check if previous month button should be disabled
   const isPrevMonthDisabled = () => {
     if (!minDate) return false;
-    
+
     const prevMonthDate = new Date(currentMonth);
     prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
     return prevMonthDate < new Date(minDate.getFullYear(), minDate.getMonth(), 1);
   };
-  
+
   // Check if next month button should be disabled
   const isNextMonthDisabled = () => {
     if (!maxDate) return false;
-    
+
     const nextMonthDate = new Date(currentMonth);
     nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
     return nextMonthDate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
   };
-  
+
   // Data for calendar rendering
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const daysInMonth = getDaysInMonth(year, month);
   const firstDayOfMonth = getFirstDayOfMonth(year, month);
-  
+
   // Current date to disable past dates
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   // Calendar header
   const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long' });
-  
+
   // Generate calendar days
   const calendarDays = [];
   const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  
+
   // Add empty cells for days before the first day of the month
   for (let i = 0; i < firstDayOfMonth; i++) {
     calendarDays.push(<div key={`empty-${i}`} className="calendar-empty-cell"></div>);
   }
-  
+
   // Add the actual days
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day);
     const isToday = date.toDateString() === today.toDateString();
     const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-    const isAvailable = availableDates.includes(day);
+    const isAvailable = availableDates.some(
+      d => d.getDate() === date.getDate() &&
+        d.getMonth() === date.getMonth() &&
+        d.getFullYear() === date.getFullYear()
+    );
     const isPast = date < today;
-    
+
     // Check if date is within min and max bounds
     const isBeforeMinDate = minDate && date < minDate;
     const isAfterMaxDate = maxDate && date > maxDate;
     const isDisabled = isPast || isBeforeMinDate || isAfterMaxDate || (!isAvailable && availableDates.length > 0);
-    
+
     let dayClass = "calendar-day";
-    
+
     if (isSelected) {
       dayClass += " bg-blue-600 text-white font-bold";
-    } else if (isToday) {
-      dayClass += " bg-blue-100 text-blue-800 font-semibold";
     } else if (isDisabled) {
       dayClass += " text-gray-300 cursor-not-allowed";
     } else if (isAvailable) {
@@ -131,10 +133,10 @@ function ModernDatePicker({
     } else {
       dayClass += " text-gray-600 hover:bg-gray-100 cursor-pointer";
     }
-    
+
     calendarDays.push(
-      <div 
-        key={day} 
+      <div
+        key={day}
         className="calendar-day-wrapper"
         onClick={() => !isDisabled && handleDateClick(day)}
         role="button"
@@ -147,7 +149,7 @@ function ModernDatePicker({
       </div>
     );
   }
-  
+
   return (
     <div className="modern-datepicker">
       <div className="selected-date">
@@ -161,7 +163,7 @@ function ModernDatePicker({
       </div>
       <div className="calendar-container">
         <div className="month-navigation">
-          <button 
+          <button
             disabled={isPrevMonthDisabled()}
             onClick={prevMonth}
             aria-label="Previous month"
@@ -169,7 +171,7 @@ function ModernDatePicker({
             <ChevronLeft className="w-5 h-5" />
           </button>
           <h2>{monthName} {year}</h2>
-          <button 
+          <button
             disabled={isNextMonthDisabled()}
             onClick={nextMonth}
             aria-label="Next month"
@@ -196,6 +198,10 @@ function ModernDatePicker({
         <div className="item">
           <div className="dot bg-blue-600"></div>
           <span>Selected</span>
+        </div>
+        <div className="item passed">
+          <div className="dot passed"></div>
+          <span>Passed</span>
         </div>
         <div className="item">
           <div className="dot bg-gray-300"></div>

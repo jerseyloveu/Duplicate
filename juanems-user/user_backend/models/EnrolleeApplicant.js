@@ -112,7 +112,15 @@ const enrolleeApplicantSchema = new mongoose.Schema({
     type: String,
     enum: ['Incomplete', 'Complete'],
     default: 'Incomplete'
-  }
+  },
+
+    // Exam and Interview Application
+    preferredExamAndInterviewDate: { type: Date },
+    preferredExamAndInterviewApplicationStatus: {
+      type: String,
+      enum: ['Incomplete', 'Complete'],
+      default: 'Incomplete'
+    },
 });
 
 // Password hashing pre-save hook

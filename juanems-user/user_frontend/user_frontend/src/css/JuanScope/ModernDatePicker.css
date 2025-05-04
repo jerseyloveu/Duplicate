@@ -150,12 +150,6 @@
   transform: scale(1.05);
 }
 
-.modern-datepicker .calendar-day.bg-blue-100 {
-  background-color: #dbeafe;
-  color: #1e40af;
-  font-weight: 600;
-}
-
 .modern-datepicker .calendar-day.bg-green-100 {
   background-color: #d1fae5;
   color: #065f46;
@@ -169,6 +163,7 @@
 .modern-datepicker .calendar-day.text-gray-300 {
   color: #d1d5db;
   cursor: not-allowed;
+  background-color: transparent; /* Ensure no background for disabled dates */
 }
 
 .modern-datepicker .calendar-day.text-gray-600 {
@@ -226,4 +221,42 @@
   .modern-datepicker .calendar-container {
     padding: 1rem; /* Slightly reduced for mobile */
   }
+}
+
+/* Add to ModernDatePicker.css */
+.date-error-message {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background-color: #fff4f4;
+  color: #dc3545;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-left: 3px solid #dc3545;
+}
+
+.date-error-message svg {
+  flex-shrink: 0;
+}
+
+/* Style for passed dates */
+.modern-datepicker .passed-date {
+  color: #dc3545 !important;
+  background-color: #ffebee !important;
+  text-decoration: line-through;
+  cursor: not-allowed !important;
+}
+
+/* Update the legend */
+.modern-datepicker .legend .item.passed {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.modern-datepicker .legend .dot.passed {
+  background-color: #ffebee;
+  border: 1px solid #dc3545;
 }
