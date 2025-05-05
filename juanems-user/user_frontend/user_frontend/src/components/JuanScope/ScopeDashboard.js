@@ -294,7 +294,7 @@ function ScopeDashboard() {
                         {userData.middleName && ` ${userData.middleName}`}
                         {` ${userData.lastName}`}
                       </h1>
-                      <p className="scope-welcome-message">Start your application today!</p>
+                      <p className="scope-welcome-message">Start your application today! Current Update</p>
                     </div>
                     <div className="scope-applicant-info">
                       <div className="scope-applicant-icon">
