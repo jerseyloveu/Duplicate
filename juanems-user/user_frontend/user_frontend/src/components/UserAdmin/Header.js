@@ -136,11 +136,11 @@ const Header = () => {
           <IoMdMenu className="menu-icon" />
           <span className="header-text">{department}</span>
         </div>
-        <img
+        {/* <img
           src={SJDEFILogo}
           alt="SJDEFI Logo"
           className="juan-logo-register"
-        />
+        /> */}
         <div className='relative'>
           <div 
             className={`header-section user-profile ${isDropdownOpen ? 'active-profile' : ''}`}

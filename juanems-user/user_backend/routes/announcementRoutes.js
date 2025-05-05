@@ -151,7 +151,7 @@ const validateAnnouncement = (req, res, next) => {
   if (!content) errors.push('Content is required');
   if (!startDate || isNaN(new Date(startDate))) errors.push('Valid start date is required');
   if (!endDate || isNaN(new Date(endDate))) errors.push('Valid end date is required');
-  if (!['All Users', 'Students', 'Faculty', 'Applicants', 'Staff'].includes(audience)) {
+  if (!['All Users', 'Students', 'Faculty', 'Applicants', 'Staffs, Admissions, Registrar, Accounting, IT, Administration'].includes(audience)) {
     errors.push('Invalid audience type');
   }
 
