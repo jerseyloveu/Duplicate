@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileAlt, faThumbsUp } from '@fortawesome/free-solid-svg-icons';
 import DatePicker from 'react-datepicker';
@@ -7,20 +7,11 @@ import '../../css/JuanScope/FamilyRecordModal.css';
 
 function WaiverFormModal({ isOpen, onClose, onSubmit, requirements, userData }) {
   const [waiverData, setWaiverData] = useState({
-    selectedRequirements: requirements.filter(req => req.waived).map(req => req.id),
-    reason: requirements.find(req => req.waived && req.waiverDetails)?.waiverDetails?.reason || '',
-    promiseDate: requirements.find(req => req.waived && req.waiverDetails)?.waiverDetails?.promiseDate || null,
+    selectedRequirements: [],
+    reason: '',
+    promiseDate: null,
   });
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    // Update waiverData when requirements change
-    setWaiverData({
-      selectedRequirements: requirements.filter(req => req.waived).map(req => req.id),
-      reason: requirements.find(req => req.waived && req.waiverDetails)?.waiverDetails?.reason || '',
-      promiseDate: requirements.find(req => req.waived && req.waiverDetails)?.waiverDetails?.promiseDate || null,
-    });
-  }, [requirements]);
 
   const handleCheckboxChange = (reqId) => {
     setWaiverData((prev) => {
