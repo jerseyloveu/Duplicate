@@ -959,3 +959,14 @@
     width: 8px !important;
     height: 8px !important;
   }
+
+  .verification-loading {
+    color: #4285F4;
+    margin: 1rem 0;
+  }
+  .verification-result.valid {
+    color: #34A853;
+  }
+  .verification-result.invalid {
+    color: #EA4335;
+  }
