@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const enrolleeApplicantsRoute = require('./routes/enrolleeApplicants');
+const pdfRoutes = require('./routes/pdfRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
@@ -92,6 +93,7 @@ const verifyCaptcha = async (token) => {
 app.use('/api/dropdown', require('./routes/dropdownRoutes'));
 app.use('/api/enrollee-applicants', enrolleeApplicantsRoute);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api', pdfRoutes);
 
 // Routes (Admin)
 app.use('/api/admin', accountRoutes);
