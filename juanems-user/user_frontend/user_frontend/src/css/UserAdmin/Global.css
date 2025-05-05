@@ -139,3 +139,7 @@ p {
     text-align: center;
     padding: 5px;
   }
+
+  .main-content {
+    background-color: #f2f7fA;
+  }
