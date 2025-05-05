@@ -1,35 +1,35 @@
 const mongoose = require('mongoose');
 
 const announcementSchema = new mongoose.Schema({
-  subject: { 
-    type: String, 
+  subject: {
+    type: String,
     required: [true, 'Subject is required'],
     trim: true
   },
-  audience: { 
-    type: String, 
+  audience: {
+    type: String,
     required: [true, 'Audience is required'],
-    enum: ['All Users', 'Students', 'Faculty', 'Applicants', 'Staff'],
+    enum: ['All Users', 'Students', 'Faculty', 'Applicants', 'Staffs', 'Admissions', 'Registrar', 'Accounting', 'IT', 'Administration'],
     default: 'All Users'
   },
-  content: { 
-    type: String, 
+  content: {
+    type: String,
     required: [true, 'Content is required'],
     trim: true
   },
-  status: { 
-    type: String, 
-    enum: ['Active', 'Inactive', 'Draft'], 
-    default: 'Active',
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Draft'],
+    default: 'Draft',
     required: true
   },
-  startDate: { 
-    type: Date, 
+  startDate: {
+    type: Date,
     required: [true, 'Start date is required'],
     default: Date.now
   },
-  endDate: { 
-    type: Date, 
+  endDate: {
+    type: Date,
     required: [true, 'End date is required'],
     validate: {
       validator: function(value) {
@@ -38,18 +38,23 @@ const announcementSchema = new mongoose.Schema({
       message: 'End date must be after start date'
     }
   },
-  announcer: { 
-    type: String, 
+  announcer: {
+    type: String,
     required: [true, 'Announcer is required'],
     trim: true
   },
-  createdAt: { 
-    type: Date, 
+  priority: {
+    type: String,
+    enum: ['important', 'urgent', 'info', undefined],
+    default: undefined
+  },
+  createdAt: {
+    type: Date,
     default: Date.now,
     immutable: true
   },
-  updatedAt: { 
-    type: Date, 
+  updatedAt: {
+    type: Date,
     default: Date.now
   }
 });

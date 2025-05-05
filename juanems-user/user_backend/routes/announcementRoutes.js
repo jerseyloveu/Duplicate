@@ -151,7 +151,15 @@ const validateAnnouncement = (req, res, next) => {
   if (!content) errors.push('Content is required');
   if (!startDate || isNaN(new Date(startDate))) errors.push('Valid start date is required');
   if (!endDate || isNaN(new Date(endDate))) errors.push('Valid end date is required');
-  if (!['All Users', 'Students', 'Faculty', 'Applicants', 'Staffs, Admissions, Registrar, Accounting, IT, Administration'].includes(audience)) {
+  
+  // Fixed validation to match schema enum values
+  const validAudiences = [
+    'All Users', 'Students', 'Faculty', 'Applicants', 
+    'Staffs', 'Admissions', 'Registrar', 'Accounting', 
+    'IT', 'Administration'
+  ];
+  
+  if (!validAudiences.includes(audience)) {
     errors.push('Invalid audience type');
   }
 
@@ -165,14 +173,37 @@ const validateAnnouncement = (req, res, next) => {
   next();
 };
 
-router.post('/', validateAnnouncement, async (req, res) => {
+// Utility: remove fields with null or undefined values
+const cleanObject = (obj) => {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== null && v !== undefined)
+  );
+};
+
+router.post('/create-announcement', validateAnnouncement, async (req, res) => {
   try {
+    console.log('Request body:', req.body);
+    const cleanedBody = cleanObject(req.body);
+
+    const now = new Date();
+    const startDate = new Date(cleanedBody.startDate);
+    const endDate = new Date(cleanedBody.endDate);
+
+    let status = 'Draft'; // default
+
+    if (now >= startDate && now <= endDate) {
+      status = 'Active';
+    } else if (now > endDate) {
+      status = 'Inactive';
+    }
+
     const newAnnouncement = new Announcement({
-      ...req.body,
-      announcer: req.user?.id || 'System'
+      ...cleanedBody,
+      status
     });
 
     await newAnnouncement.save();
+
     res.status(201).json({ 
       success: true,
       announcement: newAnnouncement 

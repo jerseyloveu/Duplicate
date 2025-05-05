@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, List, Skeleton, Form, message, Input, DatePicker, Select, Divider, Card, Typography, Badge, Tag, Tooltip, Radio} from 'antd';
+import { Avatar, Button, List, Skeleton, Form, message, Input, DatePicker, Select, Divider, Card, Typography, Badge, Tag, Tooltip, Radio } from 'antd';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import utc from 'dayjs/plugin/utc';
+import axios from 'axios'; // Import axios for API calls
 
 import { MdOutlineKeyboardArrowLeft } from 'react-icons/md';
 import { FaUser, FaEye } from "react-icons/fa";
@@ -32,8 +33,10 @@ const CreateAnnouncementsPage = () => {
   const [userName, setUserName] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState({});
-  const [showPrioritySelector, setShowPrioritySelector] = useState(false);
   const [form] = Form.useForm();
+
+  // Removed the audiencesWithPriority array and canHavePriority function
+  // since we want all audiences to have priority badges
 
   useEffect(() => {
     // Check if user is logged in
@@ -50,7 +53,7 @@ const CreateAnnouncementsPage = () => {
     const fakeDataUrl = `https://660d2bd96ddfa2943b33731c.mockapi.io/api/users?page=${currentPage}&limit=${PAGE_SIZE}`;
     return fetch(fakeDataUrl).then(res => res.json());
   };
-  
+
   useEffect(() => {
     fetchData(page).then(res => {
       const results = Array.isArray(res) ? res : [];
@@ -59,7 +62,7 @@ const CreateAnnouncementsPage = () => {
       setList(results);
     });
   }, []);
-  
+
   const onLoadMore = () => {
     setLoading(true);
     setList(data.concat(Array.from({ length: PAGE_SIZE }).map(() => ({ loading: true }))));
@@ -74,7 +77,7 @@ const CreateAnnouncementsPage = () => {
       window.dispatchEvent(new Event('resize'));
     });
   };
-  
+
   const loadMore =
     !initLoading && !loading ? (
       <div className="load-more-container">
@@ -105,11 +108,63 @@ const CreateAnnouncementsPage = () => {
     message.success('Form cleared successfully');
   };
 
-  const handleSubmit = (values) => {
-    console.log('Submitted values:', values);
-    message.success('Announcement posted successfully!');
-    form.resetFields();
-    setShowPreview(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      console.log('Submitting:', values);
+
+      message.loading('Posting announcement...', 0);
+
+      // Extract dateRange from form values and format it properly
+      const { dateRange, ...otherValues } = values;
+
+      // Create announcement data with proper startDate and endDate fields
+      const announcementData = {
+        ...otherValues,
+        startDate: dateRange[0].toISOString(),  // Convert the first date to ISO string
+        endDate: dateRange[1].toISOString(),    // Convert the second date to ISO string
+        announcer: userName || 'System'
+      };
+
+      // Remove the dateRange field as it's not expected by the backend
+      // (it's now replaced with startDate and endDate)
+
+      const response = await fetch('/api/announcements/create-announcement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(announcementData)
+      });
+
+      const data = await response.json();
+
+      message.destroy();
+
+      if (response.ok && data.success) {
+        message.success('Announcement posted successfully!');
+        form.resetFields();
+        setShowPreview(false);
+
+        // Optionally refresh the announcement list
+        // fetchAnnouncements();
+      } else {
+        message.error(data.message || 'Failed to post announcement');
+      }
+    } catch (error) {
+      message.destroy();
+      console.error('Error posting announcement:', error);
+
+      if (error.response && error.response.data && error.response.data.errors) {
+        // Display specific validation errors from backend
+        const errorMessages = error.response.data.errors.join(', ');
+        message.error(`Validation failed: ${errorMessages}`);
+      } else {
+        message.error('Failed to post announcement. Please try again.');
+      }
+    }
   };
 
   const getAudienceColor = (audience) => {
@@ -130,6 +185,16 @@ const CreateAnnouncementsPage = () => {
 
   const renderAudienceTag = (audience) => {
     return <Tag color={getAudienceColor(audience)}>{audience}</Tag>;
+  };
+
+  // Function to get priority badge color
+  const getPriorityColor = (priority) => {
+    const colors = {
+      'important': 'red',
+      'urgent': 'orange',
+      'info': 'blue'
+    };
+    return colors[priority] || 'blue';
   };
 
   return (
@@ -205,10 +270,10 @@ const CreateAnnouncementsPage = () => {
               </div>
             </Card>
           </div>
-          
+
           <div className='column announcement-form-container'>
-            <Card 
-              bordered={false} 
+            <Card
+              bordered={false}
               className='write-announcement-card'
               title={
                 <div className="announcement-postedby">
@@ -224,7 +289,6 @@ const CreateAnnouncementsPage = () => {
                 <Form
                   form={form}
                   layout="vertical"
-                  onFinish={handleSubmit}
                   className="announcement-form"
                 >
                   <Form.Item
@@ -245,18 +309,17 @@ const CreateAnnouncementsPage = () => {
                       <Select
                         placeholder="Select the target audience"
                         options={[
+                          { value: 'All Users', label: 'All Users' },
                           { value: 'Applicants', label: 'Applicants' },
                           { value: 'Students', label: 'Students' },
-                          { value: 'Staffs', label: 'Staffs' },
                           { value: 'Faculty', label: 'Faculty' },
+                          { value: 'Staffs', label: 'Staffs' },
                           { value: 'Admissions', label: 'Admissions Dept.' },
                           { value: 'Registrar', label: 'Registrar Dept.' },
                           { value: 'Accounting', label: 'Accounting Dept.' },
                           { value: 'IT', label: 'IT Dept.' },
                           { value: 'Administration', label: 'Administration Dept.' },
-                          { value: 'All Users', label: 'All Users' },
                         ]}
-                        onChange={(value) => setShowPrioritySelector(value === 'Staffs' || value === 'Admissions' || value === 'Registrar' || value === 'Accounting' || value === 'IT' || value === 'Administration')}
                       />
                     </Form.Item>
 
@@ -266,30 +329,35 @@ const CreateAnnouncementsPage = () => {
                       rules={[{ required: true, message: 'Please enter date range!' }]}
                       className="date-range-picker"
                     >
-                      <DatePicker.RangePicker style={{ width: '100%' }} />
+                      <DatePicker.RangePicker
+                        style={{ width: '100%' }}
+                        disabledDate={(current) => {
+                          // Disable all dates before today
+                          return current && current < dayjs().startOf('day');
+                        }}
+                      />
                     </Form.Item>
                   </div>
-                  
-                  {showPrioritySelector && (
-                    <Form.Item
-                      label="Priority Level"
-                      name="priority"
-                      rules={[{ required: true, message: 'Please select a priority level!' }]}
-                      className="priority-selector"
-                    >
-                      <Radio.Group buttonStyle="solid">
-                        <Radio.Button value="important" className="priority-important">
-                          <Badge color="#f5222d" text="Important" />
-                        </Radio.Button>
-                        <Radio.Button value="urgent" className="priority-urgent">
-                          <Badge color="#fa8c16" text="Urgent" />
-                        </Radio.Button>
-                        <Radio.Button value="info" className="priority-info">
-                          <Badge color="#1890ff" text="Info" />
-                        </Radio.Button>
-                      </Radio.Group>
-                    </Form.Item>
-                  )}
+
+                  {/* Removed conditional rendering - now showing priority selector for all audiences */}
+                  <Form.Item
+                    label="Badge (Priority Level)"
+                    name="priority"
+                    rules={[{ required: true, message: 'Please select a priority level!' }]}
+                    className="priority-selector"
+                  >
+                    <Radio.Group buttonStyle="solid">
+                      <Radio.Button value="important" className="priority-important">
+                        <Badge color="#f5222d" text="Important" />
+                      </Radio.Button>
+                      <Radio.Button value="urgent" className="priority-urgent">
+                        <Badge color="#fa8c16" text="Urgent" />
+                      </Radio.Button>
+                      <Radio.Button value="info" className="priority-info">
+                        <Badge color="#1890ff" text="Info" />
+                      </Radio.Button>
+                    </Radio.Group>
+                  </Form.Item>
 
                   <Form.Item
                     label="Content"
@@ -302,7 +370,7 @@ const CreateAnnouncementsPage = () => {
                   <div className="form-actions">
                     <Button onClick={handleClearForm}>Clear</Button>
                     <Button onClick={handlePreview} icon={<FaEye />}>Preview</Button>
-                    <Button type="primary" htmlType="submit">Post Announcement</Button>
+                    <Button type="primary" onClick={handleSubmit}>Post Announcement</Button>
                   </div>
                 </Form>
               ) : (
@@ -311,11 +379,9 @@ const CreateAnnouncementsPage = () => {
                     <Title level={4}>{previewData.subject}</Title>
                     <div className="preview-meta">
                       {previewData.audience && renderAudienceTag(previewData.audience)}
-                      {previewData.audience === 'Staffs' && previewData.priority && (
-                        <Tag color={
-                          previewData.priority === 'important' ? 'red' : 
-                          previewData.priority === 'urgent' ? 'orange' : 'blue'
-                        }>
+                      {/* Removed conditional check for priority badge - now showing for all audiences */}
+                      {previewData.priority && (
+                        <Tag color={getPriorityColor(previewData.priority)}>
                           {previewData.priority.charAt(0).toUpperCase() + previewData.priority.slice(1)}
                         </Tag>
                       )}
@@ -335,7 +401,7 @@ const CreateAnnouncementsPage = () => {
                   <Divider />
                   <div className="preview-actions">
                     <Button onClick={() => setShowPreview(false)}>Edit</Button>
-                    <Button type="primary" onClick={() => handleSubmit(previewData)}>Confirm & Post</Button>
+                    <Button type="primary" onClick={handleSubmit}>Confirm & Post</Button>
                   </div>
                 </div>
               )}
