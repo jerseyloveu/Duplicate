@@ -69,7 +69,6 @@ function App() {
           <Route path="/register3" element={<Register3 />} /> 
           <Route path="/verify-email" element={<VerifyEmail />} /> 
           <Route path="/scope-login" element={<ScopeLogin />} /> 
-          <Route path="/register" element={<Register />} /> {/* Add this new route */}
           <Route path="/scope-dashboard" element={<SessionManager><ScopeDashboard /></SessionManager>}/>
           <Route path="/scope-announcements" element={<SessionManager><ScopeAnnouncement /></SessionManager>}/>
           <Route path="/scope-registration" element={<SessionManager><ScopeRegistration1 /></SessionManager>}/>
