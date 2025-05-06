@@ -37,6 +37,30 @@ router.get('/academic-terms', async (req, res) => {
   }
 });
 
+// @route   GET /api/dropdown/exam-dates
+router.get('/exam-dates', async (req, res) => {
+  try {
+    const activeTerm = await AcademicTerm.findOne({ status: "Active" });
+    if (!activeTerm) {
+      return res.status(404).json({ error: "No active academic term found" });
+    }
+
+    const availableDates = activeTerm.examInterviewDates
+      .filter(date => date.dateStatus === "Available")
+      .map(date => ({
+        date: date.date,
+        maxCapacity: date.maxCapacity,
+        currentCapacity: date.currentCapacity
+      }));
+
+    console.log("Available exam dates fetched:", availableDates);
+    res.json(availableDates);
+  } catch (err) {
+    console.error("Error fetching exam dates:", err);
+    res.status(500).json({ error: "Failed to fetch exam dates" });
+  }
+});
+
 // @route   GET /api/dropdown/academic-strands
 router.get('/academic-strands', async (req, res) => {
   try {

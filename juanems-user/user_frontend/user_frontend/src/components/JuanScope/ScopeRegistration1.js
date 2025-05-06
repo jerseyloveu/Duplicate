@@ -10,7 +10,6 @@ import SessionManager from '../JuanScope/SessionManager';
 import SideNavigation from './SideNavigation';
 import axios from 'axios';
 
-// List of countries (same as Register.js)
 const countries = [
   { value: 'afghanistan', label: 'Afghanistan' },
   { value: 'albania', label: 'Albania' },
@@ -210,8 +209,6 @@ const countries = [
   { value: 'zimbabwe', label: 'Zimbabwe' },
 ];
 
-
-// Prefix and Suffix options
 const prefixOptions = [
   { value: '', label: 'None' },
   { value: 'Mr.', label: 'Mr.' },
@@ -230,7 +227,6 @@ const suffixOptions = [
   { value: 'IV', label: 'IV' },
 ];
 
-// Religion options
 const religionOptions = [
   { value: '', label: 'Select Religion' },
   { value: 'Roman Catholic', label: 'Roman Catholic' },
@@ -239,7 +235,6 @@ const religionOptions = [
   { value: 'Other/None', label: 'Other/None' },
 ];
 
-// Custom styles for react-select
 const customSelectStyles = {
   control: (provided, state) => ({
     ...provided,
@@ -282,7 +277,6 @@ const customSelectStyles = {
   }),
 };
 
-// Fuse.js configuration
 const fuseOptions = {
   keys: ['label', 'value'],
   threshold: 0.4,
@@ -294,28 +288,32 @@ function ScopeRegistration1() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userData, setUserData] = useState({});
+  const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unviewedCount, setUnviewedCount] = useState(0);
-  const [formData, setFormData] = useState({
-    prefix: '',
-    lastName: '',
-    firstName: '',
-    middleName: '',
-    suffix: '',
-    gender: '',
-    lrnNo: '',
-    civilStatus: '',
-    religion: '',
-    birthDate: '',
-    countryOfBirth: '',
-    birthPlaceCity: '',
-    birthPlaceProvince: '',
-    nationality: '',
-    ...location.state?.formData, // Initialize with data from navigation state
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('registrationData');
+    return savedData ? JSON.parse(savedData) : {
+      prefix: '',
+      lastName: '',
+      firstName: '',
+      middleName: '',
+      suffix: '',
+      gender: '',
+      lrnNo: '',
+      civilStatus: '',
+      religion: '',
+      birthDate: '',
+      countryOfBirth: '',
+      birthPlaceCity: '',
+      birthPlaceProvince: '',
+      nationality: '',
+      ...location.state?.formData,
+    };
   });
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -324,10 +322,8 @@ function ScopeRegistration1() {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
 
-  // Initialize Fuse.js
   const fuse = useMemo(() => new Fuse(countries, fuseOptions), []);
 
-  // Update current date and time every minute
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -335,7 +331,6 @@ function ScopeRegistration1() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data and verify session
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -391,7 +386,6 @@ function ScopeRegistration1() {
 
         const userData = await userResponse.json();
 
-        // Fetch additional user details for ScopeRegistration1
         const applicantResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
@@ -400,7 +394,14 @@ function ScopeRegistration1() {
         }
         const applicantData = await applicantResponse.json();
 
-        // Update local storage
+        const registrationResponse = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
+        );
+        if (!registrationResponse.ok) {
+          throw new Error('Failed to fetch registration status');
+        }
+        const registrationData = await registrationResponse.json();
+
         localStorage.setItem('applicantID', applicantData.applicantID || userData.applicantID);
         localStorage.setItem('firstName', applicantData.firstName || userData.firstName);
         localStorage.setItem('middleName', applicantData.middleName || '');
@@ -419,7 +420,14 @@ function ScopeRegistration1() {
           applicantID: applicantData.applicantID || userData.applicantID || 'N/A',
         });
 
-        // Initialize form data with fetched values, prioritizing navigation state
+        setRegistrationStatus(registrationData.registrationStatus || 'Incomplete');
+
+        // Navigate to RegistrationStatusComplete if registration is Complete
+        if (registrationData.registrationStatus === 'Complete') {
+          navigate('/scope-registration-status-complete');
+          return;
+        }
+
         setFormData((prev) => ({
           ...prev,
           prefix: location.state?.formData?.prefix || applicantData.prefix || '',
@@ -438,7 +446,6 @@ function ScopeRegistration1() {
           nationality: location.state?.formData?.nationality || applicantData.nationality || '',
         }));
 
-        // Fetch unviewed announcements count
         const announcementsResponse = await axios.get('/api/announcements', {
           params: {
             userEmail,
@@ -458,10 +465,9 @@ function ScopeRegistration1() {
 
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
-    return () => clearInterval(refreshInterval); // Changed from refInterval to refreshInterval
+    return () => clearInterval(refreshInterval);
   }, [navigate, location.state]);
 
-  // Periodic account status check
   useEffect(() => {
     const checkAccountStatus = async () => {
       try {
@@ -497,7 +503,6 @@ function ScopeRegistration1() {
     return () => clearInterval(interval);
   }, [navigate]);
 
-  // Handle unsaved changes warning
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isFormDirty) {
@@ -557,11 +562,10 @@ function ScopeRegistration1() {
   };
 
   const handleNext = () => {
-    if (!validateForm()) {
-      return;
+    if (validateForm()) {
+      localStorage.setItem('registrationData', JSON.stringify(formData));
+      navigate('/scope-registration-2', { state: { formData } });
     }
-    setIsFormDirty(false);
-    navigate('/scope-registration-2', { state: { formData } });
   };
 
   const toggleSidebar = () => {
@@ -575,28 +579,21 @@ function ScopeRegistration1() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let sanitizedValue = value.replace(/<[^>]*>?/gm, '').replace(/[^a-zA-Z\s]/g, '');
-
-    // For text fields, capitalize first letter and enforce character limits
     if (['birthPlaceCity', 'birthPlaceProvince'].includes(name)) {
       sanitizedValue = sanitizedValue.charAt(0).toUpperCase() + sanitizedValue.slice(1);
       if (sanitizedValue.length > 50) return;
     }
-
-    // For LRN, allow only digits
     if (name === 'lrnNo') {
       sanitizedValue = value.replace(/[^0-9]/g, '').slice(0, 12);
     }
-
     setFormData({
       ...formData,
       [name]: sanitizedValue,
     });
-
     setTouchedFields({
       ...touchedFields,
       [name]: true,
     });
-
     setIsFormDirty(true);
   };
 
@@ -605,12 +602,10 @@ function ScopeRegistration1() {
       ...formData,
       [name]: selectedOption ? selectedOption.value : '',
     });
-
     setTouchedFields({
       ...touchedFields,
       [name]: true,
     });
-
     setIsFormDirty(true);
   };
 
@@ -619,7 +614,6 @@ function ScopeRegistration1() {
       setCountryOptions(countries);
       return;
     }
-
     const results = fuse.search(inputValue);
     const formattedResults = results.map((result) => result.item);
     setCountryOptions(formattedResults.length > 0 ? formattedResults : countries);
@@ -661,17 +655,14 @@ function ScopeRegistration1() {
     }
   };
 
-  // Real-time validation
   useEffect(() => {
     const newErrors = {};
-
     Object.keys(touchedFields).forEach((field) => {
       if (touchedFields[field]) {
         const error = validateField(field, formData[field]);
         if (error) newErrors[field] = error;
       }
     });
-
     setErrors(newErrors);
   }, [formData, touchedFields]);
 
@@ -690,12 +681,10 @@ function ScopeRegistration1() {
       'birthPlaceProvince',
       'nationality',
     ];
-
     requiredFields.forEach((field) => {
       const error = validateField(field, formData[field]);
       if (error) newErrors[field] = error;
     });
-
     setErrors(newErrors);
     setTouchedFields(
       requiredFields.reduce((acc, field) => ({ ...acc, [field]: true }), {})
@@ -715,7 +704,6 @@ function ScopeRegistration1() {
     setNextLocation(null);
   };
 
-  // Get selected values for dropdowns
   const selectedPrefix = prefixOptions.find((option) => option.value === formData.prefix);
   const selectedSuffix = suffixOptions.find((option) => option.value === formData.suffix);
   const selectedReligion = religionOptions.find((option) => option.value === formData.religion);
@@ -751,6 +739,7 @@ function ScopeRegistration1() {
         <div className="scope-registration-content">
           <SideNavigation
             userData={userData}
+            registrationStatus={registrationStatus}
             onNavigate={closeSidebar}
             isOpen={sidebarOpen}
           />

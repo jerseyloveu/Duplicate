@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGraduationCap, faExclamationCircle, faArrowLeft, faTimes, faBars, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import SJDEFILogo from '../../images/SJDEFILogo.png';
@@ -8,21 +8,28 @@ import SideNavigation from './SideNavigation';
 
 function ScopeRegistration4() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    elementarySchoolName: '',
-    elementaryLastYearAttended: '',
-    elementaryGeneralAverage: '',
-    elementaryRemarks: '',
-    juniorHighSchoolName: '',
-    juniorHighLastYearAttended: '',
-    juniorHighGeneralAverage: '',
-    juniorHighRemarks: '',
+  const [formData, setFormData] = useState(() => {
+    const savedData = localStorage.getItem('registrationData');
+    const initialData = savedData ? JSON.parse(savedData) : {};
+    return {
+      elementarySchoolName: '',
+      elementaryLastYearAttended: '',
+      elementaryGeneralAverage: '',
+      elementaryRemarks: '',
+      juniorHighSchoolName: '',
+      juniorHighLastYearAttended: '',
+      juniorHighGeneralAverage: '',
+      juniorHighRemarks: '',
+      ...initialData,
+      ...location.state?.formData,
+    };
   });
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
@@ -115,6 +122,29 @@ function ScopeRegistration4() {
           applicantID: userData.applicantID || 'N/A',
         });
 
+        // Fetch educational background data
+        try {
+          const educationResponse = await fetch(
+            `http://localhost:5000/api/enrollee-applicants/education-details/${userEmail}`
+          );
+          if (educationResponse.ok) {
+            const educationData = await educationResponse.json();
+            setFormData((prev) => ({
+              ...prev,
+              elementarySchoolName: educationData.elementarySchoolName || prev.elementarySchoolName || '',
+              elementaryLastYearAttended: educationData.elementaryLastYearAttended || prev.elementaryLastYearAttended || '',
+              elementaryGeneralAverage: educationData.elementaryGeneralAverage || prev.elementaryGeneralAverage || '',
+              elementaryRemarks: educationData.elementaryRemarks || prev.elementaryRemarks || '',
+              juniorHighSchoolName: educationData.juniorHighSchoolName || prev.juniorHighSchoolName || '',
+              juniorHighLastYearAttended: educationData.juniorHighLastYearAttended || prev.juniorHighLastYearAttended || '',
+              juniorHighGeneralAverage: educationData.juniorHighGeneralAverage || prev.juniorHighGeneralAverage || '',
+              juniorHighRemarks: educationData.juniorHighRemarks || prev.juniorHighRemarks || '',
+            }));
+          }
+        } catch (err) {
+          console.warn('Education details fetch failed, using navigation state:', err);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('Error loading registration data:', err);
@@ -126,7 +156,7 @@ function ScopeRegistration4() {
     fetchUserData();
     const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   // Periodic account status check
   useEffect(() => {
@@ -219,26 +249,20 @@ function ScopeRegistration4() {
       setNextLocation('/scope-announcements');
       setShowUnsavedModal(true);
     } else {
-      navigate('/scope-announcements');
+      navigate('/scope-announcements', { state: { formData } });
     }
   };
 
   const handleNext = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-5');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-5');
+    if (validateForm()) {
+      localStorage.setItem('registrationData', JSON.stringify(formData));
+      navigate('/scope-registration-5', { state: { formData } });
     }
   };
 
   const handleBack = () => {
-    if (isFormDirty) {
-      setNextLocation('/scope-registration-3');
-      setShowUnsavedModal(true);
-    } else {
-      navigate('/scope-registration-3');
-    }
+    localStorage.setItem('registrationData', JSON.stringify(formData));
+    navigate('/scope-registration-3', { state: { formData } });
   };
 
   const toggleSidebar = () => {
@@ -296,33 +320,36 @@ function ScopeRegistration4() {
   };
 
   const validateField = (name, value) => {
+    // Ensure value is a string to safely check length and other properties
+    const safeValue = value == null ? '' : String(value);
+
     switch (name) {
       case 'elementarySchoolName':
       case 'juniorHighSchoolName':
-        if (!value) return 'School Name is required';
-        if (value.length < 2) return 'School Name must be at least 2 characters';
-        if (value.length > 100) return 'School Name cannot exceed 100 characters';
+        if (!safeValue) return 'School Name is required';
+        if (safeValue.length < 2) return 'School Name must be at least 2 characters';
+        if (safeValue.length > 100) return 'School Name cannot exceed 100 characters';
         return null;
       case 'elementaryLastYearAttended':
       case 'juniorHighLastYearAttended':
-        if (!value) return 'Last Year Attended is required';
-        if (!/^\d{4}-\d{4}$/.test(value)) return 'Format must be YYYY-YYYY';
-        const [startYear, endYear] = value.split('-').map(Number);
+        if (!safeValue) return 'Last Year Attended is required';
+        if (!/^\d{4}-\d{4}$/.test(safeValue)) return 'Format must be YYYY-YYYY';
+        const [startYear, endYear] = safeValue.split('-').map(Number);
         if (endYear !== startYear + 1) return 'End year must be one year after start year';
         if (startYear < 1900 || endYear > new Date().getFullYear() + 1)
           return 'Invalid year range';
         return null;
       case 'elementaryGeneralAverage':
       case 'juniorHighGeneralAverage':
-        if (!value) return 'General Average is required';
-        if (!/^\d{1,3}(\.\d{1,2})?$/.test(value))
+        if (!safeValue) return 'General Average is required';
+        if (!/^\d{1,3}(\.\d{1,2})?$/.test(safeValue))
           return 'Must be a valid number (e.g., 85 or 85.5)';
-        const numValue = parseFloat(value);
+        const numValue = parseFloat(safeValue);
         if (numValue < 0 || numValue > 100) return 'Must be between 0 and 100';
         return null;
       case 'elementaryRemarks':
       case 'juniorHighRemarks':
-        if (value.length > 250) return 'Remarks cannot exceed 250 characters';
+        if (safeValue.length > 250) return 'Remarks cannot exceed 250 characters';
         return null;
       default:
         return null;
@@ -368,18 +395,33 @@ function ScopeRegistration4() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      alert('Educational background saved successfully!');
-      setIsFormDirty(false);
+      try {
+        const userEmail = localStorage.getItem('userEmail');
+        await fetch('http://localhost:5000/api/enrollee-applicants/education-details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            ...formData,
+          }),
+        });
+        alert('Educational background saved successfully!');
+        setIsFormDirty(false);
+      } catch (err) {
+        setError('Failed to save educational background.');
+      }
     }
   };
 
   const handleModalConfirm = () => {
     setShowUnsavedModal(false);
     if (nextLocation) {
-      navigate(nextLocation);
+      navigate(nextLocation, { state: { formData } });
     }
   };
 
@@ -712,7 +754,7 @@ function ScopeRegistration4() {
                                     })
                                   }
                                   className={errors.juniorHighLastYearAttended ? 'input-error' : ''}
-                                  placeholder="A.Y. YYYY-YYYY"
+                                  placeholder="YYYY-YYYY"
                                   maxLength={9}
                                 />
                                 {errors.juniorHighLastYearAttended && (
@@ -803,9 +845,6 @@ function ScopeRegistration4() {
                         Back
                       </button>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button type="submit" className="save-button">
-                          Save
-                        </button>
                         <button type="button" className="next-button" onClick={handleNext}>
                           Next
                         </button>

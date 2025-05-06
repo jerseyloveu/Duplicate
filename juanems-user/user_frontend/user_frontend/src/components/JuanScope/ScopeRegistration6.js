@@ -5,10 +5,12 @@ import { faArrowLeft, faTimes, faBars } from '@fortawesome/free-solid-svg-icons'
 import SJDEFILogo from '../../images/SJDEFILogo.png';
 import '../../css/JuanScope/ScopeRegistration1.css';
 import SideNavigation from './SideNavigation';
+import RegistrationSummary from './RegistrationSummary';
 
 function ScopeRegistration6() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({});
+  const [registrationStatus, setRegistrationStatus] = useState('Incomplete');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
@@ -17,6 +19,7 @@ function ScopeRegistration6() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [nextLocation, setNextLocation] = useState(null);
+  const [formData, setFormData] = useState({});
 
   // Update current date and time every minute
   useEffect(() => {
@@ -26,7 +29,7 @@ function ScopeRegistration6() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch user data and verify session
+  // Fetch user data, registration status, and verify session
   useEffect(() => {
     const userEmail = localStorage.getItem('userEmail');
     const createdAt = localStorage.getItem('createdAt');
@@ -47,6 +50,7 @@ function ScopeRegistration6() {
           return;
         }
 
+        // Verify account status
         const verificationResponse = await fetch(
           `http://localhost:5000/api/enrollee-applicants/verification-status/${userEmail}`
         );
@@ -70,35 +74,73 @@ function ScopeRegistration6() {
           return;
         }
 
+        // Fetch user data
         const userResponse = await fetch(
-          `http://localhost:5000/api/enrollee-applicants/activity/${userEmail}?createdAt=${encodeURIComponent(
-            createdAt
-          )}`
+          `http://localhost:5000/api/enrollee-applicants/personal-details/${userEmail}`
         );
 
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
 
-        const userData = await userResponse.json();
+        const userDataResponse = await userResponse.json();
 
         // Update local storage
-        localStorage.setItem('applicantID', userData.applicantID);
-        localStorage.setItem('firstName', userData.firstName);
-        localStorage.setItem('middleName', '');
-        localStorage.setItem('lastName', userData.lastName);
-        localStorage.setItem('dob', userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '');
-        localStorage.setItem('nationality', userData.nationality || '');
+        localStorage.setItem('applicantID', userDataResponse.applicantID);
+        localStorage.setItem('firstName', userDataResponse.firstName);
+        localStorage.setItem('middleName', userDataResponse.middleName || '');
+        localStorage.setItem('lastName', userDataResponse.lastName);
+        localStorage.setItem('dob', userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '');
+        localStorage.setItem('nationality', userDataResponse.nationality || '');
+        localStorage.setItem('academicYear', userDataResponse.academicYear || '');
+        localStorage.setItem('academicStrand', userDataResponse.academicStrand || '');
+        localStorage.setItem('academicTerm', userDataResponse.academicTerm || '');
+        localStorage.setItem('academicLevel', userDataResponse.academicLevel || '');
 
         setUserData({
           email: userEmail,
-          firstName: userData.firstName || 'User',
-          middleName: '',
-          lastName: userData.lastName || '',
-          dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : '',
-          nationality: userData.nationality || '',
-          studentID: userData.studentID || 'N/A',
-          applicantID: userData.applicantID || 'N/A',
+          firstName: userDataResponse.firstName || 'User',
+          middleName: userDataResponse.middleName || '',
+          lastName: userDataResponse.lastName || '',
+          dob: userDataResponse.dob ? new Date(userDataResponse.dob).toISOString().split('T')[0] : '',
+          nationality: userDataResponse.nationality || '',
+          studentID: userDataResponse.studentID || 'N/A',
+          applicantID: userDataResponse.applicantID || 'N/A',
+          academicYear: userDataResponse.academicYear || '',
+          academicStrand: userDataResponse.academicStrand || '',
+          academicTerm: userDataResponse.academicTerm || '',
+          academicLevel: userDataResponse.academicLevel || '',
+        });
+
+        setRegistrationStatus(userDataResponse.registrationStatus || 'Incomplete');
+
+        // If registration is complete, redirect to registration-status-complete
+        if (userDataResponse.registrationStatus === 'Complete') {
+          navigate('/scope-registration-status-complete');
+          return;
+        }
+
+        // Fetch all registration data
+        const registrationDataLocal = localStorage.getItem('registrationData');
+        const contacts = localStorage.getItem('familyContacts');
+        let parsedRegistrationData, parsedContacts;
+        try {
+          parsedRegistrationData = registrationDataLocal ? JSON.parse(registrationDataLocal) : {};
+          parsedContacts = contacts ? JSON.parse(contacts) : [];
+        } catch (parseError) {
+          console.error('Error parsing localStorage data:', parseError);
+          setError('Invalid registration data. Please restart the registration process.');
+          setLoading(false);
+          return;
+        }
+
+        setFormData({
+          ...parsedRegistrationData,
+          contacts: Array.isArray(parsedContacts) ? parsedContacts : [],
+          academicYear: userDataResponse.academicYear || parsedRegistrationData.academicYear || '',
+          academicStrand: userDataResponse.academicStrand || parsedRegistrationData.academicStrand || '',
+          academicTerm: userDataResponse.academicTerm || parsedRegistrationData.academicTerm || '',
+          academicLevel: userDataResponse.academicLevel || parsedRegistrationData.academicLevel || '',
         });
 
         setLoading(false);
@@ -209,9 +251,51 @@ function ScopeRegistration6() {
     }
   };
 
-  const handleSaveAndProceed = () => {
-    setIsFormDirty(false); // Reset dirty state as we're saving
-    navigate('/scope-exam-interview'); // Placeholder route
+  const handleSaveAndProceed = async () => {
+    try {
+      const userEmail = localStorage.getItem('userEmail');
+      if (!userEmail) {
+        setError('User email not found. Please log in again.');
+        navigate('/scope-login');
+        return;
+      }
+
+      // Validate formData
+      if (!formData || Object.keys(formData).length === 0) {
+        setError('Registration data is missing. Please complete all previous steps.');
+        return;
+      }
+
+      if (!Array.isArray(formData.contacts)) {
+        setError('Family contacts data is invalid.');
+        return;
+      }
+
+      // Send request to save registration data
+      const response = await fetch('http://localhost:5000/api/enrollee-applicants/save-registration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          formData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsFormDirty(false);
+        alert(data.message);
+        navigate('/scope-exam-interview-application');
+      } else {
+        setError(data.error || 'Failed to save registration data.');
+      }
+    } catch (err) {
+      console.error('Error saving registration data:', err);
+      setError('An error occurred while saving the registration data. Please try again.');
+    }
   };
 
   const handleBack = () => {
@@ -272,6 +356,7 @@ function ScopeRegistration6() {
       <div className="scope-registration-content">
         <SideNavigation
           userData={userData}
+          registrationStatus={registrationStatus}
           onNavigate={closeSidebar}
           isOpen={sidebarOpen}
         />
@@ -311,9 +396,10 @@ function ScopeRegistration6() {
                   </div>
                   <div style={{ margin: '1rem 0', fontSize: '14px', color: '#333', lineHeight: '1.5' }}>
                     <p>
-                      Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete initial information after saving and proceeding to the next step.
+                      Steps 1 to 6 for Admission: Registration are complete. You can now proceed to Admission: Exam & Interview Application. Make sure to double check first your Registration information as you won't be able to add, update, or delete the information after saving and proceeding to the next step.
                     </p>
                   </div>
+                  <RegistrationSummary formData={formData} />
                   <div className="form-buttons">
                     <button
                       type="button"
@@ -327,10 +413,33 @@ function ScopeRegistration6() {
                       type="button"
                       className="save-button"
                       onClick={handleSaveAndProceed}
+                      disabled={registrationStatus === 'Complete'}
+                      style={{
+                        backgroundColor: registrationStatus === 'Complete' ? '#d3d3d3' : '#34A853',
+                        cursor: registrationStatus === 'Complete' ? 'not-allowed' : 'pointer',
+                      }}
                     >
                       Save and Proceed to Exam & Interview Application
                     </button>
                   </div>
+                  {registrationStatus === 'Complete' && (
+                    <div style={{ marginTop: '1rem', color: '#333', fontSize: '14px' }}>
+                      <p>
+                        Your registration is already complete. Please{' '}
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate('/scope-registration-status-complete');
+                          }}
+                          style={{ color: '#007BFF', textDecoration: 'underline' }}
+                        >
+                          click here
+                        </a>{' '}
+                        to view your registration details and proceed to the Exam & Interview Application.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

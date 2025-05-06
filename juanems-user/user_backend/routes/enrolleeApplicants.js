@@ -5,6 +5,151 @@ const emailService = require('../utils/emailService');
 const { generateOTP, sendOTP } = require('../utils/emailService');
 const otpGenerator = require('otp-generator');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises;
+
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads');
+(async () => {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    console.log('Uploads directory ensured');
+  } catch (err) {
+    console.error('Error creating uploads directory:', err);
+  }
+})();
+
+// Configure Multer storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000000);
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${timestamp}-${random}${ext}`);
+  },
+});
+
+// Configure Multer for memory storage (files stay in memory as buffers)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|pdf/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only PNG, JPG, JPEG, and PDF files are allowed'));
+  },
+});
+
+router.post('/save-admission-requirements', upload.any(), async (req, res) => {
+  try {
+    const { email, requirements } = req.body;
+    if (!email || !requirements) {
+      return res.status(400).json({ error: 'Email and requirements are required' });
+    }
+
+    console.log('Received save-admission-requirements request:');
+    console.log('Email:', email);
+    console.log('Requirements:', requirements);
+
+    const parsedRequirements = JSON.parse(requirements);
+    const files = req.files || [];
+
+    const fileMap = {};
+    files.forEach((file) => {
+      const [_, id] = file.fieldname.split('-');
+      fileMap[id] = file;
+    });
+
+    const admissionRequirements = parsedRequirements.map((req) => {
+      const file = fileMap[req.id];
+      return {
+        requirementId: req.id,
+        name: req.name,
+        fileContent: file ? file.buffer : null,
+        fileType: file ? file.mimetype : null,
+        fileName: file ? file.originalname : null,
+        status: req.waived ? 'Waived' : file ? 'Submitted' : req.submitted ? 'Submitted' : 'Not Submitted',
+        waiverDetails: req.waiverDetails
+      };
+    });
+
+    console.log('Prepared admissionRequirements for saving:', JSON.stringify(admissionRequirements, null, 2));
+
+    const enrollee = await EnrolleeApplicant.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        $set: { admissionRequirements }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!enrollee) {
+      return res.status(404).json({ error: 'Applicant not found' });
+    }
+
+    await enrollee.save();
+
+    console.log('Saved enrollee document:');
+    console.log('admissionRequirementsStatus:', enrollee.admissionRequirementsStatus);
+    console.log('admissionAdminFirstStatus:', enrollee.admissionAdminFirstStatus);
+    console.log('admissionRequirements:', JSON.stringify(enrollee.admissionRequirements, null, 2));
+
+    res.json({
+      message: 'Admission requirements saved successfully',
+      admissionRequirements: enrollee.admissionRequirements,
+      admissionRequirementsStatus: enrollee.admissionRequirementsStatus,
+      admissionAdminFirstStatus: enrollee.admissionAdminFirstStatus
+    });
+  } catch (err) {
+    console.error('Error saving admission requirements:', err);
+    res.status(500).json({ error: 'Failed to save admission requirements' });
+  }
+});
+
+router.get('/fetch-admission-file/:email/:requirementId', async (req, res) => {
+  try {
+    const { email, requirementId } = req.params;
+    const cleanEmail = email.trim().toLowerCase();
+    const reqId = parseInt(requirementId);
+
+    const applicant = await EnrolleeApplicant.findOne({ 
+      email: cleanEmail, 
+      status: 'Active' 
+    });
+    
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    const requirement = applicant.admissionRequirements.find(
+      req => req.requirementId === reqId
+    );
+    
+    if (!requirement || !requirement.fileContent) {
+      return res.status(404).json({ error: 'File not found for this requirement' });
+    }
+
+    const dataUri = `data:${requirement.fileType};base64,${requirement.fileContent.toString('base64')}`;
+    
+    res.json({
+      dataUri,
+      fileType: requirement.fileType,
+      fileName: requirement.fileName
+    });
+  } catch (err) {
+    console.error('Error fetching admission file:', err);
+    res.status(500).json({ error: 'Server error while fetching admission file' });
+  }
+});
 
 async function getNextStudentIDSequence(academicYear) {
   const yearShort = academicYear.split('-')[0].slice(-2);
@@ -131,13 +276,13 @@ router.get('/check-email/:email', async (req, res) => {
 
     const existingInactive = await EnrolleeApplicant.findOne({
       email,
-      status: 'Inactive'
+      status: 'Incomplete'
     });
 
     if (existingInactive) {
       return res.status(200).json({
         message: 'Email is available (previous inactive account exists)',
-        status: 'Inactive'
+        status: 'Incomplete'
       });
     }
 
@@ -150,7 +295,7 @@ router.get('/check-email/:email', async (req, res) => {
   }
 });
 
-// Route to fetch personal details
+// Updated Route to fetch all personal details with logging
 router.get('/personal-details/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -162,21 +307,71 @@ router.get('/personal-details/:email', async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (!applicant) {
+      console.error(`No active applicant found for email: ${cleanEmail}`);
       return res.status(404).json({
         message: 'Active account not found',
         errorType: 'account_not_found',
       });
     }
 
-    res.json({
+    const responseData = {
+      // Step 1: Personal Information
+      prefix: applicant.prefix || '',
       firstName: applicant.firstName,
       middleName: applicant.middleName || '',
       lastName: applicant.lastName,
-      dob: applicant.dob,
+      suffix: applicant.suffix || '',
+      gender: applicant.gender || '',
+      lrnNo: applicant.lrnNo || '',
+      civilStatus: applicant.civilStatus || '',
+      religion: applicant.religion || '',
+      birthDate: applicant.birthDate || '',
+      countryOfBirth: applicant.countryOfBirth || '',
+      birthPlaceCity: applicant.birthPlaceCity || '',
+      birthPlaceProvince: applicant.birthPlaceProvince || '',
       nationality: applicant.nationality,
+      // Step 2: Admission and Enrollment Requirements
+      entryLevel: applicant.entryLevel || '',
+      academicYear: applicant.academicYear || '',
+      academicStrand: applicant.academicStrand || '',
+      academicTerm: applicant.academicTerm || '',
+      academicLevel: applicant.academicLevel || '',
+      // Step 3: Contact Details
+      presentHouseNo: applicant.presentHouseNo || '',
+      presentBarangay: applicant.presentBarangay || '',
+      presentCity: applicant.presentCity || '',
+      presentProvince: applicant.presentProvince || '',
+      presentPostalCode: applicant.presentPostalCode || '',
+      permanentHouseNo: applicant.permanentHouseNo || '',
+      permanentBarangay: applicant.permanentBarangay || '',
+      permanentCity: applicant.permanentCity || '',
+      permanentProvince: applicant.permanentProvince || '',
+      permanentPostalCode: applicant.permanentPostalCode || '',
+      mobile: applicant.mobile,
+      telephoneNo: applicant.telephoneNo || '',
+      emailAddress: applicant.emailAddress || applicant.email,
+      // Step 4: Educational Background
+      elementarySchoolName: applicant.elementarySchoolName || '',
+      elementaryLastYearAttended: applicant.elementaryLastYearAttended || '',
+      elementaryGeneralAverage: applicant.elementaryGeneralAverage || '',
+      elementaryRemarks: applicant.elementaryRemarks || '',
+      juniorHighSchoolName: applicant.juniorHighSchoolName || '',
+      juniorHighLastYearAttended: applicant.juniorHighLastYearAttended || '',
+      juniorHighGeneralAverage: applicant.juniorHighGeneralAverage || '',
+      juniorHighRemarks: applicant.juniorHighRemarks || '',
+      // Step 5: Family Background
+      contacts: applicant.familyContacts || [],
+      // Additional fields
       studentID: applicant.studentID,
       applicantID: applicant.applicantID,
-    });
+      registrationStatus: applicant.registrationStatus,
+      dob: applicant.dob,
+    };
+    console.log('Fetched applicantData:', applicant);
+
+    console.log(`Personal details fetched for ${cleanEmail}:`, responseData);
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error fetching personal details:', error);
     res.status(500).json({
@@ -204,7 +399,7 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     if (applicant.verificationExpires < new Date()) {
-      applicant.status = 'Inactive';
+      applicant.status = 'Incomplete';
       await applicant.save();
       return res.status(400).json({
         message: 'Verification period has expired. Please register again.'
@@ -259,7 +454,7 @@ router.post('/verify-otp', async (req, res) => {
         _id: { $ne: applicant._id }
       },
       {
-        status: 'Inactive',
+        status: 'Incomplete',
         inactiveReason: 'New registration completed'
       }
     );
@@ -729,7 +924,7 @@ router.post('/login', async (req, res) => {
 
       if (pendingAccount) {
         if (pendingAccount.verificationExpires < new Date()) {
-          pendingAccount.status = 'Inactive';
+          pendingAccount.status = 'Incomplete';
           pendingAccount.inactiveReason = 'Auto-cleaned expired verification';
           await pendingAccount.save();
           return res.status(403).json({
@@ -747,7 +942,7 @@ router.post('/login', async (req, res) => {
 
       const inactiveAccount = await EnrolleeApplicant.findOne({
         email: cleanEmail,
-        status: 'Inactive'
+        status: 'Incomplete'
       });
 
       if (inactiveAccount) {
@@ -806,6 +1001,165 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Helper function to validate and sanitize string inputs
+const sanitizeString = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+// Helper function to validate formData structure
+const validateFormData = (formData) => {
+  const errors = [];
+
+  // Step 1: Personal Information (required fields)
+  if (!sanitizeString(formData.firstName)) errors.push('First name is required');
+  if (!sanitizeString(formData.lastName)) errors.push('Last name is required');
+  if (!sanitizeString(formData.birthDate)) errors.push('Birth date is required');
+  if (!sanitizeString(formData.nationality)) errors.push('Nationality is required');
+
+  // Step 2: Admission and Enrollment Requirements
+  if (!sanitizeString(formData.entryLevel)) errors.push('Entry level is required');
+
+  // Step 3: Contact Details (required fields)
+  if (!sanitizeString(formData.mobile)) errors.push('Mobile number is required');
+  if (!sanitizeString(formData.presentCity)) errors.push('Present city is required');
+  if (!sanitizeString(formData.permanentCity)) errors.push('Permanent city is required');
+
+  // Step 4: Educational Background (at least one school required)
+  if (!sanitizeString(formData.elementarySchoolName) && !sanitizeString(formData.juniorHighSchoolName)) {
+    errors.push('At least one school name (elementary or junior high) is required');
+  }
+
+  // Step 5: Family Background
+  if (!Array.isArray(formData.contacts) || formData.contacts.length === 0) {
+    errors.push('At least one family contact is required');
+  } else {
+    formData.contacts.forEach((contact, index) => {
+      if (!sanitizeString(contact.relationship)) {
+        errors.push(`Contact ${index + 1}: Relationship is required`);
+      }
+      if (!sanitizeString(contact.firstName)) {
+        errors.push(`Contact ${index + 1}: First name is required`);
+      }
+      if (!sanitizeString(contact.lastName)) {
+        errors.push(`Contact ${index + 1}: Last name is required`);
+      }
+    });
+  }
+
+  return errors;
+};
+
+router.post('/save-registration', async (req, res) => {
+  try {
+    const { email, formData } = req.body;
+
+    // Validate input
+    if (!sanitizeString(email)) {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+    if (!formData || typeof formData !== 'object') {
+      return res.status(400).json({ error: 'Invalid or missing form data' });
+    }
+
+    // Validate formData structure
+    const validationErrors = validateFormData(formData);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ error: 'Validation failed', details: validationErrors });
+    }
+
+    // Find the applicant by email
+    const applicant = await EnrolleeApplicant.findOne({ email: email.toLowerCase(), status: 'Active' });
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    // Update personal information (Step 1)
+    applicant.prefix = sanitizeString(formData.prefix);
+    applicant.firstName = sanitizeString(formData.firstName) || applicant.firstName;
+    applicant.middleName = sanitizeString(formData.middleName);
+    applicant.lastName = sanitizeString(formData.lastName) || applicant.lastName;
+    applicant.suffix = sanitizeString(formData.suffix);
+    applicant.gender = sanitizeString(formData.gender);
+    applicant.lrnNo = sanitizeString(formData.lrnNo);
+    applicant.civilStatus = sanitizeString(formData.civilStatus);
+    applicant.religion = sanitizeString(formData.religion);
+    applicant.birthDate = sanitizeString(formData.birthDate);
+    applicant.countryOfBirth = sanitizeString(formData.countryOfBirth);
+    applicant.birthPlaceCity = sanitizeString(formData.birthPlaceCity);
+    applicant.birthPlaceProvince = sanitizeString(formData.birthPlaceProvince);
+    applicant.nationality = sanitizeString(formData.nationality) || applicant.nationality;
+
+    // Update admission and enrollment requirements (Step 2)
+    applicant.entryLevel = sanitizeString(formData.entryLevel);
+
+    // Update contact details (Step 3)
+    applicant.presentHouseNo = sanitizeString(formData.presentHouseNo);
+    applicant.presentBarangay = sanitizeString(formData.presentBarangay);
+    applicant.presentCity = sanitizeString(formData.presentCity);
+    applicant.presentProvince = incurableString(formData.presentProvince);
+    applicant.presentPostalCode = sanitizeString(formData.presentPostalCode);
+    applicant.permanentHouseNo = sanitizeString(formData.permanentHouseNo);
+    applicant.permanentBarangay = sanitizeString(formData.permanentBarangay);
+    applicant.permanentCity = sanitizeString(formData.permanentCity);
+    applicant.permanentProvince = sanitizeString(formData.permanentProvince);
+    applicant.permanentPostalCode = sanitizeString(formData.permanentPostalCode);
+    applicant.mobile = sanitizeString(formData.mobile) || applicant.mobile;
+    applicant.telephoneNo = sanitizeString(formData.telephoneNo);
+    applicant.emailAddress = sanitizeString(formData.emailAddress) || applicant.email;
+
+    // Update educational background (Step 4)
+    applicant.elementarySchoolName = sanitizeString(formData.elementarySchoolName);
+    applicant.elementaryLastYearAttended = sanitizeString(formData.elementaryLastYearAttended);
+    applicant.elementaryGeneralAverage = sanitizeString(formData.elementaryGeneralAverage);
+    applicant.elementaryRemarks = sanitizeString(formData.elementaryRemarks);
+    applicant.juniorHighSchoolName = sanitizeString(formData.juniorHighSchoolName);
+    applicant.juniorHighLastYearAttended = sanitizeString(formData.juniorHighLastYearAttended);
+    applicant.juniorHighGeneralAverage = sanitizeString(formData.juniorHighGeneralAverage);
+    applicant.juniorHighRemarks = sanitizeString(formData.juniorHighRemarks);
+
+    // Update family background (Step 5)
+    applicant.familyContacts = [];
+    if (Array.isArray(formData.contacts)) {
+      for (const contact of formData.contacts) {
+        if (typeof contact === 'object' && contact) {
+          applicant.familyContacts.push({
+            relationship: sanitizeString(contact.relationship),
+            firstName: sanitizeString(contact.firstName),
+            middleName: sanitizeString(contact.middleName),
+            lastName: sanitizeString(contact.lastName),
+            occupation: sanitizeString(contact.occupation),
+            houseNo: sanitizeString(contact.houseNo),
+            city: sanitizeString(contact.city),
+            province: sanitizeString(contact.province),
+            country: sanitizeString(contact.country),
+            mobileNo: sanitizeString(contact.mobileNo),
+            telephoneNo: sanitizeString(contact.telephoneNo),
+            emailAddress: sanitizeString(contact.emailAddress),
+            isEmergencyContact: typeof contact.isEmergencyContact === 'boolean' ? contact.isEmergencyContact : false
+          });
+        }
+      }
+    }
+
+    // Mark registration as complete
+    applicant.registrationStatus = 'Complete';
+
+    // Save the updated applicant data
+    await applicant.save();
+
+    res.status(200).json({ message: 'Registration data saved successfully' });
+  } catch (err) {
+    console.error('Error saving registration data:', err);
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message).join(', ');
+      return res.status(400).json({ error: `Validation error: ${errors}` });
+    }
+    res.status(500).json({ error: `Server error: ${err.message || 'Unknown error'}` });
+  }
+});
+
 router.post('/logout', async (req, res) => {
   try {
     const { email, createdAt } = req.body;
@@ -860,6 +1214,39 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.post('/complete-admission-requirements', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOneAndUpdate(
+      { email: email.toLowerCase(), status: 'Active' },
+      {
+        $set: {
+          admissionRequirementsStatus: 'Complete',
+          admissionAdminFirstStatus: 'On-going'
+        }
+      },
+      { new: true }
+    );
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    res.json({
+      message: 'Admission requirements marked as complete',
+      admissionRequirementsStatus: applicant.admissionRequirementsStatus,
+      admissionAdminFirstStatus: applicant.admissionAdminFirstStatus
+    });
+  } catch (err) {
+    console.error('Error completing admission requirements:', err);
+    res.status(500).json({ error: 'Failed to complete admission requirements' });
+  }
+});
+
 router.get('/activity/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -905,6 +1292,81 @@ router.get('/activity/:email', async (req, res) => {
       message: 'Server error while fetching activity data',
       errorType: 'server_error'
     });
+  }
+});
+
+router.post('/save-exam-interview', async (req, res) => {
+  try {
+    const { email, selectedDate, preferredExamAndInterviewApplicationStatus } = req.body;
+
+    if (!sanitizeString(email) || !selectedDate || !preferredExamAndInterviewApplicationStatus) {
+      return res.status(400).json({ error: 'Email, selected date, and status are required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOne({ 
+      email: email.toLowerCase(), 
+      status: 'Active' 
+    });
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    if (applicant.preferredExamAndInterviewApplicationStatus === 'Complete') {
+      return res.status(400).json({ error: 'Exam and interview date already saved' });
+    }
+
+    applicant.preferredExamAndInterviewDate = new Date(selectedDate);
+    applicant.preferredExamAndInterviewApplicationStatus = preferredExamAndInterviewApplicationStatus;
+
+    await applicant.save();
+
+    res.status(200).json({ message: 'Exam and interview date saved successfully' });
+  } catch (err) {
+    console.error('Error saving exam and interview data:', err);
+    res.status(500).json({ error: 'Server error while saving exam and interview data' });
+  }
+});
+
+// Fetch admission requirements
+router.get('/admission-requirements/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const applicant = await EnrolleeApplicant.findOne({ email: email.toLowerCase(), status: 'Active' });
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+    res.status(200).json({
+      admissionRequirements: applicant.admissionRequirements,
+      admissionRequirementsStatus: applicant.admissionRequirementsStatus
+    });
+  } catch (err) {
+    console.error('Error fetching admission requirements:', err);
+    res.status(500).json({ error: 'Server error while fetching admission requirements' });
+  }
+});
+
+router.get('/exam-interview/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const cleanEmail = email.trim().toLowerCase();
+
+    const applicant = await EnrolleeApplicant.findOne({
+      email: cleanEmail,
+      status: 'Active',
+    }).sort({ createdAt: -1 });
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    res.status(200).json({
+      selectedDate: applicant.preferredExamAndInterviewDate,
+      preferredExamAndInterviewApplicationStatus: applicant.preferredExamAndInterviewApplicationStatus
+    });
+  } catch (err) {
+    console.error('Error fetching exam and interview data:', err);
+    res.status(500).json({ error: 'Server error while fetching exam and interview data' });
   }
 });
 

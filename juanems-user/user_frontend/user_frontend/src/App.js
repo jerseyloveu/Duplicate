@@ -20,6 +20,9 @@ import ScopeRegistration3 from './components/JuanScope/ScopeRegistration3';
 import ScopeRegistration4 from './components/JuanScope/ScopeRegistration4';
 import ScopeRegistration5 from './components/JuanScope/ScopeRegistration5';
 import ScopeRegistration6 from './components/JuanScope/ScopeRegistration6';
+import RegistrationStatusComplete from './components/JuanScope/RegistrationStatusComplete';
+import ScopeExamInterviewApplication from './components/JuanScope/ScopeExamInterviewApplication';
+import ScopeAdmissionRequirements from './components/JuanScope/ScopeAdmissionRequirements';
 
 import Admin_LoginPage from './components/UserAdmin/LoginPage'; 
 import Admin_DashboardPage from './components/UserAdmin/DashboardPage'; 
@@ -75,6 +78,9 @@ function App() {
           <Route path="/scope-registration-4" element={<SessionManager><ScopeRegistration4 /></SessionManager>}/>
           <Route path="/scope-registration-5" element={<SessionManager><ScopeRegistration5 /></SessionManager>}/>
           <Route path="/scope-registration-6" element={<SessionManager><ScopeRegistration6 /></SessionManager>}/>
+          <Route path="/scope-registration-status-complete" element={<SessionManager><RegistrationStatusComplete /></SessionManager>}/>
+          <Route path="/scope-exam-interview-application" element={<SessionManager><ScopeExamInterviewApplication /></SessionManager>}/>
+          <Route path="/scope-admission-requirements" element={<SessionManager><ScopeAdmissionRequirements /></SessionManager>}/>
 
           {/* Admin  */}
           <Route path='/admin' element={<Admin_LoginPage/>}/>

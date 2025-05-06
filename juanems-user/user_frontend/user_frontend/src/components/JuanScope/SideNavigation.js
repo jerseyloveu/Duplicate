@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -19,9 +19,31 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import '../../css/JuanScope/SideNavigation.css';
 
-function SideNavigation({ userData, onNavigate, isOpen }) {
+function SideNavigation({ userData, registrationStatus, onNavigate, isOpen }) {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [examInterviewStatus, setExamInterviewStatus] = useState('Incomplete');
+
+  useEffect(() => {
+    const fetchExamInterviewStatus = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/enrollee-applicants/exam-interview/${userData.email}`
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch exam and interview status');
+        }
+        const data = await response.json();
+        setExamInterviewStatus(data.preferredExamAndInterviewApplicationStatus || 'Incomplete');
+      } catch (err) {
+        console.error('Error fetching exam and interview status:', err);
+      }
+    };
+
+    if (userData.email) {
+      fetchExamInterviewStatus();
+    }
+  }, [userData.email]);
 
   const formatEmail = (email) => {
     if (!email) return '';
@@ -76,6 +98,94 @@ function SideNavigation({ userData, onNavigate, isOpen }) {
     }
   };
 
+  // Navigation items with their paths and enabled status
+  const navItems = [
+    {
+      path: '/scope-registration',
+      icon: faFileAlt,
+      label: '1. Registration',
+      enabled: true,
+    },
+    {
+      path: '/scope-exam-interview-application',
+      icon: faClipboardCheck,
+      label: '2. Exam & Interview Application',
+      enabled: registrationStatus === 'Complete',
+    },
+    {
+      path: '/scope-admission-requirements',
+      icon: faBook,
+      label: '3. Admission Requirements',
+      enabled: examInterviewStatus === 'Complete',
+    },
+    {
+      path: '#',
+      icon: faFileSignature,
+      label: '4. Admission Exam Details',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faMoneyBillWave,
+      label: '5. Exam Fee Payment',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faChartBar,
+      label: '6. Exam & Interview Result',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faMoneyBillWave,
+      label: '7. Reservation Payment',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faCheckCircle,
+      label: '8. Admission Approval',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faClipboardList,
+      label: '9. Enrollment Requirements',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faTicketAlt,
+      label: '10. Voucher Application',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faCheckCircle,
+      label: '11. Enrollment Approval',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faUserGraduate,
+      label: '12. Student Assessment',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faMoneyBillWave,
+      label: '13. Tuition Payment',
+      enabled: false,
+    },
+    {
+      path: '#',
+      icon: faCalculator,
+      label: '14. Officially Enrolled',
+      enabled: false,
+    },
+  ];
+
   return (
     <div className={`side-nav-container ${isOpen ? 'open' : ''}`}>
       <div className="side-nav-content">
@@ -91,7 +201,7 @@ function SideNavigation({ userData, onNavigate, isOpen }) {
           </div>
           <div className="scope-divider"></div>
         </div>
-        <button 
+        <button
           className="enrollment-process-button"
           onClick={() => navigateToPage('/scope-dashboard')}
         >
@@ -100,107 +210,31 @@ function SideNavigation({ userData, onNavigate, isOpen }) {
         </button>
         <div className="scope-nav-section">
           <div className="scope-nav-title">Admission Process</div>
-          <button 
-            className="scope-nav-button" 
-            onClick={() => navigateToPage('/scope-registration')}
-          >
-            <FontAwesomeIcon icon={faFileAlt} />
-            <span>1. Registration</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faClipboardCheck} />
-            <span>2. Exam & Interview Application</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faBook} />
-            <span>3. Admission Requirements</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faFileSignature} />
-            <span>4. Admission Exam Details</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faMoneyBillWave} />
-            <span>5. Exam Fee Payment</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faChartBar} />
-            <span>6. Exam & Interview Result</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faMoneyBillWave} />
-            <span>7. Reservation Payment</span>
-          </button>
+          {navItems.slice(0, 7).map((item, index) => (
+            <button
+              key={index}
+              className={`scope-nav-button ${!item.enabled ? 'disabled-nav-item' : ''}`}
+              onClick={() => item.enabled && navigateToPage(item.path)}
+              disabled={!item.enabled}
+            >
+              <FontAwesomeIcon icon={item.icon} />
+              <span>{item.label}</span>
+            </button>
+          ))}
         </div>
         <div className="scope-nav-section">
           <div className="scope-nav-title">Enrollment Process</div>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faCheckCircle} />
-            <span>8. Admission Approval</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faClipboardList} />
-            <span>9. Enrollment Requirements</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faTicketAlt} />
-            <span>10. Voucher Application</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faCheckCircle} />
-            <span>11. Enrollment Approval</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faUserGraduate} />
-            <span>12. Student Assessment</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faMoneyBillWave} />
-            <span>13. Tuition Payment</span>
-          </button>
-          <button 
-            className="scope-nav-button disabled-nav-item"
-            disabled
-          >
-            <FontAwesomeIcon icon={faCalculator} />
-            <span>14. Officially Enrolled</span>
-          </button>
+          {navItems.slice(7).map((item, index) => (
+            <button
+              key={index}
+              className={`scope-nav-button ${!item.enabled ? 'disabled-nav-item' : ''}`}
+              onClick={() => item.enabled && navigateToPage(item.path)}
+              disabled={!item.enabled}
+            >
+              <FontAwesomeIcon icon={item.icon} />
+              <span>{item.label}</span>
+            </button>
+          ))}
         </div>
         <div className="side-nav-footer">
           <button
