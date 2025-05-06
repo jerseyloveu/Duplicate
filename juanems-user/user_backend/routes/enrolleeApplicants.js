@@ -5,6 +5,151 @@ const emailService = require('../utils/emailService');
 const { generateOTP, sendOTP } = require('../utils/emailService');
 const otpGenerator = require('otp-generator');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises;
+
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads');
+(async () => {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    console.log('Uploads directory ensured');
+  } catch (err) {
+    console.error('Error creating uploads directory:', err);
+  }
+})();
+
+// Configure Multer storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000000);
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${timestamp}-${random}${ext}`);
+  },
+});
+
+// Configure Multer for memory storage (files stay in memory as buffers)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|pdf/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only PNG, JPG, JPEG, and PDF files are allowed'));
+  },
+});
+
+router.post('/save-admission-requirements', upload.any(), async (req, res) => {
+  try {
+    const { email, requirements } = req.body;
+    if (!email || !requirements) {
+      return res.status(400).json({ error: 'Email and requirements are required' });
+    }
+
+    console.log('Received save-admission-requirements request:');
+    console.log('Email:', email);
+    console.log('Requirements:', requirements);
+
+    const parsedRequirements = JSON.parse(requirements);
+    const files = req.files || [];
+
+    const fileMap = {};
+    files.forEach((file) => {
+      const [_, id] = file.fieldname.split('-');
+      fileMap[id] = file;
+    });
+
+    const admissionRequirements = parsedRequirements.map((req) => {
+      const file = fileMap[req.id];
+      return {
+        requirementId: req.id,
+        name: req.name,
+        fileContent: file ? file.buffer : null,
+        fileType: file ? file.mimetype : null,
+        fileName: file ? file.originalname : null,
+        status: req.waived ? 'Waived' : file ? 'Submitted' : req.submitted ? 'Submitted' : 'Not Submitted',
+        waiverDetails: req.waiverDetails
+      };
+    });
+
+    console.log('Prepared admissionRequirements for saving:', JSON.stringify(admissionRequirements, null, 2));
+
+    const enrollee = await EnrolleeApplicant.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        $set: { admissionRequirements }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!enrollee) {
+      return res.status(404).json({ error: 'Applicant not found' });
+    }
+
+    await enrollee.save();
+
+    console.log('Saved enrollee document:');
+    console.log('admissionRequirementsStatus:', enrollee.admissionRequirementsStatus);
+    console.log('admissionAdminFirstStatus:', enrollee.admissionAdminFirstStatus);
+    console.log('admissionRequirements:', JSON.stringify(enrollee.admissionRequirements, null, 2));
+
+    res.json({
+      message: 'Admission requirements saved successfully',
+      admissionRequirements: enrollee.admissionRequirements,
+      admissionRequirementsStatus: enrollee.admissionRequirementsStatus,
+      admissionAdminFirstStatus: enrollee.admissionAdminFirstStatus
+    });
+  } catch (err) {
+    console.error('Error saving admission requirements:', err);
+    res.status(500).json({ error: 'Failed to save admission requirements' });
+  }
+});
+
+router.get('/fetch-admission-file/:email/:requirementId', async (req, res) => {
+  try {
+    const { email, requirementId } = req.params;
+    const cleanEmail = email.trim().toLowerCase();
+    const reqId = parseInt(requirementId);
+
+    const applicant = await EnrolleeApplicant.findOne({ 
+      email: cleanEmail, 
+      status: 'Active' 
+    });
+    
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    const requirement = applicant.admissionRequirements.find(
+      req => req.requirementId === reqId
+    );
+    
+    if (!requirement || !requirement.fileContent) {
+      return res.status(404).json({ error: 'File not found for this requirement' });
+    }
+
+    const dataUri = `data:${requirement.fileType};base64,${requirement.fileContent.toString('base64')}`;
+    
+    res.json({
+      dataUri,
+      fileType: requirement.fileType,
+      fileName: requirement.fileName
+    });
+  } catch (err) {
+    console.error('Error fetching admission file:', err);
+    res.status(500).json({ error: 'Server error while fetching admission file' });
+  }
+});
 
 async function getNextStudentIDSequence(academicYear) {
   const yearShort = academicYear.split('-')[0].slice(-2);
@@ -1069,6 +1214,39 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.post('/complete-admission-requirements', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const applicant = await EnrolleeApplicant.findOneAndUpdate(
+      { email: email.toLowerCase(), status: 'Active' },
+      {
+        $set: {
+          admissionRequirementsStatus: 'Complete',
+          admissionAdminFirstStatus: 'On-going'
+        }
+      },
+      { new: true }
+    );
+
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+
+    res.json({
+      message: 'Admission requirements marked as complete',
+      admissionRequirementsStatus: applicant.admissionRequirementsStatus,
+      admissionAdminFirstStatus: applicant.admissionAdminFirstStatus
+    });
+  } catch (err) {
+    console.error('Error completing admission requirements:', err);
+    res.status(500).json({ error: 'Failed to complete admission requirements' });
+  }
+});
+
 router.get('/activity/:email', async (req, res) => {
   try {
     const { email } = req.params;
@@ -1147,6 +1325,24 @@ router.post('/save-exam-interview', async (req, res) => {
   } catch (err) {
     console.error('Error saving exam and interview data:', err);
     res.status(500).json({ error: 'Server error while saving exam and interview data' });
+  }
+});
+
+// Fetch admission requirements
+router.get('/admission-requirements/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const applicant = await EnrolleeApplicant.findOne({ email: email.toLowerCase(), status: 'Active' });
+    if (!applicant) {
+      return res.status(404).json({ error: 'Active applicant not found' });
+    }
+    res.status(200).json({
+      admissionRequirements: applicant.admissionRequirements,
+      admissionRequirementsStatus: applicant.admissionRequirementsStatus
+    });
+  } catch (err) {
+    console.error('Error fetching admission requirements:', err);
+    res.status(500).json({ error: 'Server error while fetching admission requirements' });
   }
 });
 

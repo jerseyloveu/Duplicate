@@ -38,16 +38,17 @@ function WaiverFormModal({ isOpen, onClose, onSubmit, requirements, userData }) 
 
   const validateForm = () => {
     const newErrors = {};
-    if (waiverData.selectedRequirements.length === 0) {
-      newErrors.selectedRequirements = 'At least one requirement must be selected';
-    }
-    if (!waiverData.reason.trim()) {
-      newErrors.reason = 'Reason is required';
-    }
-    if (!waiverData.promiseDate) {
-      newErrors.promiseDate = 'Promise date is required';
-    } else if (waiverData.promiseDate < new Date()) {
-      newErrors.promiseDate = 'Promise date cannot be in the past';
+    // Removed selectedRequirements validation to allow zero selections
+    if (waiverData.selectedRequirements.length > 0) {
+      // Only validate reason and promiseDate if at least one requirement is selected
+      if (!waiverData.reason.trim()) {
+        newErrors.reason = 'Reason is required';
+      }
+      if (!waiverData.promiseDate) {
+        newErrors.promiseDate = 'Promise date is required';
+      } else if (waiverData.promiseDate < new Date()) {
+        newErrors.promiseDate = 'Promise date cannot be in the past';
+      }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

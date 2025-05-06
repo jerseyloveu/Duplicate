@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const enrolleeApplicantSchema = new mongoose.Schema({
-  // Existing fields
   firstName: { type: String, required: true, trim: true },
   middleName: { type: String, trim: true },
   lastName: { type: String, required: true, trim: true },
@@ -49,24 +48,17 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   },
   lastLogin: { type: Date },
   lastLogout: { type: Date },
-
-  // New fields for registration form data
-  // Personal Information (Step 1)
   prefix: { type: String, trim: true },
   suffix: { type: String, trim: true },
   gender: { type: String, trim: true },
   lrnNo: { type: String, trim: true },
   civilStatus: { type: String, trim: true },
   religion: { type: String, trim: true },
-  birthDate: { type: String, trim: true }, // Using String to match formData format
+  birthDate: { type: String, trim: true },
   countryOfBirth: { type: String, trim: true },
   birthPlaceCity: { type: String, trim: true },
   birthPlaceProvince: { type: String, trim: true },
-
-  // Admission and Enrollment Requirements (Step 2)
   entryLevel: { type: String, trim: true },
-
-  // Contact Details (Step 3)
   presentHouseNo: { type: String, trim: true },
   presentBarangay: { type: String, trim: true },
   presentCity: { type: String, trim: true },
@@ -79,8 +71,6 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   permanentPostalCode: { type: String, trim: true },
   telephoneNo: { type: String, trim: true },
   emailAddress: { type: String, trim: true },
-
-  // Educational Background (Step 4)
   elementarySchoolName: { type: String, trim: true },
   elementaryLastYearAttended: { type: String, trim: true },
   elementaryGeneralAverage: { type: String, trim: true },
@@ -89,8 +79,6 @@ const enrolleeApplicantSchema = new mongoose.Schema({
   juniorHighLastYearAttended: { type: String, trim: true },
   juniorHighGeneralAverage: { type: String, trim: true },
   juniorHighRemarks: { type: String, trim: true },
-
-  // Family Background (Step 5)
   familyContacts: [{
     relationship: { type: String, trim: true },
     firstName: { type: String, trim: true },
@@ -106,21 +94,43 @@ const enrolleeApplicantSchema = new mongoose.Schema({
     emailAddress: { type: String, trim: true },
     isEmergencyContact: { type: Boolean, default: false }
   }],
-
-  // Registration Status
   registrationStatus: {
     type: String,
     enum: ['Incomplete', 'Complete'],
     default: 'Incomplete'
   },
-
-    // Exam and Interview Application
-    preferredExamAndInterviewDate: { type: Date },
-    preferredExamAndInterviewApplicationStatus: {
+  preferredExamAndInterviewDate: { type: Date },
+  preferredExamAndInterviewApplicationStatus: {
+    type: String,
+    enum: ['Incomplete', 'Complete'],
+    default: 'Incomplete'
+  },
+  admissionRequirements: [{
+    requirementId: { type: Number, required: true },
+    name: { type: String, required: true },
+    fileContent: { type: Buffer }, // Store file as binary data
+    fileType: { type: String }, // Store MIME type
+    fileName: { type: String }, // Store original file name
+    status: {
       type: String,
-      enum: ['Incomplete', 'Complete'],
-      default: 'Incomplete'
+      enum: ['Not Submitted', 'Submitted', 'Verified', 'Waived'],
+      default: 'Not Submitted'
     },
+    waiverDetails: {
+      reason: { type: String },
+      promiseDate: { type: Date }
+    }
+  }],
+  admissionRequirementsStatus: {
+    type: String,
+    enum: ['Incomplete', 'Complete'],
+    default: 'Incomplete'
+  },
+  admissionAdminFirstStatus: {
+    type: String,
+    enum: ['On-going', 'Approved', 'Rejected'],
+    default: 'On-going'
+  }
 });
 
 // Password hashing pre-save hook
@@ -132,18 +142,45 @@ enrolleeApplicantSchema.pre('save', async function (next) {
   ) {
     return next();
   }
-
   try {
     const cleanPassword = this.password.trim();
-    console.log('Original password before hash:', cleanPassword);
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(cleanPassword, salt);
-    console.log('Hashed password:', this.password);
     next();
   } catch (err) {
-    console.error('Error hashing password:', err);
     next(err);
   }
+});
+
+// Update admissionRequirementsStatus pre-save hook
+enrolleeApplicantSchema.pre('save', function (next) {
+  if (this.isModified('admissionRequirements') && this.admissionRequirements && this.admissionRequirements.length > 0) {
+    console.log('Evaluating admissionRequirementsStatus...');
+    console.log('Requirements:', JSON.stringify(this.admissionRequirements, null, 2));
+
+    const allComplete = this.admissionRequirements.every(req => 
+      req.status === 'Verified' || req.status === 'Waived'
+    );
+    const allAddressed = this.admissionRequirements.every(req =>
+      req.status !== 'Not Submitted'
+    );
+
+    console.log('All requirements complete (Verified or Waived):', allComplete);
+    console.log('All requirements addressed (not Not Submitted):', allAddressed);
+
+    this.admissionRequirementsStatus = (allComplete && allAddressed) ? 'Complete' : 'Incomplete';
+
+    console.log('Set admissionRequirementsStatus to:', this.admissionRequirementsStatus);
+
+    if (this.admissionRequirementsStatus === 'Complete' && this.isModified('admissionRequirementsStatus')) {
+      this.admissionAdminFirstStatus = 'On-going';
+      console.log('Set admissionAdminFirstStatus to: On-going');
+    }
+  } else {
+    this.admissionRequirementsStatus = 'Incomplete';
+    console.log('No requirements or not modified, set admissionRequirementsStatus to: Incomplete');
+  }
+  next();
 });
 
 // Method to check if OTP is valid
